@@ -5208,6 +5208,7 @@ function ListingFeedCard({ listing, go, promoted }) {
                     React.createElement("div", { className: "flex items-center gap-1.5" },
                         React.createElement("span", { className: "font-semibold text-sm truncate" }, seller ? seller.displayName : '\u2026'),
                         React.createElement("span", { className: "text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0" }, React.createElement("i", { className: "fa-solid fa-store" }), "Marketplace"),
+                        listing.type === 'service' && React.createElement("span", { className: "text-[10px] font-bold uppercase tracking-wide text-[#0d9488] bg-[#0d9488]/10 px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0" }, React.createElement("i", { className: "fa-solid fa-handshake" }), "Service"),
                         promoted && React.createElement("span", { className: "text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0" }, React.createElement("i", { className: "fa-solid fa-bullhorn" }), "Sponsored")),
                     React.createElement("span", { className: "text-[11px] text-slate-400" }, timeAgo(listing.createdAt)))),
             React.createElement("button", { onClick: openListing, className: "text-slate-400 shrink-0" }, React.createElement("i", { className: "fa-solid fa-ellipsis" }))),
@@ -8618,7 +8619,8 @@ function ProductCard({ listing, go }) {
             (listing.images && listing.images[0]) ? React.createElement("img", { src: listing.images[0], loading: "lazy", className: "w-full h-full object-cover" }) : React.createElement("div", { className: "w-full h-full flex items-center justify-center text-slate-300" }, React.createElement("i", { className: "fa-solid fa-image text-3xl" })),
             listing.status === 'sold' && React.createElement("div", { className: "absolute inset-0 bg-black/50 flex items-center justify-center" }, React.createElement("span", { className: "text-white font-bold text-sm tracking-wide" }, "SOLD")),
             listing.sponsored && React.createElement("span", { className: "absolute top-1.5 left-1.5 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded" }, "SPONSORED"),
-            !listing.sponsored && listing.featured && React.createElement("span", { className: "absolute top-1.5 left-1.5 bg-brand-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded" }, "FEATURED")),
+            !listing.sponsored && listing.featured && React.createElement("span", { className: "absolute top-1.5 left-1.5 bg-brand-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded" }, "FEATURED"),
+            listing.type === 'service' && React.createElement("span", { className: "absolute top-1.5 right-1.5 bg-white/90 dark:bg-ink-800/90 text-[#0d9488] text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1" }, React.createElement("i", { className: "fa-solid fa-handshake" }), "SERVICE")),
         React.createElement("div", { className: "p-2.5" },
             React.createElement("p", { className: "font-bold text-sm" }, formatNaira(listing.price)),
             React.createElement("p", { className: "text-xs text-slate-600 dark:text-slate-300 truncate mt-0.5" }, listing.title),
@@ -8723,6 +8725,11 @@ function ListingFormScreen({ id, go }) {
     const { profile } = useAuth();
     const toast = useToast();
     const [loaded, setLoaded] = useState(!id);
+    // 'goods' = a physical product for sale (photos, price, colour, brand, quantity, condition).
+    // 'service' = something you do for people (haircuts, repairs, tutoring…) — no colour/condition/
+    // stock count, since those don't mean anything for a service. Both share price, description,
+    // location, category, and a WhatsApp number so buyers can message the seller directly.
+    const [type, setType] = useState('goods');
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState(MARKETPLACE_CATEGORIES[0]);
@@ -8752,11 +8759,12 @@ function ListingFormScreen({ id, go }) {
                 go({ name: 'marketplace' });
                 return;
             }
+            setType(d.type === 'service' ? 'service' : 'goods');
             setTitle(d.title);
             setDescription(d.description);
             setCategory(d.category);
             setPrice(String(d.price));
-            setCondition(d.condition);
+            setCondition(d.condition || 'used');
             setColor(d.color || '');
             setBrand(d.brand || '');
             setQuantity(d.quantity ? String(d.quantity) : '');
@@ -8780,18 +8788,26 @@ function ListingFormScreen({ id, go }) {
         setNewFiles(prev => prev.filter((_, idx) => idx !== i));
         setNewPreviews(prev => prev.filter((_, idx) => idx !== i));
     };
+    const isGoods = type === 'goods';
     const submit = async () => {
         if (!title.trim() || !price || !location.trim()) {
             toast('Please fill in title, price and location', 'error');
             return;
         }
-        if (existingImages.length + newFiles.length === 0) {
+        if (isGoods && existingImages.length + newFiles.length === 0) {
             toast('Add at least one photo', 'error');
             return;
         }
         setSaving(true);
         try {
-            const fields = { title: title.trim(), description: description.trim(), category, price: Number(price), condition, color: color.trim() || null, brand: brand.trim() || null, quantity: quantity ? Number(quantity) : null, location: location.trim(), whatsappNumber: whatsappNumber.trim() || null };
+            const fields = {
+                type, title: title.trim(), description: description.trim(), category, price: Number(price),
+                location: location.trim(), whatsappNumber: whatsappNumber.trim() || null,
+                // Colour/brand/condition/quantity only mean something for a physical product —
+                // saved as null for a service so old goods-only UI elsewhere doesn't show blanks.
+                condition: isGoods ? condition : null, color: isGoods ? (color.trim() || null) : null,
+                brand: isGoods ? (brand.trim() || null) : null, quantity: isGoods && quantity ? Number(quantity) : null
+            };
             if (id) {
                 await updateListing(id, profile.id, fields, existingImages, newFiles);
                 toast('Listing updated', 'success');
@@ -8814,8 +8830,15 @@ function ListingFormScreen({ id, go }) {
     return (React.createElement("div", null,
         React.createElement("div", { className: "flex items-center gap-3 mb-4" },
             React.createElement("button", { onClick: () => go({ name: 'marketplace' }) }, React.createElement("i", { className: "fa-solid fa-arrow-left" })),
-            React.createElement("h2", { className: "font-display text-lg font-bold" }, id ? 'Edit Listing' : 'Sell Something')),
+            React.createElement("h2", { className: "font-display text-lg font-bold" }, id ? 'Edit Listing' : 'Post an Ad')),
         React.createElement("div", { className: "space-y-3" },
+            React.createElement("div", null,
+                React.createElement("p", { className: "text-xs font-semibold text-slate-500 mb-1.5" }, "What are you listing?"),
+                React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+                    React.createElement("button", { onClick: () => setType('goods'), className: "py-3 rounded-xl text-sm font-semibold border flex flex-col items-center gap-1 " + (isGoods ? "bg-brand-600 text-white border-brand-600" : "border-slate-200 dark:border-ink-700 text-slate-500") },
+                        React.createElement("i", { className: "fa-solid fa-box text-base" }), "Goods / Product"),
+                    React.createElement("button", { onClick: () => setType('service'), className: "py-3 rounded-xl text-sm font-semibold border flex flex-col items-center gap-1 " + (!isGoods ? "bg-brand-600 text-white border-brand-600" : "border-slate-200 dark:border-ink-700 text-slate-500") },
+                        React.createElement("i", { className: "fa-solid fa-handshake text-base" }), "Service"))),
             React.createElement("div", { className: "grid grid-cols-4 gap-2" },
                 existingImages.map((img, i) => React.createElement("div", { key: 'e' + i, className: "relative aspect-square rounded-lg overflow-hidden" },
                     React.createElement("img", { src: img, className: "w-full h-full object-cover" }),
@@ -8826,18 +8849,21 @@ function ListingFormScreen({ id, go }) {
                 (existingImages.length + newFiles.length) < 6 && React.createElement("label", { className: "aspect-square rounded-lg border-2 border-dashed border-slate-300 dark:border-ink-600 flex items-center justify-center cursor-pointer text-slate-400" },
                     React.createElement("i", { className: "fa-solid fa-camera" }),
                     React.createElement("input", { type: "file", accept: "image/*", multiple: true, onChange: onPickFiles, className: "hidden" }))),
-            React.createElement("input", { value: title, onChange: e => setTitle(e.target.value), placeholder: "Product title", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" }),
-            React.createElement("textarea", { value: description, onChange: e => setDescription(e.target.value), rows: 3, placeholder: "Describe your product\u2026", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm resize-none" }),
+            !isGoods && React.createElement("p", { className: "text-[11px] text-slate-400 -mt-2" }, "Photos are optional for a service, but a picture of your work builds trust."),
+            React.createElement("input", { value: title, onChange: e => setTitle(e.target.value), placeholder: isGoods ? "Product title" : "Service title (e.g. Home Hairdressing)", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" }),
+            React.createElement("textarea", { value: description, onChange: e => setDescription(e.target.value), rows: 3, placeholder: isGoods ? "Describe your product\u2026" : "Describe what your service includes\u2026", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm resize-none" }),
             React.createElement("select", { value: category, onChange: e => setCategory(e.target.value), className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" }, MARKETPLACE_CATEGORIES.map(c => React.createElement("option", { key: c, value: c }, c))),
-            React.createElement("input", { value: price, onChange: e => setPrice(e.target.value.replace(/[^0-9]/g, '')), inputMode: "numeric", placeholder: "Price (\u20A6)", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" }),
-            React.createElement("div", { className: "flex gap-2" }, [['new', 'New'], ['used', 'Used']].map(([k, l]) => React.createElement("button", { key: k, onClick: () => setCondition(k), className: "flex-1 py-2.5 rounded-xl text-sm font-semibold border " + (condition === k ? "bg-brand-600 text-white border-brand-600" : "border-slate-200 dark:border-ink-700 text-slate-500") }, l))),
-            React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+            React.createElement("input", { value: price, onChange: e => setPrice(e.target.value.replace(/[^0-9]/g, '')), inputMode: "numeric", placeholder: isGoods ? "Price (\u20A6)" : "Price / starting rate (\u20A6)", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" }),
+            // Condition, colour, brand, and stock count are goods-only — nothing here for a service
+            // to be "New/Used", have a colour, or have "3 available".
+            isGoods && React.createElement("div", { className: "flex gap-2" }, [['new', 'New'], ['used', 'Used']].map(([k, l]) => React.createElement("button", { key: k, onClick: () => setCondition(k), className: "flex-1 py-2.5 rounded-xl text-sm font-semibold border " + (condition === k ? "bg-brand-600 text-white border-brand-600" : "border-slate-200 dark:border-ink-700 text-slate-500") }, l))),
+            isGoods && React.createElement("div", { className: "grid grid-cols-2 gap-2" },
                 React.createElement("input", { value: color, onChange: e => setColor(e.target.value), placeholder: "Colour (e.g. Black)", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" }),
                 React.createElement("input", { value: brand, onChange: e => setBrand(e.target.value), placeholder: "Brand (optional)", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" })),
-            React.createElement("input", { value: quantity, onChange: e => setQuantity(e.target.value.replace(/[^0-9]/g, '')), inputMode: "numeric", placeholder: "Quantity available (optional)", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" }),
+            isGoods && React.createElement("input", { value: quantity, onChange: e => setQuantity(e.target.value.replace(/[^0-9]/g, '')), inputMode: "numeric", placeholder: "Quantity available (optional)", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" }),
             React.createElement("input", { value: location, onChange: e => setLocation(e.target.value), placeholder: "Location (e.g. Ibadan, Oyo State)", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" }),
             React.createElement("input", { type: "tel", value: whatsappNumber, onChange: e => setWhatsappNumber(e.target.value), placeholder: "WhatsApp number (optional, e.g. +234\u2026)", className: "w-full px-4 py-3 rounded-xl bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 text-sm" }),
-            React.createElement("p", { className: "text-[11px] text-slate-400 -mt-2" }, "Shown as a WhatsApp button on this listing so buyers can reach you directly."),
+            React.createElement("p", { className: "text-[11px] text-slate-400 -mt-2" }, "Shown as a WhatsApp button on this listing so buyers can message you directly."),
             React.createElement("button", { onClick: submit, disabled: saving, className: "w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-semibold text-sm" }, saving ? 'Saving\u2026' : (id ? 'Save Changes' : 'Submit Listing')))));
 }
 function OfferRow({ offer, listing, go }) {
@@ -8969,7 +8995,9 @@ function ListingDetailScreen({ id, go }) {
                     favCount)),
             React.createElement("p", { className: "text-sm font-semibold mb-1" }, listing.title),
             React.createElement("div", { className: "flex flex-wrap gap-1.5 text-[11px] text-slate-400 mb-2" },
-                React.createElement("span", { className: "px-2 py-0.5 rounded-full bg-slate-100 dark:bg-ink-700" }, listing.condition === 'new' ? 'Brand New' : 'Used'),
+                listing.type === 'service' ?
+                    React.createElement("span", { className: "px-2 py-0.5 rounded-full bg-[#0d9488]/10 text-[#0d9488] font-semibold" }, React.createElement("i", { className: "fa-solid fa-handshake mr-1" }), "Service") :
+                    React.createElement("span", { className: "px-2 py-0.5 rounded-full bg-slate-100 dark:bg-ink-700" }, listing.condition === 'new' ? 'Brand New' : 'Used'),
                 React.createElement("span", { className: "px-2 py-0.5 rounded-full bg-slate-100 dark:bg-ink-700" }, listing.category),
                 listing.color && React.createElement("span", { className: "px-2 py-0.5 rounded-full bg-slate-100 dark:bg-ink-700" }, React.createElement("i", { className: "fa-solid fa-palette mr-1" }), listing.color),
                 listing.brand && React.createElement("span", { className: "px-2 py-0.5 rounded-full bg-slate-100 dark:bg-ink-700" }, listing.brand),
