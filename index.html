@@ -2937,6 +2937,14 @@ function App() {
             return;
         notifyFriendsOfBirthdayIfDue(profile);
     }, [profile === null || profile === void 0 ? void 0 : profile.id, profile === null || profile === void 0 ? void 0 : profile.dob, profile === null || profile === void 0 ? void 0 : profile.lastBirthdayNotifiedYear]);
+    // Catches up any Paystack payment that was charged but never got credited last time (see
+    // reconcilePendingPaystackPayments) — runs once as soon as we know who's signed in, i.e.
+    // "once he enters the website back".
+    useEffect(() => {
+        if (!(profile === null || profile === void 0 ? void 0 : profile.id))
+            return;
+        reconcilePendingPaystackPayments(profile.id).catch(() => { });
+    }, [profile === null || profile === void 0 ? void 0 : profile.id]);
     const authValue = useMemo(() => ({ firebaseUser, profile }), [firebaseUser, profile]);
     if (firebaseUser === undefined) {
         return React.createElement(SplashScreen, null);
@@ -12185,16 +12193,60 @@ async function debitWallet(uid, amount, type, extra) {
     await db.collection('walletTransactions').add(Object.assign({ uid, type, amount: -amount, createdAt: FieldValue.serverTimestamp() }, extra || {}));
 }
 async function recordWalletPaystackFunding(uid, amountNaira, reference) {
+    // Idempotency guard: if this reference was already credited (e.g. the success callback
+    // fired once already, or reconcilePendingPaystackPayments() got to it first), don't credit
+    // twice.
+    const existing = await db.collection('walletTransactions').where('reference', '==', reference).where('uid', '==', uid).limit(1).get();
+    if (!existing.empty) return;
     await creditWallet(uid, amountNaira, 'fund_paystack', { reference, description: 'Wallet funded via Paystack' });
 }
-function launchWalletPaystack({ email, amountNaira, publicKey, metadata, onSuccess, onClose }) {
+function launchWalletPaystack({ email, amountNaira, publicKey, metadata, reference, onSuccess, onClose }) {
     if (typeof PaystackPop === 'undefined') { throw new Error('Payment service failed to load. Check your connection and try again.'); }
     if (!publicKey) { throw new Error('Payments are not configured yet. Please contact support.'); }
-    const handler = PaystackPop.setup({
+    const handler = PaystackPop.setup(Object.assign({
         key: publicKey, email: email, amount: Math.round(Number(amountNaira || 0) * 100), currency: 'NGN',
         metadata: metadata || {}, callback: function (response) { onSuccess(response); }, onClose: function () { onClose && onClose(); }
-    });
+    }, reference ? { ref: reference } : {}));
     handler.openIframe();
+}
+// --- Paystack "pay now, credit later" local cache -------------------------------------------
+// This app has no server, so a Paystack payment is only ever recorded when the success callback
+// above runs *in the browser that made the payment*. If that tab/app gets closed, killed, or
+// loses connection between the charge going through and that callback firing, the wallet never
+// gets credited even though the card was charged. To recover from that without needing a backend:
+// 1. Before opening the Paystack popup, we save {uid, amount, reference} to localStorage.
+// 2. If the success callback runs normally, we credit the wallet and clear the cache entry.
+// 3. If the user cancels (Paystack's onClose fires without a charge), we clear the cache entry
+//    too — nothing was paid.
+// 4. If neither fires (interrupted), the entry just sits in localStorage on that device. Next
+//    time this person opens the site *on the same phone*, reconcilePendingPaystackPayments()
+//    finds it and credits the wallet then — no verification with Paystack is possible without a
+//    server, so this trusts that a payment attempt which was never cancelled or completed by our
+//    own JS did in fact go through, same trust model the rest of this client-only app already uses.
+const PENDING_PAYSTACK_KEY = 'lokiface_pending_paystack';
+function getPendingPaystackPayments() {
+    try { return JSON.parse(localStorage.getItem(PENDING_PAYSTACK_KEY) || '[]'); }
+    catch (e) { return []; }
+}
+function savePendingPaystackPayment(uid, amountNaira, reference) {
+    const list = getPendingPaystackPayments();
+    list.push({ uid, amount: amountNaira, reference, createdAt: Date.now() });
+    localStorage.setItem(PENDING_PAYSTACK_KEY, JSON.stringify(list));
+}
+function clearPendingPaystackPayment(reference) {
+    const list = getPendingPaystackPayments().filter(p => p.reference !== reference);
+    localStorage.setItem(PENDING_PAYSTACK_KEY, JSON.stringify(list));
+}
+async function reconcilePendingPaystackPayments(uid) {
+    const all = getPendingPaystackPayments();
+    const mine = all.filter(p => p.uid === uid);
+    if (!mine.length) return;
+    const stillOthers = all.filter(p => p.uid !== uid);
+    for (const p of mine) {
+        try { await recordWalletPaystackFunding(p.uid, p.amount, p.reference); }
+        catch (e) { /* leave it cached, we'll retry next visit */ stillOthers.push(p); continue; }
+    }
+    localStorage.setItem(PENDING_PAYSTACK_KEY, JSON.stringify(stillOthers));
 }
 function uploadWalletReceipt(uid, file, onProgress) {
     const isImage = (file.type || '').startsWith('image/');
@@ -12209,15 +12261,10 @@ function uploadWalletReceipt(uid, file, onProgress) {
         }).then(() => ref.getDownloadURL());
     });
 }
-async function submitWalletManualFunding(uid, { amountNaira, receiptURL, method, reference, note }) {
-    await db.collection('walletManualFundings').add(Object.assign({
-        uid, amount: amountNaira, receiptURL: receiptURL || null, status: 'pending', submittedAt: FieldValue.serverTimestamp(),
-        // 'bank_transfer' (default, has a receipt) vs 'paystack_dispute' (Paystack took the
-        // money and showed success, but the in-browser callback that credits the wallet never
-        // ran — e.g. the tab was closed/backgrounded right after paying — so there's no receipt,
-        // just the transaction reference for the admin to verify in the Paystack dashboard).
-        method: method || 'bank_transfer'
-    }, reference ? { reference } : {}, note ? { note } : {}));
+async function submitWalletManualFunding(uid, { amountNaira, receiptURL }) {
+    await db.collection('walletManualFundings').add({
+        uid, amount: amountNaira, receiptURL, status: 'pending', submittedAt: FieldValue.serverTimestamp()
+    });
 }
 function useWalletManualFundings(statusFilter) {
     const [rows, setRows] = useState([]);
@@ -12233,11 +12280,7 @@ function useWalletManualFundings(statusFilter) {
     return rows;
 }
 async function adminApproveWalletManualFunding(row, adminUid, adminEmail) {
-    const isPaystackDispute = row.method === 'paystack_dispute';
-    await creditWallet(row.uid, row.amount, isPaystackDispute ? 'fund_paystack' : 'fund_manual', {
-        reference: isPaystackDispute ? (row.reference || ('manual:' + row.id)) : ('manual:' + row.id),
-        description: isPaystackDispute ? 'Wallet funded via Paystack (manually reconciled by admin)' : 'Wallet funded via manual bank transfer'
-    });
+    await creditWallet(row.uid, row.amount, 'fund_manual', { reference: 'manual:' + row.id, description: 'Wallet funded via manual bank transfer' });
     await db.collection('walletManualFundings').doc(row.id).update({ status: 'approved', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: adminUid, reviewedByEmail: adminEmail || null });
 }
 async function adminRejectWalletManualFunding(row, reason, adminUid, adminEmail) {
@@ -12521,36 +12564,34 @@ function FundWalletSheet({ cfg, onClose }) {
     const [busy, setBusy] = useState(false);
     const [receiptFile, setReceiptFile] = useState(null);
     const [receiptPreview, setReceiptPreview] = useState(null);
-    const [disputeOpen, setDisputeOpen] = useState(false);
-    const [disputeRef, setDisputeRef] = useState('');
-    const [disputeAmt, setDisputeAmt] = useState('');
     const fileRef = useRef();
     const payWithPaystack = () => {
         const amt = Number(amount);
         if (!amt || amt < 100) { toast('Enter a valid amount (min \u20A6100)', 'error'); return; }
         if (!cfg.paystackPublicKey) { toast('Payments aren\u2019t configured yet. Contact support.', 'error'); return; }
+        // Remember this attempt on the device *before* the checkout even opens. If Paystack
+        // charges the card but the browser tab is closed/killed before the success callback
+        // below gets to run, this cached record survives (it's in localStorage, not React
+        // state) and reconcilePendingPaystackPayments() picks it up and credits the wallet the
+        // next time this person opens the site on this device — see App().
+        const reference = 'wallet_' + profile.id + '_' + Date.now();
+        savePendingPaystackPayment(profile.id, amt, reference);
         try {
             launchWalletPaystack({
-                email: firebaseUser.email, amountNaira: amt, publicKey: cfg.paystackPublicKey,
+                email: firebaseUser.email, amountNaira: amt, publicKey: cfg.paystackPublicKey, reference: reference,
                 metadata: { uid: profile.id, purpose: 'wallet_funding' },
                 onSuccess: async (resp) => {
                     setBusy(true);
-                    try { await recordWalletPaystackFunding(profile.id, amt, resp.reference); toast('Wallet funded!', 'success'); onClose(); }
-                    catch (e) {
-                        // Paystack already took the money at this point — the failure is only in
-                        // our own Firestore write (bad connection, rules, etc). Rather than just
-                        // showing an error and losing the reference, auto-file it as a pending
-                        // dispute so it lands in the admin queue and nothing gets lost.
-                        try {
-                            await submitWalletManualFunding(profile.id, { amountNaira: amt, method: 'paystack_dispute', reference: resp.reference, note: 'Auto-filed: wallet credit failed after successful Paystack payment (' + e.message + ')' });
-                            toast('Payment received, but crediting your wallet failed. We\u2019ve flagged it for review \u2014 ref ' + resp.reference, 'error');
-                        } catch (e2) { toast('Payment received but could not be recorded. Please use "Payment didn\u2019t reflect?" below with reference ' + resp.reference, 'error'); }
-                    }
-                    finally { setBusy(false); }
+                    try { await recordWalletPaystackFunding(profile.id, amt, resp.reference || reference); toast('Wallet funded!', 'success'); }
+                    catch (e) { toast(e.message, 'error'); }
+                    finally { clearPendingPaystackPayment(reference); setBusy(false); onClose(); }
                 },
-                onClose: () => { }
+                // User backed out without paying — nothing was charged, so drop the cached
+                // attempt too, otherwise it would look like an interrupted successful payment
+                // next time they open the site.
+                onClose: () => { clearPendingPaystackPayment(reference); }
             });
-        } catch (e) { toast(e.message, 'error'); }
+        } catch (e) { clearPendingPaystackPayment(reference); toast(e.message, 'error'); }
     };
     const onPickReceipt = (e) => {
         const file = e.target.files && e.target.files[0];
@@ -12571,52 +12612,29 @@ function FundWalletSheet({ cfg, onClose }) {
             onClose();
         } catch (e) { toast(e.message, 'error'); } finally { setBusy(false); }
     };
-    const submitDispute = async () => {
-        const amt = Number(disputeAmt);
-        if (!amt || amt < 100) { toast('Enter the amount you paid (min \u20A6100)', 'error'); return; }
-        if (!disputeRef.trim()) { toast('Enter the Paystack reference or receipt code from your payment', 'error'); return; }
-        setBusy(true);
-        try {
-            await submitWalletManualFunding(profile.id, { amountNaira: amt, method: 'paystack_dispute', reference: disputeRef.trim() });
-            toast('Reported \u2014 an admin will verify it with Paystack and credit your wallet', 'success');
-            onClose();
-        } catch (e) { toast(e.message, 'error'); } finally { setBusy(false); }
-    };
     return React.createElement("div", { className: "fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center", onClick: onClose },
         React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm max-h-[90vh] overflow-y-auto p-5", onClick: e => e.stopPropagation() },
-            !disputeOpen ? React.createElement(React.Fragment, null,
-                React.createElement("h3", { className: "font-display font-bold text-lg mb-3" }, "Fund wallet"),
-                React.createElement("div", { className: "flex gap-2 mb-4" },
-                    React.createElement("button", { onClick: () => setMethod('paystack'), className: "flex-1 py-2 rounded-lg text-xs font-semibold " + (method === 'paystack' ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, "Paystack"),
-                    React.createElement("button", { onClick: () => setMethod('manual'), className: "flex-1 py-2 rounded-lg text-xs font-semibold " + (method === 'manual' ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, "Bank transfer")),
-                React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Amount (\u20A6)"),
-                React.createElement("input", { type: "number", min: 100, value: amount, onChange: e => setAmount(e.target.value), placeholder: "e.g. 5000", className: "w-full mt-1 mb-4 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm" }),
-                method === 'paystack' ? (React.createElement("div", null,
-                    !cfg.paystackPublicKey && React.createElement("p", { className: "text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2 mb-3" }, "Payments aren't configured yet. Contact support."),
-                    React.createElement("button", { disabled: busy, onClick: payWithPaystack, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-semibold text-sm" }, busy ? 'Processing\u2026' : 'Pay with Paystack'))) :
-                    (React.createElement("div", null,
-                        (cfg.bankName || cfg.bankAccountNumber) ? React.createElement("div", { className: "bg-slate-50 dark:bg-ink-700 rounded-lg p-3 mb-3 text-sm space-y-0.5" },
-                            React.createElement("p", null, React.createElement("span", { className: "text-slate-400" }, "Bank: "), cfg.bankName),
-                            React.createElement("p", null, React.createElement("span", { className: "text-slate-400" }, "Account no: "), cfg.bankAccountNumber),
-                            React.createElement("p", null, React.createElement("span", { className: "text-slate-400" }, "Account name: "), cfg.bankAccountName)) :
-                            React.createElement("p", { className: "text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2 mb-3" }, "Bank details aren't configured yet. Contact support."),
-                        React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: onPickReceipt }),
-                        receiptPreview ? React.createElement("img", { src: receiptPreview, className: "w-full h-32 object-cover rounded-lg mb-3" }) :
-                            React.createElement("button", { onClick: () => fileRef.current.click(), className: "w-full border-2 border-dashed border-slate-200 dark:border-ink-600 rounded-lg py-6 text-xs text-slate-400 mb-3" }, React.createElement("i", { className: "fa-solid fa-camera text-lg block mb-1" }), "Upload payment receipt"),
-                        receiptPreview && React.createElement("button", { onClick: () => fileRef.current.click(), className: "text-xs font-semibold text-brand-600 mb-3" }, "Change receipt"),
-                        React.createElement("button", { disabled: busy, onClick: submitManual, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-semibold text-sm" }, busy ? 'Submitting\u2026' : 'Submit for review'))),
-                method === 'paystack' && React.createElement("button", { onClick: () => setDisputeOpen(true), className: "w-full text-center text-xs font-semibold text-amber-600 mt-3" }, "Already paid but your balance didn't update?"),
-                React.createElement("button", { onClick: onClose, className: "w-full text-center text-xs text-slate-400 mt-3" }, "Cancel"))
-                :
-                React.createElement(React.Fragment, null,
-                    React.createElement("button", { onClick: () => setDisputeOpen(false), className: "text-xs text-slate-400 mb-3" }, React.createElement("i", { className: "fa-solid fa-arrow-left mr-1" }), "Back"),
-                    React.createElement("h3", { className: "font-display font-bold text-lg mb-1" }, "Report a missing payment"),
-                    React.createElement("p", { className: "text-xs text-slate-400 mb-4" }, "If Paystack charged you but your wallet balance didn't go up, tell us the amount and the reference from your payment receipt/SMS/email. An admin will verify it with Paystack and credit you manually."),
-                    React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Amount you paid (\u20A6)"),
-                    React.createElement("input", { type: "number", min: 100, value: disputeAmt, onChange: e => setDisputeAmt(e.target.value), placeholder: "e.g. 5000", className: "w-full mt-1 mb-3 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm" }),
-                    React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Paystack reference / receipt number"),
-                    React.createElement("input", { value: disputeRef, onChange: e => setDisputeRef(e.target.value), placeholder: "e.g. T123456789.0", className: "w-full mt-1 mb-4 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm font-mono" }),
-                    React.createElement("button", { disabled: busy, onClick: submitDispute, className: "w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl py-3 font-semibold text-sm" }, busy ? 'Submitting\u2026' : 'Submit report'))));
+            React.createElement("h3", { className: "font-display font-bold text-lg mb-3" }, "Fund wallet"),
+            React.createElement("div", { className: "flex gap-2 mb-4" },
+                React.createElement("button", { onClick: () => setMethod('paystack'), className: "flex-1 py-2 rounded-lg text-xs font-semibold " + (method === 'paystack' ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, "Paystack"),
+                React.createElement("button", { onClick: () => setMethod('manual'), className: "flex-1 py-2 rounded-lg text-xs font-semibold " + (method === 'manual' ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, "Bank transfer")),
+            React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Amount (\u20A6)"),
+            React.createElement("input", { type: "number", min: 100, value: amount, onChange: e => setAmount(e.target.value), placeholder: "e.g. 5000", className: "w-full mt-1 mb-4 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm" }),
+            method === 'paystack' ? (React.createElement("div", null,
+                !cfg.paystackPublicKey && React.createElement("p", { className: "text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2 mb-3" }, "Payments aren't configured yet. Contact support."),
+                React.createElement("button", { disabled: busy, onClick: payWithPaystack, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-semibold text-sm" }, busy ? 'Processing\u2026' : 'Pay with Paystack'))) :
+                (React.createElement("div", null,
+                    (cfg.bankName || cfg.bankAccountNumber) ? React.createElement("div", { className: "bg-slate-50 dark:bg-ink-700 rounded-lg p-3 mb-3 text-sm space-y-0.5" },
+                        React.createElement("p", null, React.createElement("span", { className: "text-slate-400" }, "Bank: "), cfg.bankName),
+                        React.createElement("p", null, React.createElement("span", { className: "text-slate-400" }, "Account no: "), cfg.bankAccountNumber),
+                        React.createElement("p", null, React.createElement("span", { className: "text-slate-400" }, "Account name: "), cfg.bankAccountName)) :
+                        React.createElement("p", { className: "text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2 mb-3" }, "Bank details aren't configured yet. Contact support."),
+                    React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: onPickReceipt }),
+                    receiptPreview ? React.createElement("img", { src: receiptPreview, className: "w-full h-32 object-cover rounded-lg mb-3" }) :
+                        React.createElement("button", { onClick: () => fileRef.current.click(), className: "w-full border-2 border-dashed border-slate-200 dark:border-ink-600 rounded-lg py-6 text-xs text-slate-400 mb-3" }, React.createElement("i", { className: "fa-solid fa-camera text-lg block mb-1" }), "Upload payment receipt"),
+                    receiptPreview && React.createElement("button", { onClick: () => fileRef.current.click(), className: "text-xs font-semibold text-brand-600 mb-3" }, "Change receipt"),
+                    React.createElement("button", { disabled: busy, onClick: submitManual, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-semibold text-sm" }, busy ? 'Submitting\u2026' : 'Submit for review'))),
+            React.createElement("button", { onClick: onClose, className: "w-full text-center text-xs text-slate-400 mt-3" }, "Cancel")));
 }
 
 function AdCentreScreen({ go }) {
@@ -12885,20 +12903,13 @@ function AdminWalletPanel({ adminUid, adminEmail }) {
         subtab === 'manual' && React.createElement("div", null,
             React.createElement("div", { className: "flex gap-2 mb-3" }, ['pending', 'approved', 'rejected', 'all'].map(f => React.createElement("button", { key: f, onClick: () => setFilter(f), className: "px-3 py-1 rounded-full text-xs font-semibold " + (filter === f ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, f))),
             fundings.length === 0 && React.createElement("p", { className: "text-sm text-slate-400" }, "No manual fundings in this filter."),
-            fundings.map(row => React.createElement("div", { key: row.id, className: "bg-white dark:bg-ink-800 border " + (row.method === 'paystack_dispute' ? "border-amber-300 dark:border-amber-700" : "border-slate-100 dark:border-ink-700") + " rounded-xl p-3 mb-2" },
+            fundings.map(row => React.createElement("div", { key: row.id, className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-3 mb-2" },
                 React.createElement("div", { className: "flex items-center justify-between mb-2" },
                     React.createElement("div", null,
                         React.createElement("p", { className: "font-semibold text-sm" }, formatNaira(row.amount)),
                         React.createElement("p", { className: "text-xs text-slate-400" }, row.uid)),
-                    React.createElement("div", { className: "flex flex-col items-end gap-1" },
-                        row.method === 'paystack_dispute' && React.createElement("span", { className: "text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" }, "Paystack not credited"),
-                        React.createElement("span", { className: "text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-ink-700 shrink-0" }, row.status))),
-                row.method === 'paystack_dispute' ?
-                    React.createElement("div", { className: "bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2.5 mb-2 text-xs" },
-                        React.createElement("p", { className: "text-slate-500 dark:text-slate-400 mb-1" }, "Verify this reference in the Paystack dashboard before approving \u2014 it wasn't confirmed automatically."),
-                        React.createElement("p", { className: "font-mono font-semibold" }, "Ref: ", row.reference || '\u2014'),
-                        row.note && React.createElement("p", { className: "text-slate-400 mt-1" }, row.note)) :
-                    row.receiptURL && React.createElement("img", { src: row.receiptURL, onClick: () => openLightbox([row.receiptURL], 0), className: "w-28 h-20 object-cover rounded-lg cursor-zoom-in mb-2" }),
+                    React.createElement("span", { className: "text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-ink-700 shrink-0" }, row.status)),
+                row.receiptURL && React.createElement("img", { src: row.receiptURL, onClick: () => openLightbox([row.receiptURL], 0), className: "w-28 h-20 object-cover rounded-lg cursor-zoom-in mb-2" }),
                 row.rejectionReason && React.createElement("p", { className: "text-xs text-red-500 mb-2" }, "Rejected: ", row.rejectionReason),
                 row.status === 'pending' && React.createElement("div", { className: "flex gap-2" },
                     React.createElement("button", { onClick: () => approve(row), className: "flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-1.5 text-xs font-semibold" }, "Approve"),
