@@ -2946,8 +2946,7 @@ function App() {
             React.createElement(PagesContext.Provider, { value: pagesValue },
                 React.createElement(AuthContext.Provider, { value: authValue }, !firebaseUser ? (React.createElement(AuthScreen, null)) : !profile ? (React.createElement(SplashScreen, null)) : !profile.username ? (React.createElement(OnboardingScreen, null)) : profile.suspended ? (React.createElement(SuspendedScreen, null)) : (saSession && firebaseUser.uid === SUPER_ADMIN_UID && profile.isAdmin) ? (React.createElement(SuperAdminApp, { theme: theme, setTheme: setTheme })) : (React.createElement(MainApp, { route: route, setRoute: setRoute }))),
                 pageKey && React.createElement(StaticPageOverlay, { pageKey: pageKey, onClose: () => setPageKey(null) }),
-                React.createElement(ImageLightbox, null),
-                firebaseUser && React.createElement(WalletPendingPaystackResolver, null)))));
+                React.createElement(ImageLightbox, null)))));
 }
 function SplashScreen() {
     return (React.createElement("div", { className: "h-screen flex items-center justify-center bg-white dark:bg-ink-900" },
@@ -12188,58 +12187,14 @@ async function debitWallet(uid, amount, type, extra) {
 async function recordWalletPaystackFunding(uid, amountNaira, reference) {
     await creditWallet(uid, amountNaira, 'fund_paystack', { reference, description: 'Wallet funded via Paystack' });
 }
-function launchWalletPaystack({ email, amountNaira, publicKey, metadata, reference, onSuccess, onClose }) {
+function launchWalletPaystack({ email, amountNaira, publicKey, metadata, onSuccess, onClose }) {
     if (typeof PaystackPop === 'undefined') { throw new Error('Payment service failed to load. Check your connection and try again.'); }
     if (!publicKey) { throw new Error('Payments are not configured yet. Please contact support.'); }
     const handler = PaystackPop.setup({
         key: publicKey, email: email, amount: Math.round(Number(amountNaira || 0) * 100), currency: 'NGN',
-        ref: reference, metadata: metadata || {}, callback: function (response) { onSuccess(response); }, onClose: function () { onClose && onClose(); }
+        metadata: metadata || {}, callback: function (response) { onSuccess(response); }, onClose: function () { onClose && onClose(); }
     });
     handler.openIframe();
-}
-/* ---- Auto-credit on return: if the app gets closed/backgrounded right after the person pays
-   (e.g. they leave to approve the payment in their bank app and don't come back to this tab),
-   Paystack's own success callback never fires and the wallet is never credited. To fix that,
-   every Paystack attempt is logged here BEFORE the popup opens (uid + exact amount + reference).
-   The next time this person opens the site, checkWalletPendingPaystack() looks for any of their
-   own unresolved attempts and credits the wallet for that amount automatically — no admin step,
-   no typing a reference in. Once resolved, the record is marked so it can never be credited twice. */
-async function logWalletPendingPaystack(uid, reference, amountNaira) {
-    await db.collection('walletPendingPaystack').doc(reference).set({
-        uid, reference, amount: amountNaira, status: 'pending', createdAt: FieldValue.serverTimestamp()
-    });
-}
-async function resolveWalletPendingPaystack(reference, status) {
-    await db.collection('walletPendingPaystack').doc(reference).set({ status: status || 'credited', resolvedAt: FieldValue.serverTimestamp() }, { merge: true });
-}
-async function checkWalletPendingPaystack(uid) {
-    const snap = await db.collection('walletPendingPaystack').where('uid', '==', uid).where('status', '==', 'pending').get();
-    return snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
-}
-/* Mounted once near the app root (inside AuthContext) so it fires on every visit, not just when
-   the Wallet screen happens to be open. Silent unless it actually finds and credits something. */
-function WalletPendingPaystackResolver() {
-    const { profile } = useAuth();
-    const toast = useToast();
-    useEffect(() => {
-        if (!(profile && profile.id)) return;
-        let cancelled = false;
-        (async () => {
-            try {
-                const pending = await checkWalletPendingPaystack(profile.id);
-                for (const p of pending) {
-                    if (cancelled) return;
-                    try {
-                        await recordWalletPaystackFunding(profile.id, p.amount, p.reference);
-                        await resolveWalletPendingPaystack(p.reference, 'credited');
-                        toast('\u20A6' + Number(p.amount || 0).toLocaleString() + ' wallet funding confirmed', 'success');
-                    } catch (e) { /* leave it pending \u2014 it will be retried on the next visit */ }
-                }
-            } catch (e) { /* fine, just try again next visit */ }
-        })();
-        return () => { cancelled = true; };
-    }, [profile && profile.id]);
-    return null;
 }
 function uploadWalletReceipt(uid, file, onProgress) {
     const isImage = (file.type || '').startsWith('image/');
@@ -12570,34 +12525,25 @@ function FundWalletSheet({ cfg, onClose }) {
     const [disputeRef, setDisputeRef] = useState('');
     const [disputeAmt, setDisputeAmt] = useState('');
     const fileRef = useRef();
-    const payWithPaystack = async () => {
+    const payWithPaystack = () => {
         const amt = Number(amount);
         if (!amt || amt < 100) { toast('Enter a valid amount (min \u20A6100)', 'error'); return; }
         if (!cfg.paystackPublicKey) { toast('Payments aren\u2019t configured yet. Contact support.', 'error'); return; }
-        const reference = 'WFP_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
         try {
-            // Log the attempt (exact amount + reference) BEFORE opening the popup, so that even if
-            // this tab closes mid-payment, WalletPendingPaystackResolver can pick it up and credit
-            // the wallet automatically the next time this person opens the site.
-            await logWalletPendingPaystack(profile.id, reference, amt);
             launchWalletPaystack({
-                email: firebaseUser.email, amountNaira: amt, publicKey: cfg.paystackPublicKey, reference: reference,
+                email: firebaseUser.email, amountNaira: amt, publicKey: cfg.paystackPublicKey,
                 metadata: { uid: profile.id, purpose: 'wallet_funding' },
                 onSuccess: async (resp) => {
                     setBusy(true);
-                    try {
-                        await recordWalletPaystackFunding(profile.id, amt, resp.reference);
-                        await resolveWalletPendingPaystack(reference, 'credited');
-                        toast('Wallet funded!', 'success'); onClose();
-                    }
+                    try { await recordWalletPaystackFunding(profile.id, amt, resp.reference); toast('Wallet funded!', 'success'); onClose(); }
                     catch (e) {
                         // Paystack already took the money at this point — the failure is only in
-                        // our own Firestore write (bad connection, rules, etc). The pending record
-                        // stays 'pending', so it will still self-credit the wallet automatically on
-                        // the next visit even if this also fails.
+                        // our own Firestore write (bad connection, rules, etc). Rather than just
+                        // showing an error and losing the reference, auto-file it as a pending
+                        // dispute so it lands in the admin queue and nothing gets lost.
                         try {
                             await submitWalletManualFunding(profile.id, { amountNaira: amt, method: 'paystack_dispute', reference: resp.reference, note: 'Auto-filed: wallet credit failed after successful Paystack payment (' + e.message + ')' });
-                            toast('Payment received \u2014 it\u2019ll reflect in your wallet automatically next time you open the site, or an admin will review it', 'error');
+                            toast('Payment received, but crediting your wallet failed. We\u2019ve flagged it for review \u2014 ref ' + resp.reference, 'error');
                         } catch (e2) { toast('Payment received but could not be recorded. Please use "Payment didn\u2019t reflect?" below with reference ' + resp.reference, 'error'); }
                     }
                     finally { setBusy(false); }
