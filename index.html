@@ -3504,7 +3504,7 @@ function App() {
    as a heading (sidebar, header bars, auth screen, static-page overlay). */
 function BrandWordmark({ className, size }) {
     return React.createElement("span", { className: (className || "") + " font-display font-extrabold inline-flex items-center" + (size ? " " + size : "") },
-        React.createElement("img", { src: (typeof window !== 'undefined' ? window.YELOFACE_MARK : ''), alt: "Y", className: "inline-block", style: { height: '1em', width: 'auto', marginRight: '0.02em' }, draggable: false }),
+        React.createElement("img", { src: (typeof window !== 'undefined' ? window.YELOFACE_MARK : ''), alt: "Y", className: "inline-block", style: { height: '1em', width: 'auto', marginRight: '-0.09em' }, draggable: false }),
         React.createElement("span", { style: { color: '#8B0C4F', position: 'relative', top: '0.12em' } }, "eloface"));
 }
 function SplashScreen() {
