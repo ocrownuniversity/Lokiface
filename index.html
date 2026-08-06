@@ -2989,6 +2989,370 @@ function ToastProvider({ children }) {
                 (t.type === 'error' ? 'bg-red-500' : t.type === 'success' ? 'bg-emerald-500' : 'bg-ink-800') }, t.message))))));
 }
 /* ============================== APP ROOT ============================== */
+/* ============================== VOICE & VIDEO CALLING ==============================
+   Peer-to-peer WebRTC calls, signaled entirely through Firestore — no server or Cloud
+   Function required, since only Firestore + Auth + Storage are available here.
+
+   Firestore layout used (new, does not touch any existing collection):
+     calls/{callId}                — one doc per call attempt
+       callerId, calleeId, callerName, callerPhoto, calleeName, calleePhoto,
+       type ('voice'|'video'), status ('ringing'|'accepted'|'rejected'|'busy'|'missed'|'ended'),
+       offer{type,sdp}, answer{type,sdp}, createdAt, updatedAt
+     calls/{callId}/candidates/{auto} — ICE candidates, { from: uid, candidate }
+
+   Add these Security Rules (Firestore console → Rules) so only the two participants on
+   a call can read/write it:
+
+     match /calls/{callId} {
+       allow create: if request.auth != null && request.auth.uid == request.resource.data.callerId;
+       allow read: if request.auth != null &&
+         (request.auth.uid == resource.data.callerId || request.auth.uid == resource.data.calleeId);
+       allow update: if request.auth != null &&
+         (request.auth.uid == resource.data.callerId || request.auth.uid == resource.data.calleeId);
+       match /candidates/{candidateId} {
+         allow read, create: if request.auth != null;
+       }
+     }
+
+   Optional cleanup: Firestore supports a free TTL policy (Console → Firestore →
+   TTL) on the `updatedAt` field of `calls` so old call docs auto-delete after a day —
+   no Cloud Function needed.
+
+   NAT traversal: Google's free public STUN servers, plus the free OpenRelay TURN
+   servers (openrelay.metered.ca) as a fallback for callers behind strict NATs/firewalls
+   where a direct peer-to-peer connection can't be established. OpenRelay's free tier is
+   shared publicly and rate-limited — fine to get started, but swap in your own TURN
+   credentials below (e.g. a free Metered.ca or Cloudflare Calls account) if calls start
+   failing to connect under real traffic. */
+const ICE_SERVERS = {
+    iceServers: [
+        { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
+        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    ]
+};
+const RING_TIMEOUT_MS = 45000;
+// Tiny module-level store (outside React) so any component can trigger/observe the
+// active call without needing a Context Provider wrapped around the whole app.
+const callStore = (function () {
+    let state = { call: null };
+    let listeners = [];
+    return {
+        get: () => state,
+        set: (patch) => { state = Object.assign({}, state, typeof patch === 'function' ? patch(state) : patch); listeners.forEach(l => l(state)); },
+        subscribe: (fn) => { listeners.push(fn); return () => { listeners = listeners.filter(l => l !== fn); }; }
+    };
+})();
+function useCallState() {
+    const [s, setS] = useState(callStore.get());
+    useEffect(() => callStore.subscribe(setS), []);
+    return s;
+}
+function makeRingtone(freq) {
+    let ctx = null, interval = null;
+    return {
+        start() {
+            try {
+                ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const beep = () => {
+                    if (!ctx) return;
+                    const osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.type = 'sine'; osc.frequency.value = freq || 440;
+                    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.85);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(); osc.stop(ctx.currentTime + 0.9);
+                };
+                beep();
+                interval = setInterval(beep, 1600);
+            } catch (e) { /* Web Audio unsupported/blocked — call still works, just silent */ }
+        },
+        stop() {
+            clearInterval(interval); interval = null;
+            if (ctx) { try { ctx.close(); } catch (e) { } ctx = null; }
+        }
+    };
+}
+let __ringtone = null;
+let __session = null; // { pc, localStream, callId, role, otherUid, callDocUnsub, candidatesUnsub, ringTimeout }
+function __teardownSession() {
+    if (__ringtone) { __ringtone.stop(); __ringtone = null; }
+    if (!__session) return;
+    const s = __session;
+    __session = null;
+    if (s.ringTimeout) clearTimeout(s.ringTimeout);
+    if (s.callDocUnsub) s.callDocUnsub();
+    if (s.candidatesUnsub) s.candidatesUnsub();
+    try { s.pc && s.pc.close(); } catch (e) { }
+    try { (s.localStream ? s.localStream.getTracks() : []).forEach(t => t.stop()); } catch (e) { }
+}
+function endActiveCall(reason) {
+    const s = __session;
+    if (s && s.callId) {
+        db.collection('calls').doc(s.callId).update({ status: reason || 'ended', updatedAt: FieldValue.serverTimestamp() }).catch(() => { });
+    }
+    __teardownSession();
+    callStore.set({ call: null });
+}
+function declineIncomingCall(callId) {
+    if (__ringtone) { __ringtone.stop(); __ringtone = null; }
+    const current = callStore.get().call;
+    if (current && current.incomingUnsub) current.incomingUnsub();
+    db.collection('calls').doc(callId).update({ status: 'rejected', updatedAt: FieldValue.serverTimestamp() }).catch(() => { });
+    callStore.set({ call: null });
+}
+function attachRemoteTrackHandlers(pc) {
+    const remoteStream = new MediaStream();
+    pc.ontrack = (e) => {
+        (e.streams[0] ? e.streams[0].getTracks() : [e.track]).forEach(t => { if (!remoteStream.getTracks().includes(t)) remoteStream.addTrack(t); });
+        callStore.set(s => ({ call: s.call ? Object.assign({}, s.call, { remoteStream }) : s.call }));
+    };
+    return remoteStream;
+}
+function watchConnectionState(pc) {
+    pc.onconnectionstatechange = () => {
+        const st = pc.connectionState;
+        if (st === 'connected') {
+            callStore.set(s => (s.call && s.call.status !== 'connected') ? { call: Object.assign({}, s.call, { status: 'connected', connectedAt: Date.now() }) } : s);
+        } else if (st === 'failed' || st === 'closed') {
+            if (__session) endActiveCall('ended');
+        }
+    };
+}
+async function startOutgoingCall(profile, otherUid, otherUser, type) {
+    if (__session || callStore.get().call) throw new Error('You are already on a call.');
+    if (!otherUid || otherUid === profile.id) throw new Error('Invalid call target.');
+    let localStream;
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' ? { facingMode: 'user' } : false });
+    } catch (e) {
+        throw new Error('Could not access your ' + (type === 'video' ? 'camera/microphone' : 'microphone') + '. Please allow permission and try again.');
+    }
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    const remoteStream = attachRemoteTrackHandlers(pc);
+    watchConnectionState(pc);
+    const callRef = db.collection('calls').doc();
+    pc.onicecandidate = (e) => { if (e.candidate) callRef.collection('candidates').add({ from: profile.id, candidate: e.candidate.toJSON(), createdAt: FieldValue.serverTimestamp() }).catch(() => { }); };
+    const otherPhoto = otherUser.photoURL || (otherUser.photos && otherUser.photos[0]) || null;
+    __session = { pc, localStream, callId: callRef.id, role: 'caller', otherUid };
+    callStore.set({
+        call: { id: callRef.id, role: 'caller', type, status: 'ringing', peer: { id: otherUid, name: otherUser.displayName, photo: otherPhoto }, localStream, remoteStream, muted: false, cameraOff: false }
+    });
+    try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await callRef.set({
+            callerId: profile.id, calleeId: otherUid,
+            callerName: profile.displayName || 'Someone', callerPhoto: profile.photoURL || null,
+            calleeName: otherUser.displayName || '', calleePhoto: otherPhoto,
+            type, status: 'ringing', offer: { type: offer.type, sdp: offer.sdp }, answer: null,
+            createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
+        });
+    } catch (e) {
+        __teardownSession(); callStore.set({ call: null });
+        throw new Error('Could not start the call: ' + e.message);
+    }
+    __ringtone = makeRingtone(480);
+    __ringtone.start();
+    __session.candidatesUnsub = callRef.collection('candidates').where('from', '==', otherUid).onSnapshot(snap => {
+        snap.docChanges().forEach(ch => { if (ch.type === 'added') { const d = ch.doc.data(); pc.addIceCandidate(new RTCIceCandidate(d.candidate)).catch(() => { }); } });
+    });
+    __session.callDocUnsub = callRef.onSnapshot(async (snap) => {
+        if (!snap.exists || !__session || __session.callId !== callRef.id) return;
+        const data = snap.data();
+        if (data.status === 'accepted' && data.answer && !pc.currentRemoteDescription) {
+            if (__ringtone) { __ringtone.stop(); __ringtone = null; }
+            if (__session.ringTimeout) clearTimeout(__session.ringTimeout);
+            try { await pc.setRemoteDescription(new RTCSessionDescription(data.answer)); } catch (e) { }
+            callStore.set(s => ({ call: s.call ? Object.assign({}, s.call, { status: 'connecting' }) : s.call }));
+        } else if (data.status === 'rejected' || data.status === 'busy' || data.status === 'ended' || data.status === 'missed') {
+            callStore.set({ call: null }); __teardownSession();
+        }
+    });
+    __session.ringTimeout = setTimeout(() => {
+        if (__session && __session.callId === callRef.id) {
+            callRef.update({ status: 'missed', updatedAt: FieldValue.serverTimestamp() }).catch(() => { });
+            callStore.set({ call: null }); __teardownSession();
+        }
+    }, RING_TIMEOUT_MS);
+}
+function listenForIncomingCalls(profile) {
+    return db.collection('calls').where('calleeId', '==', profile.id).where('status', '==', 'ringing')
+        .onSnapshot(snap => {
+            snap.docChanges().forEach(ch => {
+                if (ch.type !== 'added') return;
+                const data = ch.doc.data();
+                const ageMs = data.createdAt && data.createdAt.toDate ? (Date.now() - data.createdAt.toDate().getTime()) : 0;
+                if (ageMs > RING_TIMEOUT_MS) return; // stale ringing doc left over from a previous session
+                if (__session || callStore.get().call) { // already on/showing a call — auto-decline as busy
+                    db.collection('calls').doc(ch.doc.id).update({ status: 'busy', updatedAt: FieldValue.serverTimestamp() }).catch(() => { });
+                    return;
+                }
+                __ringtone = makeRingtone(392);
+                __ringtone.start();
+                const incomingUnsub = db.collection('calls').doc(ch.doc.id).onSnapshot(s2 => {
+                    if (!s2.exists) return;
+                    const d2 = s2.data();
+                    const cur = callStore.get().call;
+                    if (d2.status !== 'ringing' && cur && cur.id === ch.doc.id && cur.status === 'ringing-incoming') {
+                        if (__ringtone) { __ringtone.stop(); __ringtone = null; }
+                        callStore.set({ call: null });
+                    }
+                });
+                callStore.set({ call: { id: ch.doc.id, role: 'callee', status: 'ringing-incoming', type: data.type, peer: { id: data.callerId, name: data.callerName, photo: data.callerPhoto }, incomingUnsub } });
+            });
+        }, () => { });
+}
+async function acceptIncomingCall(profile) {
+    const current = callStore.get().call;
+    if (!current || current.role !== 'callee') return;
+    const callId = current.id;
+    if (__ringtone) { __ringtone.stop(); __ringtone = null; }
+    if (current.incomingUnsub) current.incomingUnsub();
+    const callRef = db.collection('calls').doc(callId);
+    const snap = await callRef.get();
+    if (!snap.exists || snap.data().status !== 'ringing') { callStore.set({ call: null }); throw new Error('This call is no longer available.'); }
+    const data = snap.data();
+    let localStream;
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: data.type === 'video' ? { facingMode: 'user' } : false });
+    } catch (e) {
+        await callRef.update({ status: 'rejected', updatedAt: FieldValue.serverTimestamp() });
+        callStore.set({ call: null });
+        throw new Error('Could not access your ' + (data.type === 'video' ? 'camera/microphone' : 'microphone') + '. Please allow permission and try again.');
+    }
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    const remoteStream = attachRemoteTrackHandlers(pc);
+    watchConnectionState(pc);
+    pc.onicecandidate = (e) => { if (e.candidate) callRef.collection('candidates').add({ from: profile.id, candidate: e.candidate.toJSON(), createdAt: FieldValue.serverTimestamp() }).catch(() => { }); };
+    __session = { pc, localStream, callId, role: 'callee', otherUid: data.callerId };
+    callStore.set({ call: { id: callId, role: 'callee', type: data.type, status: 'connecting', peer: { id: data.callerId, name: data.callerName, photo: data.callerPhoto }, localStream, remoteStream, muted: false, cameraOff: false } });
+    try {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await callRef.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'accepted', updatedAt: FieldValue.serverTimestamp() });
+    } catch (e) {
+        __teardownSession(); callStore.set({ call: null });
+        throw new Error('Could not connect the call: ' + e.message);
+    }
+    __session.candidatesUnsub = callRef.collection('candidates').where('from', '==', data.callerId).onSnapshot(snap2 => {
+        snap2.docChanges().forEach(ch => { if (ch.type === 'added') { const d = ch.doc.data(); pc.addIceCandidate(new RTCIceCandidate(d.candidate)).catch(() => { }); } });
+    });
+    __session.callDocUnsub = callRef.onSnapshot(s3 => {
+        if (!s3.exists || !__session) return;
+        if (s3.data().status === 'ended') { callStore.set({ call: null }); __teardownSession(); }
+    });
+}
+function toggleCallMute() {
+    if (!__session) return;
+    const track = __session.localStream.getAudioTracks()[0];
+    if (!track) return;
+    track.enabled = !track.enabled;
+    callStore.set(s => ({ call: s.call ? Object.assign({}, s.call, { muted: !track.enabled }) : s.call }));
+}
+function toggleCallCamera() {
+    if (!__session) return;
+    const track = __session.localStream.getVideoTracks()[0];
+    if (!track) return;
+    track.enabled = !track.enabled;
+    callStore.set(s => ({ call: s.call ? Object.assign({}, s.call, { cameraOff: !track.enabled }) : s.call }));
+}
+async function switchCallCamera() {
+    if (!__session) return;
+    const current = __session.localStream.getVideoTracks()[0];
+    if (!current) return;
+    const facing = (current.getSettings().facingMode === 'environment') ? 'user' : 'environment';
+    try {
+        const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
+        const newTrack = newStream.getVideoTracks()[0];
+        const sender = __session.pc.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) await sender.replaceTrack(newTrack);
+        current.stop();
+        __session.localStream.removeTrack(current);
+        __session.localStream.addTrack(newTrack);
+        callStore.set(s => ({ call: s.call ? Object.assign({}, s.call) : s.call })); // same object refs, just nudge a re-render
+    } catch (e) { /* device likely only has one camera — ignore */ }
+}
+function CallTimer({ connectedAt }) {
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
+    if (!connectedAt) return null;
+    const secs = Math.max(0, Math.floor((now - connectedAt) / 1000));
+    return React.createElement("span", null, String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0'));
+}
+function CallAvatarPhoto({ peer, size }) {
+    const src = peer.photo || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(peer.name || '?')}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+    return React.createElement("img", { src: src, className: "rounded-full object-cover bg-slate-700", style: { width: size, height: size } });
+}
+function IncomingCallModal({ call }) {
+    const toast = useToast();
+    const [busy, setBusy] = useState(false);
+    const { profile } = useAuth();
+    const accept = async () => { setBusy(true); try { await acceptIncomingCall(profile); } catch (e) { toast(e.message, 'error'); } finally { setBusy(false); } };
+    const decline = () => declineIncomingCall(call.id);
+    return React.createElement("div", { className: "fixed inset-0 z-[200] bg-ink-900/98 flex flex-col items-center justify-center text-white px-6" },
+        React.createElement("div", { className: "absolute inset-0 flex items-center justify-center" },
+            React.createElement("div", { className: "w-56 h-56 rounded-full bg-brand-500/10 animate-ping absolute" })),
+        React.createElement("div", { className: "relative z-10 flex flex-col items-center" },
+            React.createElement(CallAvatarPhoto, { peer: call.peer, size: 112 }),
+            React.createElement("p", { className: "mt-5 font-display text-xl font-bold" }, call.peer.name || 'Someone'),
+            React.createElement("p", { className: "mt-1 text-sm text-slate-300" }, "Incoming ", call.type === 'video' ? 'video call' : 'voice call', "\u2026"),
+            React.createElement("div", { className: "flex items-center gap-10 mt-12" },
+                React.createElement("button", { onClick: decline, disabled: busy, className: "w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center shadow-lg disabled:opacity-60" },
+                    React.createElement("i", { className: "fa-solid fa-phone-slash text-xl" })),
+                React.createElement("button", { onClick: accept, disabled: busy, className: "w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center shadow-lg disabled:opacity-60" },
+                    React.createElement("i", { className: (call.type === 'video' ? "fa-solid fa-video" : "fa-solid fa-phone") + " text-xl" })))));
+}
+function CallScreen({ call }) {
+    const localVideoRef = useRef(null);
+    const remoteVideoRef = useRef(null);
+    const remoteAudioRef = useRef(null);
+    useEffect(() => { if (localVideoRef.current) localVideoRef.current.srcObject = call.localStream || null; }, [call.localStream]);
+    useEffect(() => { if (remoteVideoRef.current) remoteVideoRef.current.srcObject = call.remoteStream || null; }, [call.remoteStream, call.type]);
+    useEffect(() => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = call.remoteStream || null; }, [call.remoteStream, call.type]);
+    const isVideo = call.type === 'video';
+    const statusLabel = call.status === 'connected' ? React.createElement(CallTimer, { connectedAt: call.connectedAt })
+        : call.status === 'connecting' ? 'Connecting\u2026'
+            : call.role === 'caller' ? 'Ringing\u2026' : 'Connecting\u2026';
+    return React.createElement("div", { className: "fixed inset-0 z-[200] bg-ink-900 text-white flex flex-col" },
+        isVideo && React.createElement("video", { ref: remoteVideoRef, autoPlay: true, playsInline: true, className: "absolute inset-0 w-full h-full object-cover bg-ink-900" }),
+        !isVideo && React.createElement("audio", { ref: remoteAudioRef, autoPlay: true }),
+        (!isVideo || call.status !== 'connected') && React.createElement("div", { className: "absolute inset-0 flex flex-col items-center justify-center" + (isVideo ? " bg-ink-900/60" : "") },
+            React.createElement(CallAvatarPhoto, { peer: call.peer, size: 128 }),
+            React.createElement("p", { className: "mt-5 font-display text-xl font-bold" }, call.peer.name || 'Someone'),
+            React.createElement("p", { className: "mt-1 text-sm text-slate-300" }, statusLabel)),
+        isVideo && call.status === 'connected' && React.createElement("p", { className: "absolute top-6 left-0 right-0 text-center text-sm font-semibold text-white drop-shadow" }, call.peer.name, " \u00B7 ", statusLabel),
+        isVideo && !call.cameraOff && React.createElement("video", { ref: localVideoRef, autoPlay: true, playsInline: true, muted: true, className: "absolute bottom-28 right-4 w-28 h-40 rounded-2xl object-cover border-2 border-white/20 shadow-lg bg-ink-800" }),
+        React.createElement("div", { className: "relative z-10 mt-auto pb-10 pt-6 flex items-center justify-center gap-5" },
+            React.createElement("button", { onClick: toggleCallMute, className: "w-14 h-14 rounded-full flex items-center justify-center " + (call.muted ? "bg-white text-ink-900" : "bg-white/15 hover:bg-white/25") },
+                React.createElement("i", { className: "fa-solid " + (call.muted ? "fa-microphone-slash" : "fa-microphone") })),
+            isVideo && React.createElement("button", { onClick: toggleCallCamera, className: "w-14 h-14 rounded-full flex items-center justify-center " + (call.cameraOff ? "bg-white text-ink-900" : "bg-white/15 hover:bg-white/25") },
+                React.createElement("i", { className: "fa-solid " + (call.cameraOff ? "fa-video-slash" : "fa-video") })),
+            isVideo && React.createElement("button", { onClick: switchCallCamera, className: "w-14 h-14 rounded-full flex items-center justify-center bg-white/15 hover:bg-white/25" },
+                React.createElement("i", { className: "fa-solid fa-camera-rotate" })),
+            React.createElement("button", { onClick: () => endActiveCall('ended'), className: "w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center shadow-lg" },
+                React.createElement("i", { className: "fa-solid fa-phone-slash text-xl" }))));
+}
+// Mounted once inside MainApp — listens for incoming calls addressed to the signed-in
+// user and renders the incoming-call / in-call full-screen overlays on top of everything.
+function CallOverlayHost() {
+    const { profile } = useAuth();
+    const { call } = useCallState();
+    useEffect(() => {
+        if (!(profile && profile.id)) return;
+        const unsub = listenForIncomingCalls(profile);
+        return () => { unsub && unsub(); if (__session) endActiveCall('ended'); };
+    }, [profile && profile.id]);
+    if (!call) return null;
+    if (call.role === 'callee' && call.status === 'ringing-incoming') return React.createElement(IncomingCallModal, { call: call });
+    return React.createElement(CallScreen, { call: call });
+}
+
 function App() {
     const [firebaseUser, setFirebaseUser] = useState(undefined); // undefined = loading
     const [profile, setProfile] = useState(null);
@@ -2998,7 +3362,68 @@ function App() {
     // Admin access: same login as everyone else. If the signed-in UID matches
     // SUPER_ADMIN_UID, the effect below grants/keeps the admin flag automatically.
     const [saSession, setSaSession] = useState(sessionStorage.getItem(SUPER_ADMIN_SESSION_KEY) === '1');
-    const pagesValue = useMemo(() => ({ openPage: setPageKey, closePage: () => setPageKey(null) }), []);
+
+    /* -------- Browser history integration --------
+       This app is a single HTML file that swaps "screens" by changing React state
+       (route / pageKey) rather than by loading new URLs, so by default the browser's
+       history stack only ever has one entry and pressing Back takes you straight out
+       of the site. To make Back move between in-app screens instead, every navigation
+       pushes a history entry carrying the screen it should show, and popstate (fired
+       on Back/Forward) restores that screen from history instead of leaving the page. */
+    const isPoppingRef = useRef(false);
+    const routeRef = useRef(route);
+    routeRef.current = route;
+    const pushHistoryState = (nextRoute, nextPageKey) => {
+        const state = { __lf: true, route: nextRoute, pageKey: nextPageKey || null };
+        const slug = nextPageKey ? 'page/' + nextPageKey : ((nextRoute && nextRoute.name) || 'home') + (nextRoute && nextRoute.uid ? '/' + nextRoute.uid : '');
+        window.history.pushState(state, '', '#/' + slug);
+    };
+    const navigateRoute = (r) => {
+        setRoute(r);
+        setPageKey(null);
+        if (!isPoppingRef.current) pushHistoryState(r, null);
+    };
+    const openPage = (key) => {
+        setPageKey(key);
+        if (!isPoppingRef.current) pushHistoryState(routeRef.current, key);
+    };
+    const closePage = () => {
+        // Closing via the X / Escape should feel like "going back" so the history
+        // stack stays balanced with what pressing the real Back button does.
+        const st = window.history.state;
+        if (st && st.__lf && st.pageKey) {
+            window.history.back();
+        } else {
+            setPageKey(null);
+        }
+    };
+    useEffect(() => {
+        const st = window.history.state;
+        if (st && st.__lf) {
+            // Reload on a deep link (e.g. user refreshed mid-navigation): restore it.
+            setRoute(st.route || { name: 'home' });
+            setPageKey(st.pageKey || null);
+        } else {
+            // First load: establish a baseline entry so the very first Back press has
+            // somewhere in-app to go rather than exiting the site immediately.
+            window.history.replaceState({ __lf: true, route: { name: 'home' }, pageKey: null }, '', location.pathname + location.search);
+        }
+        const onPopState = (e) => {
+            const st = e.state;
+            isPoppingRef.current = true;
+            if (st && st.__lf) {
+                setRoute(st.route || { name: 'home' });
+                setPageKey(st.pageKey || null);
+            } else {
+                setRoute({ name: 'home' });
+                setPageKey(null);
+            }
+            setTimeout(() => { isPoppingRef.current = false; }, 0);
+        };
+        window.addEventListener('popstate', onPopState);
+        return () => window.removeEventListener('popstate', onPopState);
+    }, []);
+    const pagesValue = useMemo(() => ({ openPage, closePage }), []);
     useEffect(() => {
         document.documentElement.classList.toggle('dark', theme === 'dark');
         localStorage.setItem('zlove-theme', theme);
@@ -3056,8 +3481,8 @@ function App() {
     return (React.createElement(ThemeContext.Provider, { value: { theme, setTheme } },
         React.createElement(ToastProvider, null,
             React.createElement(PagesContext.Provider, { value: pagesValue },
-                React.createElement(AuthContext.Provider, { value: authValue }, !firebaseUser ? (React.createElement(AuthScreen, null)) : !profile ? (React.createElement(SplashScreen, null)) : !profile.username ? (React.createElement(OnboardingScreen, null)) : profile.suspended ? (React.createElement(SuspendedScreen, null)) : (saSession && firebaseUser.uid === SUPER_ADMIN_UID && profile.isAdmin) ? (React.createElement(SuperAdminApp, { theme: theme, setTheme: setTheme })) : (React.createElement(MainApp, { route: route, setRoute: setRoute }))),
-                pageKey && React.createElement(StaticPageOverlay, { pageKey: pageKey, onClose: () => setPageKey(null) }),
+                React.createElement(AuthContext.Provider, { value: authValue }, !firebaseUser ? (React.createElement(AuthScreen, null)) : !profile ? (React.createElement(SplashScreen, null)) : !profile.username ? (React.createElement(OnboardingScreen, null)) : profile.suspended ? (React.createElement(SuspendedScreen, null)) : (saSession && firebaseUser.uid === SUPER_ADMIN_UID && profile.isAdmin) ? (React.createElement(SuperAdminApp, { theme: theme, setTheme: setTheme })) : (React.createElement(MainApp, { route: route, setRoute: navigateRoute }))),
+                pageKey && React.createElement(StaticPageOverlay, { pageKey: pageKey, onClose: closePage }),
                 React.createElement(ImageLightbox, null)))));
 }
 function SplashScreen() {
@@ -3424,6 +3849,7 @@ function MainApp({ route, setRoute }) {
     // through visible navigation, per the "not discoverable by regular users" requirement.
     const go = (r) => { setRoute(r); };
     return (React.createElement("div", { className: "min-h-screen flex" },
+        React.createElement(CallOverlayHost, null),
         React.createElement("aside", { className: "hidden md:flex flex-col w-64 shrink-0 border-r border-slate-100 dark:border-ink-800 px-4 py-6 sticky top-0 h-screen" },
             React.createElement("div", { className: "flex items-center gap-2 px-2 mb-8 text-brand-600 dark:text-brand-400" },
                 React.createElement("span", { className: "font-display font-extrabold text-3xl" }, "Lokiface")),
@@ -3477,6 +3903,7 @@ function MainApp({ route, setRoute }) {
                 route.name === 'chat' && React.createElement(ChatWindow, { chatId: route.chatId, otherUid: route.otherUid, pageId: route.pageId, go: go }),
                 route.name === 'notifications' && React.createElement(NotificationsScreen, { go: go }),
                 route.name === 'bookmarks' && React.createElement(BookmarksScreen, { go: go }),
+                route.name === 'memories' && React.createElement(MemoriesScreen, { go: go }),
                 route.name === 'birthdays' && React.createElement(BirthdaysScreen, { go: go }),
                 route.name === 'wallet' && React.createElement(WalletScreen, { go: go }),
                 route.name === 'referrals' && React.createElement(ReferralScreen, { go: go }),
@@ -3513,7 +3940,7 @@ const MENU_TILES = [
     { key: 'games', label: 'Games', icon: 'fa-gamepad', route: { name: 'games' } },
     { key: 'pages', label: 'Pages', icon: 'fa-flag', route: { name: 'myPages' } },
     { key: 'saved', label: 'Saved', icon: 'fa-bookmark', route: { name: 'bookmarks' } },
-    { key: 'memories', label: 'Memories', icon: 'fa-clock-rotate-left', route: null },
+    { key: 'memories', label: 'Memories', icon: 'fa-clock-rotate-left', route: { name: 'memories' } },
     { key: 'birthdays', label: 'Birthdays', icon: 'fa-gift', route: { name: 'birthdays' } },
     { key: 'events', label: 'Events', icon: 'fa-calendar-days', route: null },
     { key: 'adCentre', label: 'Ad Centre', icon: 'fa-bullhorn', route: { name: 'adCentre' } },
@@ -5587,6 +6014,49 @@ function BookmarksScreen({ go }) {
         posts === null && React.createElement(PostSkeleton, null),
         (posts === null || posts === void 0 ? void 0 : posts.length) === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "Nothing saved yet."), posts === null || posts === void 0 ? void 0 :
         posts.map(p => React.createElement(PostCard, { key: p.id, post: p, go: go }))));
+}
+/* ============================== MEMORIES ("On this day") ============================== */
+// Facebook-style "On This Day" — every post this person has ever made whose post date shares
+// today's month+day but is from a past year. Firestore can't filter on month/day directly, so
+// this pulls the person's own posts (capped, newest-first, same pattern as ProfilePhotosTab)
+// and does the day-matching client-side.
+function MemoriesScreen({ go }) {
+    const { profile } = useAuth();
+    const [posts, setPosts] = useState(undefined);
+    useEffect(() => {
+        const unsub = db.collection('posts').where('authorId', '==', profile.id).limit(500)
+            .onSnapshot(snap => {
+            const list = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(p => !p.hiddenByAdmin && !p.groupId && !p.isAd);
+            setPosts(list);
+        }, () => setPosts([]));
+        return unsub;
+    }, [profile.id]);
+    const today = new Date();
+    const memories = useMemo(() => {
+        if (!posts)
+            return [];
+        return posts
+            .filter(p => { var _a; const d = (_a = p.createdAt) === null || _a === void 0 ? void 0 : _a.toDate; if (!d)
+            return false; const dt = p.createdAt.toDate(); return dt.getMonth() === today.getMonth() && dt.getDate() === today.getDate() && dt.getFullYear() < today.getFullYear(); })
+            .sort((a, b) => b.createdAt.toDate().getFullYear() - a.createdAt.toDate().getFullYear());
+    }, [posts]);
+    return (React.createElement("div", null,
+        React.createElement("div", { className: "flex items-center gap-3 mb-4" },
+            React.createElement("button", { onClick: () => go({ name: 'menu' }) }, React.createElement("i", { className: "fa-solid fa-arrow-left" })),
+            React.createElement("div", null,
+                React.createElement("h2", { className: "font-display text-lg font-bold" }, "Memories"),
+                React.createElement("p", { className: "text-xs text-slate-400" }, today.toLocaleDateString(undefined, { month: 'long', day: 'numeric' }), " \u2014 on this day"))),
+        posts === undefined && React.createElement(PostSkeleton, null),
+        posts !== undefined && memories.length === 0 && React.createElement("div", { className: "text-center text-slate-400 py-16" },
+            React.createElement("i", { className: "fa-solid fa-clock-rotate-left text-3xl mb-3 opacity-40" }),
+            React.createElement("p", { className: "text-sm" }, "No memories from this day yet."),
+            React.createElement("p", { className: "text-xs mt-1" }, "Anything you post today will show up here on this date in future years.")),
+        memories.map(p => {
+            const years = today.getFullYear() - p.createdAt.toDate().getFullYear();
+            return React.createElement("div", { key: p.id, className: "mb-4" },
+                React.createElement("p", { className: "text-xs font-bold text-brand-600 dark:text-brand-400 mb-1.5 px-1" }, years, " year", years === 1 ? '' : 's', " ago"),
+                React.createElement(PostCard, { post: p, go: go }));
+        })));
 }
 /* ============================== BIRTHDAYS ============================== */
 function BirthdaysScreen({ go }) {
@@ -8424,6 +8894,11 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
         catch (e) { toast('Could not delete message', 'error'); }
     };
     const copyText = (m) => { var _a; (_a = navigator.clipboard) === null || _a === void 0 ? void 0 : _a.writeText(m.text || ''); toast('Copied', 'success'); };
+    const initiateCall = async (type) => {
+        if (blocked) { toast("You can't call this user.", 'error'); return; }
+        try { await startOutgoingCall(profile, otherUid, otherUser, type); }
+        catch (e) { toast(e.message, 'error'); }
+    };
     const react = async (m, emoji) => {
         var _a;
         const key = 'reactions.' + profile.id;
@@ -8448,9 +8923,9 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
             React.createElement("div", { className: "flex-1 min-w-0 cursor-pointer", onClick: () => go(identityRoute) },
                 React.createElement("p", { className: "font-semibold text-sm truncate" }, displayIdentity.displayName),
                 React.createElement("p", { className: "text-xs text-slate-400 truncate" }, pageId ? "Page \u00B7 messages are received by the Page owner" : (((_a = chatDoc === null || chatDoc === void 0 ? void 0 : chatDoc.typing) === null || _a === void 0 ? void 0 : _a[otherUid]) ? React.createElement("span", { className: "text-[#0d9488]" }, "typing\u2026") : lastSeenLabel(otherUser)))),
-            !pageId && React.createElement("button", { className: "text-[#0d9488] w-9 h-9 rounded-full hover:bg-[#0d9488]/10 flex items-center justify-center" },
+            !pageId && React.createElement("button", { onClick: () => initiateCall('voice'), title: "Voice call", className: "text-[#0d9488] w-9 h-9 rounded-full hover:bg-[#0d9488]/10 flex items-center justify-center" },
                 React.createElement("i", { className: "fa-solid fa-phone" })),
-            !pageId && React.createElement("button", { className: "text-[#0d9488] w-9 h-9 rounded-full hover:bg-[#0d9488]/10 flex items-center justify-center" },
+            !pageId && React.createElement("button", { onClick: () => initiateCall('video'), title: "Video call", className: "text-[#0d9488] w-9 h-9 rounded-full hover:bg-[#0d9488]/10 flex items-center justify-center" },
                 React.createElement("i", { className: "fa-solid fa-video" })),
             !pageId && React.createElement("div", { className: "relative shrink-0" },
                 React.createElement("button", { onClick: () => setSettingsOpen(a => !a), className: "text-[#0d9488] w-9 h-9 rounded-full hover:bg-[#0d9488]/10 flex items-center justify-center" },
@@ -12133,11 +12608,10 @@ function DatingChatScreen({ matchId, go }) {
         }
     };
     const block = async () => { if (!confirm('Block this person? You will no longer see each other.')) return; await blockDatingUser(profile.id, other.id); toast('Blocked', 'success'); go({ name: 'dating' }); };
-    const startCall = (type) => {
+    const startCall = async (type) => {
         if (!canStartDatingCall(myDp)) { setCallGateType(type); return; }
-        // Calling itself isn't implemented in this file — wire this up to your calling
-        // provider (e.g. Agora, Twilio Video, Daily) once you have one configured.
-        toast((type === 'video' ? 'Video' : 'Voice') + ' call starting with ' + other.displayName + '\u2026', 'success');
+        try { await startOutgoingCall(profile, other.id, other, type); }
+        catch (e) { toast(e.message, 'error'); }
     };
     if (match === undefined || other === undefined) return React.createElement("div", { className: "py-16 flex justify-center" }, React.createElement("div", { className: "w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" }));
     if (!match || !other) return React.createElement("p", { className: "text-center text-slate-400 py-16" }, "This match is no longer available.");
@@ -12427,6 +12901,37 @@ async function recordWalletPaystackFunding(uid, amountNaira, reference) {
     if (!existing.empty) return;
     await creditWallet(uid, amountNaira, 'fund_paystack', { reference, description: 'Wallet funded via Paystack' });
 }
+// A pay-by-transfer/USSD/mobile-money "success" from Paystack's inline widget only means the
+// *customer said* they paid (or Paystack's client SDK optimistically resolved) — unlike a card
+// charge, which is genuinely captured synchronously with 3DS/OTP, those channels are settled
+// asynchronously and can report success before the money has actually moved. Since this app has
+// no server to call Paystack's real verify-by-secret-key endpoint, anything that isn't a card
+// payment gets held here for an admin to manually confirm in the Paystack dashboard before the
+// wallet is touched — this is what closes the "picked Transfer, never paid, got credited anyway"
+// gap instead of trusting the browser's word for it.
+async function flagPaystackForReview(uid, amountNaira, reference, channel) {
+    await db.collection('walletPaystackPending').add({
+        uid, amount: amountNaira, reference, channel: channel || 'unknown', status: 'pending', createdAt: FieldValue.serverTimestamp()
+    });
+}
+function useWalletPaystackPending(filter) {
+    const [rows, setRows] = useState([]);
+    useEffect(() => {
+        let q = db.collection('walletPaystackPending').orderBy('createdAt', 'desc').limit(300);
+        if (filter && filter !== 'all')
+            q = db.collection('walletPaystackPending').where('status', '==', filter).limit(300);
+        const unsub = q.onSnapshot(snap => setRows(snap.docs.map(d => (Object.assign({ id: d.id }, d.data())))), () => setRows([]));
+        return unsub;
+    }, [filter]);
+    return rows;
+}
+async function adminApprovePaystackPending(row, adminUid, adminEmail) {
+    await recordWalletPaystackFunding(row.uid, row.amount, row.reference);
+    await db.collection('walletPaystackPending').doc(row.id).update({ status: 'approved', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: adminUid, reviewedByEmail: adminEmail || null });
+}
+async function adminRejectPaystackPending(row, reason, adminUid, adminEmail) {
+    await db.collection('walletPaystackPending').doc(row.id).update({ status: 'rejected', rejectionReason: reason || '', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: adminUid, reviewedByEmail: adminEmail || null });
+}
 function launchWalletPaystack({ email, amountNaira, publicKey, metadata, reference, onSuccess, onClose }) {
     if (typeof PaystackPop === 'undefined') { throw new Error('Payment service failed to load. Check your connection and try again.'); }
     if (!publicKey) { throw new Error('Payments are not configured yet. Please contact support.'); }
@@ -12442,14 +12947,14 @@ function launchWalletPaystack({ email, amountNaira, publicKey, metadata, referen
 // loses connection between the charge going through and that callback firing, the wallet never
 // gets credited even though the card was charged. To recover from that without needing a backend:
 // 1. Before opening the Paystack popup, we save {uid, amount, reference} to localStorage.
-// 2. If the success callback runs normally, we credit the wallet and clear the cache entry.
+// 2. If the success callback runs normally, we credit/flag it (see onSuccess below) and clear
+//    the cache entry.
 // 3. If the user cancels (Paystack's onClose fires without a charge), we clear the cache entry
 //    too — nothing was paid.
 // 4. If neither fires (interrupted), the entry just sits in localStorage on that device. Next
 //    time this person opens the site *on the same phone*, reconcilePendingPaystackPayments()
-//    finds it and credits the wallet then — no verification with Paystack is possible without a
-//    server, so this trusts that a payment attempt which was never cancelled or completed by our
-//    own JS did in fact go through, same trust model the rest of this client-only app already uses.
+//    finds it — since we don't know what channel an interrupted attempt used (or whether it
+//    really completed), it's always routed to admin review rather than auto-credited.
 const PENDING_PAYSTACK_KEY = 'lokiface_pending_paystack';
 function getPendingPaystackPayments() {
     try { return JSON.parse(localStorage.getItem(PENDING_PAYSTACK_KEY) || '[]'); }
@@ -12470,7 +12975,7 @@ async function reconcilePendingPaystackPayments(uid) {
     if (!mine.length) return;
     const stillOthers = all.filter(p => p.uid !== uid);
     for (const p of mine) {
-        try { await recordWalletPaystackFunding(p.uid, p.amount, p.reference); }
+        try { await flagPaystackForReview(p.uid, p.amount, p.reference, 'unknown (interrupted before we saw the result)'); }
         catch (e) { /* leave it cached, we'll retry next visit */ stillOthers.push(p); continue; }
     }
     localStorage.setItem(PENDING_PAYSTACK_KEY, JSON.stringify(stillOthers));
@@ -12809,7 +13314,24 @@ function FundWalletSheet({ cfg, onClose }) {
                 metadata: { uid: profile.id, purpose: 'wallet_funding' },
                 onSuccess: async (resp) => {
                     setBusy(true);
-                    try { await recordWalletPaystackFunding(profile.id, amt, resp.reference || reference); toast('Wallet funded!', 'success'); }
+                    // Only a card payment is genuinely confirmed synchronously (3DS/OTP completes
+                    // before Paystack calls this back) — that's why picking "Transfer" (or USSD,
+                    // mobile money, etc.) and never actually paying was still crediting the
+                    // wallet: those channels can report back before real money has moved, and
+                    // there's no server here to verify against Paystack's secret-key API. So only
+                    // 'card' gets credited instantly; everything else is held for an admin to
+                    // confirm against the Paystack dashboard first.
+                    const isCard = resp && resp.channel === 'card' && resp.status === 'success';
+                    try {
+                        if (isCard) {
+                            await recordWalletPaystackFunding(profile.id, amt, resp.reference || reference);
+                            toast('Wallet funded!', 'success');
+                        }
+                        else {
+                            await flagPaystackForReview(profile.id, amt, resp.reference || reference, (resp && resp.channel) || 'unknown');
+                            toast('Payment received \u2014 we\u2019re confirming it with Paystack. Your wallet updates once verified, usually within a few minutes.', 'success');
+                        }
+                    }
                     catch (e) { toast(e.message, 'error'); }
                     finally { clearPendingPaystackPayment(reference); setBusy(false); onClose(); }
                 },
@@ -13118,15 +13640,37 @@ function AdminWalletPanel({ adminUid, adminEmail }) {
     const [subtab, setSubtab] = useState('manual');
     const [filter, setFilter] = useState('pending');
     const fundings = useWalletManualFundings(filter);
+    // Separate queue from manual fundings above — these are Paystack payments (Transfer, USSD,
+    // mobile money…) that need a human to confirm against the Paystack dashboard before the
+    // wallet is credited, since only card payments are trusted to auto-credit. See
+    // flagPaystackForReview().
+    const [pfFilter, setPfFilter] = useState('pending');
+    const pending = useWalletPaystackPending(pfFilter);
     const cfg = useWalletConfig();
     const [cfgForm, setCfgForm] = useState(null);
     useEffect(() => { if (subtab === 'settings') setCfgForm(cfg); }, [subtab]);
     const approve = async (row) => { try { await adminApproveWalletManualFunding(row, adminUid, adminEmail); toast('Approved \u2014 wallet credited', 'success'); } catch (e) { toast(e.message, 'error'); } };
     const reject = async (row) => { const reason = prompt('Reason for rejection:'); if (reason === null) return; try { await adminRejectWalletManualFunding(row, reason, adminUid, adminEmail); toast('Rejected', 'success'); } catch (e) { toast(e.message, 'error'); } };
+    const approvePf = async (row) => { try { await adminApprovePaystackPending(row, adminUid, adminEmail); toast('Confirmed \u2014 wallet credited', 'success'); } catch (e) { toast(e.message, 'error'); } };
+    const rejectPf = async (row) => { const reason = prompt('Reason (e.g. "no matching payment in Paystack dashboard"):'); if (reason === null) return; try { await adminRejectPaystackPending(row, reason, adminUid, adminEmail); toast('Rejected', 'success'); } catch (e) { toast(e.message, 'error'); } };
     const saveCfg = async () => { try { await saveWalletConfig(cfgForm); toast('Wallet settings saved', 'success'); } catch (e) { toast(e.message, 'error'); } };
     return React.createElement("div", null,
         React.createElement("h2", { className: "font-display text-lg font-bold mb-3 flex items-center gap-2" }, React.createElement("i", { className: "fa-solid fa-wallet text-brand-600" }), "Wallet"),
-        React.createElement("div", { className: "flex gap-2 mb-4" }, [['manual', 'Manual fundings'], ['settings', 'Settings']].map(([k, l]) => React.createElement("button", { key: k, onClick: () => setSubtab(k), className: "px-3 py-1.5 rounded-full text-xs font-semibold " + (subtab === k ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, l))),
+        React.createElement("div", { className: "flex gap-2 mb-4 flex-wrap" }, [['manual', 'Manual fundings'], ['paystack', 'Paystack to verify' + (pending.filter(r => r.status === 'pending').length && pfFilter === 'pending' ? ' (' + pending.length + ')' : '')], ['settings', 'Settings']].map(([k, l]) => React.createElement("button", { key: k, onClick: () => setSubtab(k), className: "px-3 py-1.5 rounded-full text-xs font-semibold " + (subtab === k ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, l))),
+        subtab === 'paystack' && React.createElement("div", null,
+            React.createElement("p", { className: "text-xs text-slate-400 mb-3" }, "Card payments credit instantly. Transfer/USSD/mobile-money payments land here first \u2014 check the reference against your Paystack dashboard before approving."),
+            React.createElement("div", { className: "flex gap-2 mb-3" }, ['pending', 'approved', 'rejected', 'all'].map(f => React.createElement("button", { key: f, onClick: () => setPfFilter(f), className: "px-3 py-1 rounded-full text-xs font-semibold " + (pfFilter === f ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, f))),
+            pending.length === 0 && React.createElement("p", { className: "text-sm text-slate-400" }, "Nothing in this filter."),
+            pending.map(row => React.createElement("div", { key: row.id, className: "bg-white dark:bg-ink-800 border border-amber-200 dark:border-amber-800 rounded-xl p-3 mb-2" },
+                React.createElement("div", { className: "flex items-center justify-between mb-1" },
+                    React.createElement("p", { className: "font-semibold text-sm" }, formatNaira(row.amount)),
+                    React.createElement("span", { className: "text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-ink-700 shrink-0" }, row.status)),
+                React.createElement("p", { className: "text-xs text-slate-400 mb-1" }, row.uid),
+                React.createElement("p", { className: "text-xs font-mono bg-slate-50 dark:bg-ink-700 rounded-lg px-2 py-1 mb-2" }, "Ref: ", row.reference || '\u2014', " \u00b7 ", row.channel),
+                row.rejectionReason && React.createElement("p", { className: "text-xs text-red-500 mb-2" }, "Rejected: ", row.rejectionReason),
+                row.status === 'pending' && React.createElement("div", { className: "flex gap-2" },
+                    React.createElement("button", { onClick: () => approvePf(row), className: "flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-1.5 text-xs font-semibold" }, "Confirmed \u2014 credit"),
+                    React.createElement("button", { onClick: () => rejectPf(row), className: "flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-1.5 text-xs font-semibold" }, "Reject"))))),
         subtab === 'manual' && React.createElement("div", null,
             React.createElement("div", { className: "flex gap-2 mb-3" }, ['pending', 'approved', 'rejected', 'all'].map(f => React.createElement("button", { key: f, onClick: () => setFilter(f), className: "px-3 py-1 rounded-full text-xs font-semibold " + (filter === f ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, f))),
             fundings.length === 0 && React.createElement("p", { className: "text-sm text-slate-400" }, "No manual fundings in this filter."),
