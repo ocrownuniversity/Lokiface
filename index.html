@@ -151,49 +151,10 @@ const firebaseConfig = {
     messagingSenderId: "1049200851049",
     appId: "1:1049200851049:web:1d1e8a63812f83f9828af8"
 };
-/* ---- Multi-account support ----
-   Each account you add gets its own named Firebase App instance (Auth+Firestore+Storage are
-   bundled per-app), so more than one account can stay signed in on this device at once —
-   like the Facebook/Gmail account switcher. Whichever account is "active" in localStorage is
-   the one this tab's global `auth` / `db` / `storage` are bound to below; switching accounts
-   just re-points those and reloads the page. */
-const ZLOVE_ACCOUNTS_KEY = 'zlove_linked_accounts';
-const ZLOVE_ACTIVE_ACCOUNT_KEY = 'zlove_active_account_app';
-function zloveGetLinkedAccounts() {
-    try { return JSON.parse(localStorage.getItem(ZLOVE_ACCOUNTS_KEY) || '[]'); } catch (e) { return []; }
-}
-function zloveSaveLinkedAccounts(list) { localStorage.setItem(ZLOVE_ACCOUNTS_KEY, JSON.stringify(list)); }
-function zloveUpsertLinkedAccount(entry) {
-    const list = zloveGetLinkedAccounts();
-    const idx = list.findIndex(a => a.uid === entry.uid);
-    if (idx >= 0) list[idx] = Object.assign({}, list[idx], entry);
-    else list.push(entry);
-    zloveSaveLinkedAccounts(list);
-}
-function zloveRemoveLinkedAccount(uid) {
-    zloveSaveLinkedAccounts(zloveGetLinkedAccounts().filter(a => a.uid !== uid));
-}
-function zloveGetActiveAppName() { return localStorage.getItem(ZLOVE_ACTIVE_ACCOUNT_KEY) || '[DEFAULT]'; }
-function zloveSetActiveAppName(name) { localStorage.setItem(ZLOVE_ACTIVE_ACCOUNT_KEY, name); }
-function zloveGetOrCreateApp(appName) {
-    const existing = firebase.apps.find(a => a.name === appName);
-    if (existing) return existing;
-    return appName === '[DEFAULT]' ? firebase.initializeApp(firebaseConfig) : firebase.initializeApp(firebaseConfig, appName);
-}
-// A fresh, never-before-used app instance for signing in to an account that isn't linked yet
-// (so it can't disturb whichever account is currently active).
-function zloveCreateNewAppSlot() {
-    let n = 1;
-    const used = new Set(firebase.apps.map(a => a.name));
-    while (used.has('acct' + n)) n++;
-    const name = 'acct' + n;
-    return { name: name, app: firebase.initializeApp(firebaseConfig, name) };
-}
-const ZLOVE_ACTIVE_APP_NAME = zloveGetActiveAppName();
-const ZLOVE_ACTIVE_APP = zloveGetOrCreateApp(ZLOVE_ACTIVE_APP_NAME);
-const auth = ZLOVE_ACTIVE_APP.auth();
-const db = ZLOVE_ACTIVE_APP.firestore();
-const storage = ZLOVE_ACTIVE_APP.storage();
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
 const FieldValue = firebase.firestore.FieldValue;
 // Referral capture: if the visitor arrived via someone's referral link (?ref=CODE), stash the
 // code in localStorage (survives across pages/sessions until they sign up) and strip it from
@@ -3542,18 +3503,6 @@ function App() {
         });
         return unsub;
     }, [firebaseUser]);
-    // Keep this device's account switcher in sync: whenever whoever is active here finishes
-    // loading, remember them (uid/appName + display info) so they show up next time the
-    // switcher is opened, even if they were never explicitly "added" as a second account.
-    useEffect(() => {
-        if (!firebaseUser || !profile) return;
-        zloveUpsertLinkedAccount({
-            uid: firebaseUser.uid, appName: ZLOVE_ACTIVE_APP_NAME,
-            email: firebaseUser.email || profile.email || '',
-            displayName: profile.displayName || profile.username || '',
-            photoURL: profile.photoURL || ''
-        });
-    }, [firebaseUser, profile]);
     // Same login flow as any other user — no separate URL/door needed. If this is the one
     // account whose UID matches SUPER_ADMIN_UID, make sure its isAdmin flag is set (Firestore
     // rules only allow this exact UID to set isAdmin on itself, so this is safe to run every
@@ -4031,7 +3980,6 @@ function MainApp({ route, setRoute }) {
                 route.name === 'bookmarks' && React.createElement(BookmarksScreen, { go: go }),
                 route.name === 'memories' && React.createElement(MemoriesScreen, { go: go }),
                 route.name === 'birthdays' && React.createElement(BirthdaysScreen, { go: go }),
-                route.name === 'accountSettings' && React.createElement(AccountSettingsScreen, { go: go }),
                 route.name === 'wallet' && React.createElement(WalletScreen, { go: go }),
                 route.name === 'referrals' && React.createElement(ReferralScreen, { go: go }),
                 route.name === 'adCentre' && React.createElement(AdCentreScreen, { go: go }),
@@ -4109,8 +4057,6 @@ function MenuScreen({ go, theme, setTheme }) {
     const pages = usePages();
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
-    const [switcherOpen, setSwitcherOpen] = useState(false);
-    const [addAccountOpen, setAddAccountOpen] = useState(false);
     const soon = (label) => toast((label || 'This feature') + ' is coming soon', 'info');
     const openTile = (tile) => tile.route ? go(tile.route) : soon(tile.label);
     const doLogout = () => { if (confirm('Log out of Yeloface?')) auth.signOut(); };
@@ -4131,7 +4077,7 @@ function MenuScreen({ go, theme, setTheme }) {
                 React.createElement("div", { className: "flex-1 min-w-0" },
                     React.createElement("p", { className: "font-bold text-base leading-tight truncate" }, profile.displayName || profile.username),
                     React.createElement("p", { className: "text-xs text-brand-600 dark:text-brand-400 font-semibold" }, "View your profile")),
-                React.createElement("span", { onClick: (e) => { e.stopPropagation(); setSwitcherOpen(true); }, className: "w-9 h-9 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center shrink-0" },
+                React.createElement("span", { onClick: (e) => { e.stopPropagation(); soon('Switching accounts'); }, className: "w-9 h-9 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center shrink-0" },
                     React.createElement("i", { className: "fa-solid fa-chevron-down text-slate-500 text-xs" }))),
             React.createElement("button", { onClick: () => soon('Inviting friends'), className: "w-full flex items-center gap-3 bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-3.5 text-left" },
                 React.createElement("i", { className: "fa-solid fa-heart text-red-500 text-lg" }),
@@ -4142,7 +4088,7 @@ function MenuScreen({ go, theme, setTheme }) {
                     React.createElement("button", { onClick: () => setTheme(theme === 'dark' ? 'light' : 'dark'), className: "flex items-center gap-3 py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300" },
                         React.createElement("i", { className: "fa-solid " + (theme === 'dark' ? 'fa-sun' : 'fa-moon') + " w-5" }),
                         theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'),
-                    React.createElement("button", { onClick: () => go({ name: 'accountSettings' }), className: "flex items-center gap-3 py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300" },
+                    React.createElement("button", { onClick: () => soon('Settings'), className: "flex items-center gap-3 py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300" },
                         React.createElement("i", { className: "fa-solid fa-user-gear w-5" }),
                         "Account settings"),
                     React.createElement("div", { className: "flex items-center justify-between py-2" },
@@ -4160,211 +4106,14 @@ function MenuScreen({ go, theme, setTheme }) {
                     React.createElement("button", { onClick: () => pages.openPage('contact'), className: "flex items-center gap-3 py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300" },
                         React.createElement("i", { className: "fa-solid fa-envelope w-5" }),
                         "Contact us")),
-                React.createElement("button", { onClick: () => setAddAccountOpen(true), className: "w-full flex items-center gap-4 px-4 py-3.5 text-left border-b border-slate-100 dark:border-ink-800" },
+                React.createElement("button", { onClick: () => soon('Adding another account'), className: "w-full flex items-center gap-4 px-4 py-3.5 text-left border-b border-slate-100 dark:border-ink-800" },
                     React.createElement("span", { className: "w-8 h-8 rounded-full bg-slate-100 dark:bg-ink-800 flex items-center justify-center shrink-0" },
                         React.createElement("i", { className: "fa-solid fa-user-plus text-slate-600 dark:text-slate-300" })),
                     React.createElement("span", { className: "font-semibold text-[15px]" }, "Add Account")),
                 React.createElement("button", { onClick: doLogout, className: "w-full flex items-center gap-4 px-4 py-3.5 text-left" },
                     React.createElement("span", { className: "w-8 h-8 rounded-full bg-slate-100 dark:bg-ink-800 flex items-center justify-center shrink-0" },
                         React.createElement("i", { className: "fa-solid fa-arrow-right-from-bracket text-red-500" })),
-                    React.createElement("span", { className: "font-semibold text-[15px] text-red-500" }, "Log Out"))))),
-        switcherOpen && React.createElement(AccountSwitcherSheet, { onClose: () => setSwitcherOpen(false), onAddAccount: () => { setSwitcherOpen(false); setAddAccountOpen(true); } }),
-        addAccountOpen && React.createElement(AddAccountModal, { onClose: () => setAddAccountOpen(false) }));
-}
-/* ============================== ACCOUNT SWITCHER & ADD ACCOUNT ============================== */
-function AccountSwitcherSheet({ onClose, onAddAccount }) {
-    const { firebaseUser } = useAuth();
-    const [accounts, setAccounts] = useState(() => zloveGetLinkedAccounts());
-    const [busyUid, setBusyUid] = useState(null);
-    const toast = useToast();
-    const switchTo = (acct) => {
-        if (acct.uid === firebaseUser.uid) { onClose(); return; }
-        setBusyUid(acct.uid);
-        zloveSetActiveAppName(acct.appName);
-        window.location.reload();
-    };
-    const removeAccount = (e, acct) => {
-        e.stopPropagation();
-        if (acct.uid === firebaseUser.uid) { toast('Log out of this account first to remove it here.', 'info'); return; }
-        if (!confirm('Remove ' + (acct.displayName || acct.email) + ' from this device? You can add it again anytime.')) return;
-        zloveRemoveLinkedAccount(acct.uid);
-        setAccounts(zloveGetLinkedAccounts());
-    };
-    return (React.createElement("div", { className: "fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center", onClick: onClose },
-        React.createElement("div", { onClick: e => e.stopPropagation(), className: "w-full sm:max-w-sm bg-white dark:bg-ink-800 rounded-t-2xl sm:rounded-2xl overflow-hidden" },
-            React.createElement("div", { className: "flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-ink-700" },
-                React.createElement("p", { className: "font-bold" }, "Switch account"),
-                React.createElement("button", { onClick: onClose, className: "w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-ink-700 flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-xmark" }))),
-            React.createElement("div", { className: "max-h-[60vh] overflow-y-auto" },
-                accounts.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-8" }, "No linked accounts yet."),
-                accounts.map(acct => React.createElement("button", { key: acct.uid, onClick: () => switchTo(acct), disabled: busyUid === acct.uid, className: "w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-ink-700" },
-                    React.createElement(Avatar, { user: acct, size: 10 }),
-                    React.createElement("div", { className: "flex-1 min-w-0" },
-                        React.createElement("p", { className: "font-semibold text-sm truncate" }, acct.displayName || acct.email),
-                        React.createElement("p", { className: "text-xs text-slate-400 truncate" }, acct.email)),
-                    acct.uid === firebaseUser.uid ? React.createElement("i", { className: "fa-solid fa-circle-check text-brand-600" })
-                        : busyUid === acct.uid ? React.createElement("div", { className: "w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" })
-                        : React.createElement("i", { onClick: (e) => removeAccount(e, acct), className: "fa-solid fa-xmark text-slate-300 hover:text-red-500 px-1" })))),
-            React.createElement("button", { onClick: onAddAccount, className: "w-full flex items-center gap-3 px-4 py-3.5 text-left border-t border-slate-100 dark:border-ink-700" },
-                React.createElement("span", { className: "w-9 h-9 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center" },
-                    React.createElement("i", { className: "fa-solid fa-plus text-sm" })),
-                React.createElement("span", { className: "font-semibold text-sm" }, "Add another account")))));
-}
-function AddAccountModal({ onClose }) {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [busy, setBusy] = useState(false);
-    const toast = useToast();
-    const submit = async (e) => {
-        e.preventDefault();
-        setBusy(true);
-        try {
-            const slot = zloveCreateNewAppSlot();
-            const slotAuth = slot.app.auth();
-            const cred = await slotAuth.signInWithEmailAndPassword(email, password);
-            const slotDb = slot.app.firestore();
-            const snap = await slotDb.collection('users').doc(cred.user.uid).get();
-            const data = snap.exists ? snap.data() : {};
-            zloveUpsertLinkedAccount({
-                uid: cred.user.uid, appName: slot.name, email: cred.user.email || email,
-                displayName: data.displayName || data.username || '', photoURL: data.photoURL || ''
-            });
-            zloveSetActiveAppName(slot.name);
-            toast('Account added \u2014 switching over\u2026', 'success');
-            window.location.reload();
-        }
-        catch (err) {
-            toast(friendlyError(err).replace('Firebase: ', ''), 'error');
-            setBusy(false);
-        }
-    };
-    return (React.createElement("div", { className: "fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center", onClick: onClose },
-        React.createElement("div", { onClick: e => e.stopPropagation(), className: "w-full sm:max-w-sm bg-white dark:bg-ink-800 rounded-t-2xl sm:rounded-2xl p-5" },
-            React.createElement("div", { className: "flex items-center justify-between mb-4" },
-                React.createElement("h3", { className: "font-display font-bold text-lg" }, "Add account"),
-                React.createElement("button", { onClick: onClose, className: "text-slate-400" }, React.createElement("i", { className: "fa-solid fa-xmark text-lg" }))),
-            React.createElement("form", { onSubmit: submit, className: "space-y-3" },
-                React.createElement("input", { type: "email", required: true, value: email, onChange: e => setEmail(e.target.value), placeholder: "Email", className: "w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-ink-600 bg-transparent text-sm text-[#050505] dark:text-white placeholder-slate-400" }),
-                React.createElement("input", { type: "password", required: true, value: password, onChange: e => setPassword(e.target.value), placeholder: "Password", className: "w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-ink-600 bg-transparent text-sm text-[#050505] dark:text-white placeholder-slate-400" }),
-                React.createElement("p", { className: "text-[11px] text-slate-400" }, "This signs the other account in alongside your current one, so you can switch between them without logging out."),
-                React.createElement("button", { type: "submit", disabled: busy, className: "w-full bg-brand-600 text-white font-bold py-3 rounded-xl disabled:opacity-50" }, busy ? 'Signing in\u2026' : 'Continue')))));
-}
-/* ============================== ACCOUNT SETTINGS ============================== */
-// Reauthentication is required by Firebase before sensitive changes (email/password/delete).
-// Google-signed-in users reauth via a popup; email/password users reauth with their password.
-async function zloveReauthenticate(firebaseUser, password) {
-    const providerId = (firebaseUser.providerData[0] || {}).providerId;
-    if (providerId === 'google.com') {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        await firebaseUser.reauthenticateWithPopup(provider);
-    } else {
-        if (!password) throw new Error('Enter your current password to confirm.');
-        const cred = firebase.auth.EmailAuthProvider.credential(firebaseUser.email, password);
-        await firebaseUser.reauthenticateWithCredential(cred);
-    }
-}
-function AccountSettingsScreen({ go }) {
-    const { profile, firebaseUser } = useAuth();
-    const toast = useToast();
-    const isPasswordAccount = (firebaseUser.providerData[0] || {}).providerId !== 'google.com';
-    const [section, setSection] = useState(null); // null | 'email' | 'password' | 'blocked' | 'delete'
-    const [currentPassword, setCurrentPassword] = useState('');
-    const [newEmail, setNewEmail] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [busy, setBusy] = useState(false);
-    const [blockedUsers, setBlockedUsers] = useState(null);
-    useEffect(() => {
-        if (section !== 'blocked') return;
-        const ids = profile.blockedUsers || [];
-        if (ids.length === 0) { setBlockedUsers([]); return; }
-        Promise.all(ids.map(uid => db.collection('users').doc(uid).get()))
-            .then(snaps => setBlockedUsers(snaps.filter(s => s.exists).map(s => Object.assign({ id: s.id }, s.data()))))
-            .catch(() => setBlockedUsers([]));
-    }, [section, profile.blockedUsers]);
-    const closeSection = () => { setSection(null); setCurrentPassword(''); setNewEmail(''); setNewPassword(''); };
-    const submitEmail = async (e) => {
-        e.preventDefault();
-        setBusy(true);
-        try {
-            await zloveReauthenticate(firebaseUser, currentPassword);
-            await firebaseUser.verifyBeforeUpdateEmail(newEmail);
-            toast('Check ' + newEmail + ' for a link to confirm the change.', 'success');
-            closeSection();
-        }
-        catch (err) { toast(friendlyError(err).replace('Firebase: ', ''), 'error'); }
-        finally { setBusy(false); }
-    };
-    const submitPassword = async (e) => {
-        e.preventDefault();
-        if (newPassword.length < 6) { toast('New password must be at least 6 characters.', 'error'); return; }
-        setBusy(true);
-        try {
-            await zloveReauthenticate(firebaseUser, currentPassword);
-            await firebaseUser.updatePassword(newPassword);
-            toast('Password updated.', 'success');
-            closeSection();
-        }
-        catch (err) { toast(friendlyError(err).replace('Firebase: ', ''), 'error'); }
-        finally { setBusy(false); }
-    };
-    const unblock = async (uid) => {
-        try {
-            await db.collection('users').doc(profile.id).update({ blockedUsers: FieldValue.arrayRemove(uid) });
-            setBlockedUsers(list => (list || []).filter(u => u.id !== uid));
-            toast('Unblocked.', 'success');
-        }
-        catch (err) { toast(friendlyError(err), 'error'); }
-    };
-    const deleteAccount = async (e) => {
-        e.preventDefault();
-        if (!confirm('This permanently deletes your account sign-in. This cannot be undone. Continue?')) return;
-        setBusy(true);
-        try {
-            await zloveReauthenticate(firebaseUser, currentPassword);
-            await firebaseUser.delete();
-            zloveRemoveLinkedAccount(firebaseUser.uid);
-            toast('Account deleted.', 'success');
-        }
-        catch (err) { toast(friendlyError(err).replace('Firebase: ', ''), 'error'); setBusy(false); }
-    };
-    const Row = ({ icon, label, sub, onClick, danger }) => React.createElement("button", { onClick: onClick, className: "w-full flex items-center gap-3 px-4 py-3.5 text-left border-b border-slate-100 dark:border-ink-700 last:border-b-0" },
-        React.createElement("span", { className: "w-9 h-9 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center shrink-0" },
-            React.createElement("i", { className: "fa-solid " + icon + " " + (danger ? "text-red-500" : "text-slate-600 dark:text-slate-300") })),
-        React.createElement("div", { className: "flex-1 min-w-0" },
-            React.createElement("p", { className: "font-semibold text-sm " + (danger ? "text-red-500" : "") }, label),
-            sub && React.createElement("p", { className: "text-xs text-slate-400 truncate" }, sub)),
-        React.createElement("i", { className: "fa-solid fa-chevron-right text-slate-300 text-xs" }));
-    return React.createElement("div", null,
-        React.createElement("div", { className: "flex items-center gap-2 mb-4" },
-            React.createElement("button", { onClick: () => (section ? closeSection() : go({ name: 'menu' })), className: "text-slate-400" }, React.createElement("i", { className: "fa-solid fa-arrow-left text-lg" })),
-            React.createElement("h1", { className: "font-display text-lg font-bold" }, section ? { email: 'Change email', password: 'Change password', blocked: 'Blocked accounts', delete: 'Delete account' }[section] : "Account settings")),
-        !section && React.createElement("div", { className: "space-y-4" },
-            React.createElement("div", { className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl overflow-hidden" },
-                Row({ icon: 'fa-envelope', label: 'Email', sub: firebaseUser.email, onClick: () => isPasswordAccount ? setSection('email') : toast('Google-signed accounts manage email via Google.', 'info') }),
-                isPasswordAccount && Row({ icon: 'fa-lock', label: 'Password', sub: 'Change your password', onClick: () => setSection('password') }),
-                Row({ icon: 'fa-user-slash', label: 'Blocked accounts', sub: (profile.blockedUsers || []).length + ' blocked', onClick: () => setSection('blocked') })),
-            React.createElement("div", { className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl overflow-hidden" },
-                Row({ icon: 'fa-trash', label: 'Delete account', sub: 'Permanently remove this sign-in', danger: true, onClick: () => setSection('delete') }))),
-        section === 'email' && React.createElement("form", { onSubmit: submitEmail, className: "space-y-3" },
-            isPasswordAccount && React.createElement("input", { type: "password", required: true, value: currentPassword, onChange: e => setCurrentPassword(e.target.value), placeholder: "Current password", className: "w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-ink-600 bg-transparent text-sm text-[#050505] dark:text-white placeholder-slate-400" }),
-            React.createElement("input", { type: "email", required: true, value: newEmail, onChange: e => setNewEmail(e.target.value), placeholder: "New email address", className: "w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-ink-600 bg-transparent text-sm text-[#050505] dark:text-white placeholder-slate-400" }),
-            React.createElement("p", { className: "text-[11px] text-slate-400" }, "We'll send a confirmation link to the new address before it takes effect."),
-            React.createElement("button", { type: "submit", disabled: busy, className: "w-full bg-brand-600 text-white font-bold py-3 rounded-xl disabled:opacity-50" }, busy ? 'Saving\u2026' : 'Save email')),
-        section === 'password' && React.createElement("form", { onSubmit: submitPassword, className: "space-y-3" },
-            React.createElement("input", { type: "password", required: true, value: currentPassword, onChange: e => setCurrentPassword(e.target.value), placeholder: "Current password", className: "w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-ink-600 bg-transparent text-sm text-[#050505] dark:text-white placeholder-slate-400" }),
-            React.createElement("input", { type: "password", required: true, value: newPassword, onChange: e => setNewPassword(e.target.value), placeholder: "New password (min. 6 characters)", className: "w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-ink-600 bg-transparent text-sm text-[#050505] dark:text-white placeholder-slate-400" }),
-            React.createElement("button", { type: "submit", disabled: busy, className: "w-full bg-brand-600 text-white font-bold py-3 rounded-xl disabled:opacity-50" }, busy ? 'Saving\u2026' : 'Save password')),
-        section === 'blocked' && React.createElement("div", { className: "space-y-2" },
-            blockedUsers === null && React.createElement("div", { className: "py-10 flex justify-center" }, React.createElement("div", { className: "w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" })),
-            blockedUsers && blockedUsers.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-8" }, "You haven't blocked anyone."),
-            (blockedUsers || []).map(u => React.createElement("div", { key: u.id, className: "flex items-center gap-3 bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-3" },
-                React.createElement(Avatar, { user: u, size: 10 }),
-                React.createElement("p", { className: "flex-1 font-semibold text-sm truncate" }, u.displayName || u.username),
-                React.createElement("button", { onClick: () => unblock(u.id), className: "text-xs font-bold text-brand-600 px-3 py-1.5 rounded-full border border-brand-600" }, "Unblock")))),
-        section === 'delete' && React.createElement("form", { onSubmit: deleteAccount, className: "space-y-3" },
-            React.createElement("p", { className: "text-sm text-slate-500 dark:text-slate-400" }, "Deleting your account removes your ability to sign in. This can't be undone."),
-            isPasswordAccount && React.createElement("input", { type: "password", required: true, value: currentPassword, onChange: e => setCurrentPassword(e.target.value), placeholder: "Current password", className: "w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-ink-600 bg-transparent text-sm text-[#050505] dark:text-white placeholder-slate-400" }),
-            React.createElement("button", { type: "submit", disabled: busy, className: "w-full bg-red-500 text-white font-bold py-3 rounded-xl disabled:opacity-50" }, busy ? 'Deleting\u2026' : 'Permanently delete account')));
+                    React.createElement("span", { className: "font-semibold text-[15px] text-red-500" }, "Log Out"))))));
 }
 /* ============================== AVATAR ============================== */
 const PAGE_CATEGORIES = [
@@ -5600,7 +5349,7 @@ function CommentComposer({ avatarUser, placeholder, onSubmit, onCancel, compact,
                 React.createElement("img", { src: imagePreview, className: "h-20 rounded-lg object-cover" }),
                 React.createElement("button", { onClick: removeImage, className: "absolute -top-1.5 -right-1.5 bg-black/70 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center" }, "\u2715"))),
             React.createElement("div", { className: "flex items-center gap-2" },
-                React.createElement("input", { value: text, onChange: e => setText(e.target.value), onKeyDown: e => e.key === 'Enter' && doSubmit(), placeholder: placeholder || "Write a comment\u2026", autoFocus: autoFocus, className: "flex-1 min-w-0 bg-slate-50 dark:bg-ink-700 rounded-full px-4 py-1.5 text-sm text-[#050505] dark:text-white placeholder-slate-400 dark:placeholder-slate-500 " + (bold ? 'font-bold' : '') }),
+                React.createElement("input", { value: text, onChange: e => setText(e.target.value), onKeyDown: e => e.key === 'Enter' && doSubmit(), placeholder: placeholder || "Write a comment\u2026", autoFocus: autoFocus, className: "flex-1 min-w-0 bg-slate-50 dark:bg-ink-700 rounded-full px-4 py-1.5 text-sm " + (bold ? 'font-bold' : '') }),
                 React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: onPickImage }),
                 React.createElement("button", { onClick: () => { var _a; return (_a = fileRef.current) === null || _a === void 0 ? void 0 : _a.click(); }, title: "Attach photo", className: "text-slate-500 shrink-0" },
                     React.createElement("i", { className: "fa-regular fa-image" })),
@@ -10199,7 +9948,7 @@ function ReelCommentsSheet({ reel, meId, isOwnerOrMod, onClose }) {
                 React.createElement("div", { className: "flex items-center gap-2" },
                     React.createElement("button", { onClick: () => fileRef.current.click(), className: "w-9 h-9 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center shrink-0" }, React.createElement("i", { className: "fa-regular fa-image text-slate-500" })),
                     React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: e => setImageFile(e.target.files[0]) }),
-                    React.createElement("input", { value: text, onChange: e => setText(e.target.value), onKeyDown: e => e.key === 'Enter' && send(), placeholder: "Add a comment\u2026", className: "flex-1 px-3 py-2 rounded-full bg-slate-50 dark:bg-ink-700 text-sm text-[#050505] dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none" }),
+                    React.createElement("input", { value: text, onChange: e => setText(e.target.value), onKeyDown: e => e.key === 'Enter' && send(), placeholder: "Add a comment\u2026", className: "flex-1 px-3 py-2 rounded-full bg-slate-50 dark:bg-ink-700 text-sm focus:outline-none" }),
                     React.createElement("button", { onClick: send, disabled: busy || (!text.trim() && !imageFile), className: "w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0 disabled:opacity-40" }, React.createElement("i", { className: "fa-solid fa-paper-plane text-xs" })))))));
 }
 /* ============================== REELS: SINGLE CARD ============================== */
