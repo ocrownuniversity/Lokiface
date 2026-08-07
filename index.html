@@ -3414,6 +3414,112 @@ function CallOverlayHost() {
     return React.createElement(CallScreen, { call: call });
 }
 
+/* ============================== MULTI-ACCOUNT: locally remembered logins ==============================
+   Firebase Auth only keeps one active session per browser tab, so "another account" here means:
+   we remember (in localStorage, on this device only — never a password) which accounts have signed
+   in before, so switching is a quick "sign out, then sign back in as X" instead of typing a fresh
+   email every time. Passwords are never stored. */
+function getSavedAccounts() {
+    try {
+        const list = JSON.parse(localStorage.getItem('zlove_saved_accounts') || '[]');
+        return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+}
+function rememberAccount(entry) {
+    if (!entry || !entry.uid) return;
+    try {
+        const list = getSavedAccounts().filter(a => a.uid !== entry.uid);
+        list.unshift(entry);
+        localStorage.setItem('zlove_saved_accounts', JSON.stringify(list.slice(0, 6)));
+    } catch (e) { }
+}
+function forgetAccount(uid) {
+    try { localStorage.setItem('zlove_saved_accounts', JSON.stringify(getSavedAccounts().filter(a => a.uid !== uid))); } catch (e) { }
+}
+// Signs the current user out and sends them to a blank login form to add a new account.
+function addAnotherAccount() {
+    try { localStorage.removeItem('zlove_switch_email'); } catch (e) { }
+    auth.signOut();
+}
+// Signs the current user out and sends them to the login form with this account's email
+// pre-filled, so switching back is just "enter password" rather than retyping the email.
+function switchToAccount(email) {
+    try { if (email) localStorage.setItem('zlove_switch_email', email); } catch (e) { }
+    auth.signOut();
+}
+// Bottom sheet used from both the Menu screen (chevron next to the profile card) and the
+// Account Settings screen: lists every account that has ever signed in on this device and
+// lets the person jump to one, remove it from the list, or add a brand new account.
+function AccountSwitcherSheet({ currentUid, onClose }) {
+    const [accounts, setAccounts] = useState(() => getSavedAccounts());
+    const others = accounts.filter(a => a.uid !== currentUid);
+    const remove = (uid) => { forgetAccount(uid); setAccounts(getSavedAccounts()); };
+    return (React.createElement("div", { className: "fixed inset-0 z-[95] flex items-end justify-center bg-black/50", onClick: onClose },
+        React.createElement("div", { onClick: e => e.stopPropagation(), className: "w-full sm:max-w-md bg-white dark:bg-ink-800 text-slate-900 dark:text-slate-100 rounded-t-2xl max-h-[80vh] flex flex-col overflow-hidden" },
+            React.createElement("div", { className: "flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-ink-700 shrink-0" },
+                React.createElement("p", { className: "font-bold" }, "Switch account"),
+                React.createElement("button", { onClick: onClose, className: "w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-ink-700 flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-xmark" }))),
+            React.createElement("div", { className: "flex-1 overflow-y-auto p-3 space-y-1.5" },
+                others.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-6" }, "No other accounts remembered on this device yet."),
+                others.map(a => React.createElement("div", { key: a.uid, className: "flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-ink-700" },
+                    React.createElement("div", { onClick: () => switchToAccount(a.email), className: "flex items-center gap-3 flex-1 min-w-0 cursor-pointer" },
+                        React.createElement(Avatar, { user: a, size: 10 }),
+                        React.createElement("div", { className: "min-w-0" },
+                            React.createElement("p", { className: "text-sm font-semibold truncate" }, a.displayName || a.email || 'Account'),
+                            a.displayName && a.email && React.createElement("p", { className: "text-xs text-slate-400 truncate" }, a.email))),
+                    React.createElement("button", { onClick: () => remove(a.uid), title: "Remove from this device", className: "w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 shrink-0" },
+                        React.createElement("i", { className: "fa-solid fa-xmark text-xs" }))))),
+            React.createElement("div", { className: "border-t border-slate-100 dark:border-ink-700 p-3 shrink-0" },
+                React.createElement("button", { onClick: () => addAnotherAccount(), className: "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold" },
+                    React.createElement("i", { className: "fa-solid fa-user-plus" }), "Add another account")))));
+}
+// A real, working "Account settings" screen: shows the signed-in account's details, lets
+// them trigger a password-reset email (Firebase requires the reset-email flow rather than
+// setting a new password directly without re-authenticating), manage remembered accounts on
+// this device, add another account, or log out.
+function AccountSettingsScreen({ go }) {
+    const { profile } = useAuth();
+    const toast = useToast();
+    const [busy, setBusy] = useState(false);
+    const [switcherOpen, setSwitcherOpen] = useState(false);
+    const email = (auth.currentUser && auth.currentUser.email) || profile.email || '';
+    const joined = profile.createdAt && profile.createdAt.toDate ? profile.createdAt.toDate().toLocaleDateString() : null;
+    const sendReset = async () => {
+        if (!email) { toast('This account has no email on file (e.g. Google sign-in) — nothing to reset.', 'error'); return; }
+        setBusy(true);
+        try { await auth.sendPasswordResetEmail(email); toast('Password reset email sent to ' + email, 'success'); }
+        catch (e) { toast(friendlyError(e), 'error'); }
+        finally { setBusy(false); }
+    };
+    const doLogout = () => { if (confirm('Log out of Yeloface?')) auth.signOut(); };
+    const savedCount = getSavedAccounts().length;
+    return (React.createElement("div", null,
+        React.createElement("button", { onClick: () => go({ name: 'menu' }), className: "text-sm text-slate-400 mb-3" }, React.createElement("i", { className: "fa-solid fa-arrow-left mr-1.5" }), "Back to Menu"),
+        React.createElement("h2", { className: "font-display text-xl font-bold mb-4" }, "Account settings"),
+        React.createElement("div", { className: "flex items-center gap-3 bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-3 mb-4" },
+            React.createElement(Avatar, { user: profile, size: 12 }),
+            React.createElement("div", { className: "min-w-0" },
+                React.createElement("p", { className: "font-bold truncate" }, profile.displayName || profile.username),
+                email && React.createElement("p", { className: "text-xs text-slate-400 truncate" }, email),
+                joined && React.createElement("p", { className: "text-[11px] text-slate-400" }, "Joined ", joined))),
+        React.createElement("div", { className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl divide-y divide-slate-100 dark:divide-ink-700 overflow-hidden mb-4" },
+            React.createElement("button", { onClick: sendReset, disabled: busy, className: "w-full flex items-center gap-3 px-4 py-3.5 text-left disabled:opacity-50" },
+                React.createElement("i", { className: "fa-solid fa-key w-5 text-slate-500" }),
+                React.createElement("div", null,
+                    React.createElement("p", { className: "text-sm font-semibold" }, "Change password"),
+                    React.createElement("p", { className: "text-[11px] text-slate-400" }, "We\u2019ll email you a secure link to set a new one"))),
+            React.createElement("button", { onClick: () => setSwitcherOpen(true), className: "w-full flex items-center gap-3 px-4 py-3.5 text-left" },
+                React.createElement("i", { className: "fa-solid fa-users w-5 text-slate-500" }),
+                React.createElement("div", null,
+                    React.createElement("p", { className: "text-sm font-semibold" }, "Manage accounts on this device"),
+                    React.createElement("p", { className: "text-[11px] text-slate-400" }, savedCount, " remembered account", savedCount === 1 ? '' : 's'))),
+            React.createElement("button", { onClick: () => addAnotherAccount(), className: "w-full flex items-center gap-3 px-4 py-3.5 text-left" },
+                React.createElement("i", { className: "fa-solid fa-user-plus w-5 text-slate-500" }),
+                React.createElement("p", { className: "text-sm font-semibold" }, "Add another account"))),
+        React.createElement("button", { onClick: doLogout, className: "w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-sm font-semibold" },
+            React.createElement("i", { className: "fa-solid fa-arrow-right-from-bracket" }), "Log out of this account"),
+        switcherOpen && React.createElement(AccountSwitcherSheet, { currentUid: profile.id, onClose: () => setSwitcherOpen(false) })));
+}
 function App() {
     const [firebaseUser, setFirebaseUser] = useState(undefined); // undefined = loading
     const [profile, setProfile] = useState(null);
@@ -3490,7 +3596,10 @@ function App() {
         localStorage.setItem('zlove-theme', theme);
     }, [theme]);
     useEffect(() => {
-        const unsub = auth.onAuthStateChanged(u => setFirebaseUser(u || null));
+        const unsub = auth.onAuthStateChanged(u => {
+            setFirebaseUser(u || null);
+            if (u) rememberAccount({ uid: u.uid, email: u.email || '', displayName: u.displayName || '', photoURL: u.photoURL || '' });
+        });
         return unsub;
     }, []);
     useEffect(() => {
@@ -3621,6 +3730,11 @@ function AuthScreen() {
     useEffect(() => {
         const stored = (localStorage.getItem('zlove_ref_code') || '').trim().toUpperCase();
         if (stored) { setRefCode(stored); setRefCodeLocked(true); }
+        // If we got here via "switch account" / a saved account tile, the email is pre-filled
+        // so the person only has to type their password — it's a one-time hint, so clear it
+        // immediately after reading it.
+        const switchEmail = localStorage.getItem('zlove_switch_email');
+        if (switchEmail) { setEmail(switchEmail); localStorage.removeItem('zlove_switch_email'); }
     }, []);
     const needsConsent = mode === 'signup' && !agreed;
     const handleEmailAuth = async (e) => {
@@ -3961,6 +4075,7 @@ function MainApp({ route, setRoute }) {
                             route.name === n.name && React.createElement("span", { className: "absolute bottom-0 left-1/2 -translate-x-1/2 w-9 h-[3px] rounded-full bg-brand-600" }))))),
             React.createElement("main", { className: (route.name === 'menu' || route.name === 'chat' || route.name === 'datingChat') ? "flex-1 max-w-2xl w-full mx-auto md:px-6 md:py-4" : "flex-1 max-w-2xl w-full mx-auto px-2 md:px-6 py-2 pb-8" },
                 route.name === 'menu' && React.createElement(MenuScreen, { go: go, theme: theme, setTheme: setTheme }),
+                route.name === 'accountSettings' && React.createElement(AccountSettingsScreen, { go: go }),
                 route.name === 'home' && React.createElement(HomeFeed, { go: go }),
                 route.name === 'reels' && React.createElement(ReelsFeedScreen, { go: go, route: route }),
                 route.name === 'reelUpload' && React.createElement(ReelUploadScreen, { go: go, route: route }),
@@ -4057,6 +4172,7 @@ function MenuScreen({ go, theme, setTheme }) {
     const pages = usePages();
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
+    const [switcherOpen, setSwitcherOpen] = useState(false);
     const soon = (label) => toast((label || 'This feature') + ' is coming soon', 'info');
     const openTile = (tile) => tile.route ? go(tile.route) : soon(tile.label);
     const doLogout = () => { if (confirm('Log out of Yeloface?')) auth.signOut(); };
@@ -4077,7 +4193,7 @@ function MenuScreen({ go, theme, setTheme }) {
                 React.createElement("div", { className: "flex-1 min-w-0" },
                     React.createElement("p", { className: "font-bold text-base leading-tight truncate" }, profile.displayName || profile.username),
                     React.createElement("p", { className: "text-xs text-brand-600 dark:text-brand-400 font-semibold" }, "View your profile")),
-                React.createElement("span", { onClick: (e) => { e.stopPropagation(); soon('Switching accounts'); }, className: "w-9 h-9 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center shrink-0" },
+                React.createElement("span", { onClick: (e) => { e.stopPropagation(); setSwitcherOpen(true); }, className: "w-9 h-9 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center shrink-0" },
                     React.createElement("i", { className: "fa-solid fa-chevron-down text-slate-500 text-xs" }))),
             React.createElement("button", { onClick: () => soon('Inviting friends'), className: "w-full flex items-center gap-3 bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-3.5 text-left" },
                 React.createElement("i", { className: "fa-solid fa-heart text-red-500 text-lg" }),
@@ -4088,7 +4204,7 @@ function MenuScreen({ go, theme, setTheme }) {
                     React.createElement("button", { onClick: () => setTheme(theme === 'dark' ? 'light' : 'dark'), className: "flex items-center gap-3 py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300" },
                         React.createElement("i", { className: "fa-solid " + (theme === 'dark' ? 'fa-sun' : 'fa-moon') + " w-5" }),
                         theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'),
-                    React.createElement("button", { onClick: () => soon('Settings'), className: "flex items-center gap-3 py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300" },
+                    React.createElement("button", { onClick: () => go({ name: 'accountSettings' }), className: "flex items-center gap-3 py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300" },
                         React.createElement("i", { className: "fa-solid fa-user-gear w-5" }),
                         "Account settings"),
                     React.createElement("div", { className: "flex items-center justify-between py-2" },
@@ -4106,14 +4222,15 @@ function MenuScreen({ go, theme, setTheme }) {
                     React.createElement("button", { onClick: () => pages.openPage('contact'), className: "flex items-center gap-3 py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300" },
                         React.createElement("i", { className: "fa-solid fa-envelope w-5" }),
                         "Contact us")),
-                React.createElement("button", { onClick: () => soon('Adding another account'), className: "w-full flex items-center gap-4 px-4 py-3.5 text-left border-b border-slate-100 dark:border-ink-800" },
+                React.createElement("button", { onClick: () => addAnotherAccount(), className: "w-full flex items-center gap-4 px-4 py-3.5 text-left border-b border-slate-100 dark:border-ink-800" },
                     React.createElement("span", { className: "w-8 h-8 rounded-full bg-slate-100 dark:bg-ink-800 flex items-center justify-center shrink-0" },
                         React.createElement("i", { className: "fa-solid fa-user-plus text-slate-600 dark:text-slate-300" })),
                     React.createElement("span", { className: "font-semibold text-[15px]" }, "Add Account")),
                 React.createElement("button", { onClick: doLogout, className: "w-full flex items-center gap-4 px-4 py-3.5 text-left" },
                     React.createElement("span", { className: "w-8 h-8 rounded-full bg-slate-100 dark:bg-ink-800 flex items-center justify-center shrink-0" },
                         React.createElement("i", { className: "fa-solid fa-arrow-right-from-bracket text-red-500" })),
-                    React.createElement("span", { className: "font-semibold text-[15px] text-red-500" }, "Log Out"))))));
+                    React.createElement("span", { className: "font-semibold text-[15px] text-red-500" }, "Log Out")))),
+        switcherOpen && React.createElement(AccountSwitcherSheet, { currentUid: profile.id, onClose: () => setSwitcherOpen(false) })));
 }
 /* ============================== AVATAR ============================== */
 const PAGE_CATEGORIES = [
@@ -9927,7 +10044,7 @@ function ReelCommentsSheet({ reel, meId, isOwnerOrMod, onClose }) {
         } catch (e) { toast(friendlyError(e), 'error'); } finally { setBusy(false); }
     };
     return (React.createElement("div", { className: "fixed inset-0 z-[95] flex items-end justify-center bg-black/50", onClick: onClose },
-        React.createElement("div", { onClick: e => e.stopPropagation(), className: "w-full sm:max-w-md bg-white dark:bg-ink-800 rounded-t-2xl max-h-[80vh] flex flex-col overflow-hidden" },
+        React.createElement("div", { onClick: e => e.stopPropagation(), className: "w-full sm:max-w-md bg-white dark:bg-ink-800 text-slate-900 dark:text-slate-100 rounded-t-2xl max-h-[80vh] flex flex-col overflow-hidden" },
             React.createElement("div", { className: "flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-ink-700 shrink-0" },
                 React.createElement("p", { className: "font-bold" }, formatCount(reel.commentsCount || 0), " comments"),
                 React.createElement("button", { onClick: onClose, className: "w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-ink-700 flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-xmark" }))),
@@ -9948,7 +10065,7 @@ function ReelCommentsSheet({ reel, meId, isOwnerOrMod, onClose }) {
                 React.createElement("div", { className: "flex items-center gap-2" },
                     React.createElement("button", { onClick: () => fileRef.current.click(), className: "w-9 h-9 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center shrink-0" }, React.createElement("i", { className: "fa-regular fa-image text-slate-500" })),
                     React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: e => setImageFile(e.target.files[0]) }),
-                    React.createElement("input", { value: text, onChange: e => setText(e.target.value), onKeyDown: e => e.key === 'Enter' && send(), placeholder: "Add a comment\u2026", className: "flex-1 px-3 py-2 rounded-full bg-slate-50 dark:bg-ink-700 text-sm focus:outline-none" }),
+                    React.createElement("input", { value: text, onChange: e => setText(e.target.value), onKeyDown: e => e.key === 'Enter' && send(), placeholder: "Add a comment\u2026", className: "flex-1 px-3 py-2 rounded-full bg-slate-50 dark:bg-ink-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none" }),
                     React.createElement("button", { onClick: send, disabled: busy || (!text.trim() && !imageFile), className: "w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0 disabled:opacity-40" }, React.createElement("i", { className: "fa-solid fa-paper-plane text-xs" })))))));
 }
 /* ============================== REELS: SINGLE CARD ============================== */
@@ -9957,6 +10074,16 @@ function ReelCommentsSheet({ reel, meId, isOwnerOrMod, onClose }) {
 // regardless of any stale/late "active" prop transitions elsewhere — this is what
 // stops a previous reel's audio from bleeding into the next one.
 let __zloveActiveReelVideo = null;
+// mm:ss (or h:mm:ss for anything an hour or longer) — used by the reel player's time readout.
+function formatReelTime(totalSeconds) {
+    if (!isFinite(totalSeconds) || totalSeconds < 0) return '0:00';
+    const s = Math.floor(totalSeconds);
+    const hh = Math.floor(s / 3600);
+    const mm = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    return hh > 0 ? (hh + ':' + pad(mm) + ':' + pad(ss)) : (mm + ':' + pad(ss));
+}
 function ReelCard({ reel, active, go, meId, muted, onToggleMute, onOpenComments, onOpenReport }) {
     const toast = useToast();
     const videoRef = useRef();
@@ -9964,6 +10091,9 @@ function ReelCard({ reel, active, go, meId, muted, onToggleMute, onOpenComments,
     const [author, setAuthor] = useState(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [shareOpen, setShareOpen] = useState(false);
+    const [curTime, setCurTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [scrubbing, setScrubbing] = useState(false);
     const liked = useReelLiveDoc(['reels', reel.id, 'likes', meId]);
     const saved = useReelLiveDoc(['savedReels', meId, 'items', reel.id]);
     const following = useReelLiveDoc(reel.authorType === 'page' ? ['pageFollows', meId + '_' + reel.pageId] : ['follows', meId + '_' + reel.authorId]);
@@ -10013,11 +10143,34 @@ function ReelCard({ reel, active, go, meId, muted, onToggleMute, onOpenComments,
         } catch (e) { toast(friendlyError(e), 'error'); }
     };
     const doDelete = async () => { if (confirm('Delete this reel? This cannot be undone.')) { await deleteReel(reel); toast('Reel deleted', 'success'); } };
+    // Playback progress: keeps curTime/duration in sync with the <video> element so the
+    // seek bar and mm:ss readout below stay accurate, but pauses that sync while the user
+    // is actively dragging the seek bar (scrubbing) so their drag isn't fought by playback.
+    const onTimeUpdate = (e) => { if (!scrubbing) setCurTime(e.target.currentTime); };
+    const onLoadedMetadata = (e) => { setDuration(e.target.duration || 0); };
+    const seekTo = (seconds) => {
+        const v = videoRef.current;
+        if (!v || !isFinite(v.duration)) return;
+        const clamped = Math.max(0, Math.min(v.duration, seconds));
+        v.currentTime = clamped;
+        setCurTime(clamped);
+    };
+    const skip = (delta) => { const v = videoRef.current; if (v) seekTo((v.currentTime || 0) + delta); };
+    const onScrubInput = (e) => { setScrubbing(true); setCurTime(Number(e.target.value)); };
+    const onScrubCommit = (e) => { seekTo(Number(e.target.value)); setScrubbing(false); };
     const captionParts = (reel.caption || '').split(/(\s+)/);
     return (React.createElement("div", { className: "relative w-full h-full shrink-0 snap-start bg-black flex items-center justify-center overflow-hidden" },
-        React.createElement("video", { ref: videoRef, src: reel.videoURL, poster: reel.thumbURL || undefined, loop: true, muted: muted, playsInline: true, onClick: onToggleMute, className: "w-full h-full object-contain bg-black cursor-pointer" }),
+        React.createElement("video", { ref: videoRef, src: reel.videoURL, poster: reel.thumbURL || undefined, loop: true, muted: muted, playsInline: true, onClick: onToggleMute, onTimeUpdate: onTimeUpdate, onLoadedMetadata: onLoadedMetadata, className: "w-full h-full object-contain bg-black cursor-pointer" }),
         React.createElement("button", { onClick: onToggleMute, className: "absolute top-16 right-3 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center" }, React.createElement("i", { className: "fa-solid " + (muted ? "fa-volume-xmark" : "fa-volume-high") + " text-sm" })),
         reel.pinned && React.createElement("span", { className: "absolute top-3 left-3 bg-black/50 text-white text-[11px] font-semibold px-2 py-1 rounded-full" }, React.createElement("i", { className: "fa-solid fa-thumbtack mr-1" }), "Pinned"),
+        duration > 0 && React.createElement("div", { onClick: e => e.stopPropagation(), className: "absolute left-0 right-0 bottom-[92px] px-4 flex items-center gap-2.5 text-white z-10" },
+            React.createElement("button", { onClick: () => skip(-10), title: "Back 10 seconds", className: "w-8 h-8 rounded-full bg-black/40 flex items-center justify-center shrink-0" },
+                React.createElement("i", { className: "fa-solid fa-rotate-left text-xs" })),
+            React.createElement("span", { className: "text-[11px] font-semibold tabular-nums w-9 text-center shrink-0" }, formatReelTime(curTime)),
+            React.createElement("input", { type: "range", min: 0, max: duration || 0, step: 0.1, value: Math.min(curTime, duration || 0), onChange: onScrubInput, onMouseUp: onScrubCommit, onTouchEnd: onScrubCommit, className: "flex-1 h-1.5 accent-brand-500 cursor-pointer" }),
+            React.createElement("span", { className: "text-[11px] font-semibold tabular-nums w-9 text-center shrink-0" }, formatReelTime(duration)),
+            React.createElement("button", { onClick: () => skip(10), title: "Forward 10 seconds", className: "w-8 h-8 rounded-full bg-black/40 flex items-center justify-center shrink-0" },
+                React.createElement("i", { className: "fa-solid fa-rotate-right text-xs" }))),
         React.createElement("div", { className: "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pt-16 pb-4 px-4 flex items-end justify-between gap-3" },
             React.createElement("div", { className: "flex-1 min-w-0 text-white" },
                 React.createElement("div", { className: "flex items-center gap-2 mb-1.5" },
