@@ -2407,6 +2407,42 @@ const ToastContext = createContext(null);
 const PagesContext = createContext(null);
 function useAuth() { return useContext(AuthContext); }
 function useToast() { return useContext(ToastContext); }
+// Sizes a chat-style container to exactly fill the space below its own top edge, down to the
+// real bottom of the viewport — instead of a hardcoded "100vh minus some guessed number",
+// which drifts whenever the mobile browser's address bar collapses or the keyboard opens, and
+// leaves a dead gap below the composer if the guess doesn't match what's actually on screen.
+function useFillToViewportBottom() {
+    const ref = useRef();
+    const [height, setHeight] = useState(null);
+    useEffect(() => {
+        const recalc = () => {
+            const el = ref.current;
+            if (!el) return;
+            if (window.innerWidth >= 768) { setHeight(null); return; } // desktop keeps its own fixed height
+            const top = el.getBoundingClientRect().top;
+            const viewportH = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+            setHeight(Math.max(240, viewportH - top));
+        };
+        recalc();
+        const vv = window.visualViewport;
+        window.addEventListener('resize', recalc);
+        window.addEventListener('orientationchange', recalc);
+        vv && vv.addEventListener('resize', recalc);
+        // Some mobile browsers only settle the viewport size a beat after the keyboard
+        // finishes animating in/out, so re-measure shortly after any focus change too.
+        const onFocusChange = () => { recalc(); setTimeout(recalc, 320); };
+        document.addEventListener('focusin', onFocusChange);
+        document.addEventListener('focusout', onFocusChange);
+        return () => {
+            window.removeEventListener('resize', recalc);
+            window.removeEventListener('orientationchange', recalc);
+            vv && vv.removeEventListener('resize', recalc);
+            document.removeEventListener('focusin', onFocusChange);
+            document.removeEventListener('focusout', onFocusChange);
+        };
+    }, []);
+    return [ref, height];
+}
 function usePages() { return useContext(PagesContext); }
 
 /* ============================== GAMES: CATALOG ============================== */
@@ -9156,6 +9192,7 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
     const { profile } = useAuth();
     const toast = useToast();
     const siteSettings = useSiteSettings();
+    const [containerRef, mobileHeight] = useFillToViewportBottom();
     const [otherUser, setOtherUser] = useState(null);
     const [pageInfo, setPageInfo] = useState(pageId ? undefined : null);
     const [chatDoc, setChatDoc] = useState(null);
@@ -9417,7 +9454,7 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
     const displayIdentity = pageId && pageInfo ? pageInfo : otherUser;
     const identityRoute = pageId && pageInfo ? { name: 'page', id: pageId } : { name: 'profile', uid: otherUid };
     const visibleMessages = (messages || []).filter(m => !(m.deletedFor || []).includes(profile.id));
-    return (React.createElement("div", { className: "flex flex-col bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 md:rounded-2xl overflow-hidden h-[calc(100dvh-7.25rem)] md:h-[calc(100vh-2rem)]" },
+    return (React.createElement("div", { ref: containerRef, className: "flex flex-col bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 md:rounded-2xl overflow-hidden md:h-[calc(100vh-2rem)]", style: mobileHeight ? { height: mobileHeight + 'px' } : undefined },
         React.createElement("div", { className: "flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-700 shrink-0 sticky top-0 z-30 bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm" },
             React.createElement("button", { onClick: () => go({ name: 'messages' }), className: "text-[#0d9488] w-8 h-8 flex items-center justify-center md:hidden" },
                 React.createElement("i", { className: "fa-solid fa-arrow-left" })),
@@ -10138,7 +10175,7 @@ function ReelCommentRow({ reel, comment, meId, isOwnerOrMod, authors, onReply })
     return (React.createElement("div", { className: "flex gap-2.5" },
         React.createElement(Avatar, { user: a, size: 8 }),
         React.createElement("div", { className: "flex-1 min-w-0" },
-            React.createElement("p", { className: "text-sm" }, React.createElement("span", { className: "font-semibold mr-1.5" }, (a === null || a === void 0 ? void 0 : a.displayName) || 'User'), comment.text),
+            React.createElement("p", { className: "text-sm text-[#050505] dark:text-white" }, React.createElement("span", { className: "font-semibold mr-1.5" }, (a === null || a === void 0 ? void 0 : a.displayName) || 'User'), comment.text),
             comment.image && React.createElement("img", { src: comment.image, onClick: () => openLightbox(comment.image), className: "mt-1.5 max-w-[160px] rounded-lg cursor-zoom-in" }),
             React.createElement("div", { className: "flex items-center gap-3 mt-1 text-xs text-slate-400" },
                 React.createElement("span", null, timeAgo(comment.createdAt)),
@@ -10219,6 +10256,51 @@ function ReelCard({ reel, active, go, meId, muted, onToggleMute, onOpenComments,
     const saved = useReelLiveDoc(['savedReels', meId, 'items', reel.id]);
     const following = useReelLiveDoc(reel.authorType === 'page' ? ['pageFollows', meId + '_' + reel.pageId] : ['follows', meId + '_' + reel.authorId]);
     const isOwner = reel.authorId === meId;
+    // ---- Fast-forward / scrub bar ----
+    // A thin, tappable/draggable progress bar pinned to the bottom of the video so people can
+    // skip ahead (or back) in a reel instead of only watching it start to finish.
+    const seekBarRef = useRef();
+    const seekingRef = useRef(false);
+    const [progress, setProgress] = useState(0); // 0..1
+    const [duration, setDuration] = useState(0);
+    const [scrubbing, setScrubbing] = useState(false);
+    useEffect(() => {
+        const v = videoRef.current;
+        if (!v) return;
+        const onTime = () => { if (!seekingRef.current && v.duration) setProgress(v.currentTime / v.duration); };
+        const onDur = () => setDuration(v.duration || 0);
+        v.addEventListener('timeupdate', onTime);
+        v.addEventListener('loadedmetadata', onDur);
+        v.addEventListener('durationchange', onDur);
+        return () => { v.removeEventListener('timeupdate', onTime); v.removeEventListener('loadedmetadata', onDur); v.removeEventListener('durationchange', onDur); };
+    }, []);
+    const seekToClientX = (clientX) => {
+        const bar = seekBarRef.current;
+        const v = videoRef.current;
+        if (!bar || !v || !v.duration) return;
+        const rect = bar.getBoundingClientRect();
+        const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+        v.currentTime = ratio * v.duration;
+        setProgress(ratio);
+    };
+    const onSeekPointerDown = (e) => {
+        e.stopPropagation();
+        seekingRef.current = true;
+        setScrubbing(true);
+        seekToClientX(e.clientX);
+        e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId);
+    };
+    const onSeekPointerMove = (e) => {
+        if (!seekingRef.current) return;
+        e.stopPropagation();
+        seekToClientX(e.clientX);
+    };
+    const endSeek = (e) => {
+        if (!seekingRef.current) return;
+        e && e.stopPropagation();
+        seekingRef.current = false;
+        setScrubbing(false);
+    };
     useEffect(() => {
         const coll = reel.authorType === 'page' ? 'fanPages' : 'users';
         const id = reel.authorType === 'page' ? reel.pageId : reel.authorId;
@@ -10242,6 +10324,7 @@ function ReelCard({ reel, active, go, meId, muted, onToggleMute, onOpenComments,
         } else {
             v.pause();
             try { v.currentTime = 0; } catch (e) { }
+            setProgress(0);
             if (__zloveActiveReelVideo === v) __zloveActiveReelVideo = null;
         }
         // Belt-and-suspenders: if this exact card unmounts (feed closed, list virtualized,
@@ -10269,12 +10352,16 @@ function ReelCard({ reel, active, go, meId, muted, onToggleMute, onOpenComments,
         React.createElement("video", { ref: videoRef, src: reel.videoURL, poster: reel.thumbURL || undefined, loop: true, muted: muted, playsInline: true, onClick: onToggleMute, className: "w-full h-full object-contain bg-black cursor-pointer" }),
         React.createElement("button", { onClick: onToggleMute, className: "absolute top-16 right-3 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center" }, React.createElement("i", { className: "fa-solid " + (muted ? "fa-volume-xmark" : "fa-volume-high") + " text-sm" })),
         reel.pinned && React.createElement("span", { className: "absolute top-3 left-3 bg-black/50 text-white text-[11px] font-semibold px-2 py-1 rounded-full" }, React.createElement("i", { className: "fa-solid fa-thumbtack mr-1" }), "Pinned"),
+        React.createElement("div", { ref: seekBarRef, onPointerDown: onSeekPointerDown, onPointerMove: onSeekPointerMove, onPointerUp: endSeek, onPointerCancel: endSeek, className: "absolute inset-x-0 bottom-0 z-10 h-4 flex items-center px-0.5 cursor-pointer touch-none" },
+            React.createElement("div", { className: "relative w-full bg-white/25 rounded-full overflow-hidden transition-all " + (scrubbing ? "h-1.5" : "h-[3px]") },
+                React.createElement("div", { className: "h-full bg-brand-500 rounded-full", style: { width: (progress * 100) + '%' } }))),
         React.createElement("div", { className: "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pt-16 pb-4 px-4 flex items-end justify-between gap-3" },
             React.createElement("div", { className: "flex-1 min-w-0 text-white" },
                 React.createElement("div", { className: "flex items-center gap-2 mb-1.5" },
                     React.createElement(Avatar, { user: author, size: 9, onClick: () => go(reel.authorType === 'page' ? { name: 'page', id: reel.pageId } : { name: 'profile', uid: reel.authorId }) }),
                     React.createElement("span", { className: "font-semibold text-sm cursor-pointer", onClick: () => go(reel.authorType === 'page' ? { name: 'page', id: reel.pageId } : { name: 'profile', uid: reel.authorId }) }, (author === null || author === void 0 ? void 0 : author.displayName) || '\u2026'),
                     (author === null || author === void 0 ? void 0 : author.verified) && React.createElement("i", { className: "fa-solid fa-badge-check text-brand-400 text-sm" }),
+                    React.createElement("span", { className: "text-white/70 text-xs" }, "\u00b7 ", timeAgo(reel.createdAt)),
                     !isOwner && React.createElement("button", { onClick: doFollow, className: "ml-1 text-xs font-semibold px-2.5 py-1 rounded-full " + (following ? "bg-white/20" : "bg-white text-ink-900") }, following ? 'Following' : 'Follow'),
                     React.createElement("i", { className: "fa-solid " + ((REEL_PRIVACY_OPTIONS.find(o => o.key === reel.privacy) || {}).icon || 'fa-earth-americas') + " text-[11px] text-white/70 ml-1", title: reel.privacy })),
                 reel.caption && React.createElement("p", { className: "text-sm leading-snug line-clamp-3" }, captionParts.map((part, i) => part.startsWith('#') ? React.createElement("span", { key: i, className: "text-brand-300 font-medium" }, part) : part))),
@@ -13051,6 +13138,7 @@ function DatingChatScreen({ matchId, go }) {
     const myDp = useDatingProfile(profile.id);
     const cfg = useDatingConfig();
     const siteSettings = useSiteSettings();
+    const [containerRef, mobileHeight] = useFillToViewportBottom();
     const [match, setMatch] = useState(undefined);
     const [other, setOther] = useState(undefined);
     const [text, setText] = useState('');
@@ -13136,7 +13224,7 @@ function DatingChatScreen({ matchId, go }) {
     };
     if (match === undefined || other === undefined) return React.createElement("div", { className: "py-16 flex justify-center" }, React.createElement("div", { className: "w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" }));
     if (!match || !other) return React.createElement("p", { className: "text-center text-slate-400 py-16" }, "This match is no longer available.");
-    return React.createElement("div", { className: "flex flex-col h-[calc(100vh-56px)] md:h-[80vh]" },
+    return React.createElement("div", { ref: containerRef, className: "flex flex-col md:h-[80vh]", style: mobileHeight ? { height: mobileHeight + 'px' } : undefined },
         React.createElement("div", { className: "flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-700" },
             React.createElement("button", { onClick: () => go({ name: 'dating' }) }, React.createElement("i", { className: "fa-solid fa-arrow-left" })),
             React.createElement("button", { onClick: () => setProfileOpen(true), className: "flex items-center gap-3 flex-1 min-w-0 text-left" },
