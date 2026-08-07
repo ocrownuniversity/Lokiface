@@ -10301,6 +10301,22 @@ function ReelCard({ reel, active, go, meId, muted, onToggleMute, onOpenComments,
         seekingRef.current = false;
         setScrubbing(false);
     };
+    // ---- 10-second fast-forward ----
+    // Tapping the skip button jumps the video ahead by 10s (clamped to the end) and briefly
+    // flashes a "+10s" badge over the video so the tap registers visually.
+    const [skipFlash, setSkipFlash] = useState(false);
+    const skipFlashTimer = useRef();
+    const skipForward10 = (e) => {
+        e.stopPropagation();
+        const v = videoRef.current;
+        if (!v || !v.duration) return;
+        v.currentTime = Math.min(v.duration - 0.05, v.currentTime + 10);
+        setProgress(v.currentTime / v.duration);
+        setSkipFlash(true);
+        clearTimeout(skipFlashTimer.current);
+        skipFlashTimer.current = setTimeout(() => setSkipFlash(false), 550);
+    };
+    useEffect(() => () => clearTimeout(skipFlashTimer.current), []);
     useEffect(() => {
         const coll = reel.authorType === 'page' ? 'fanPages' : 'users';
         const id = reel.authorType === 'page' ? reel.pageId : reel.authorId;
@@ -10351,6 +10367,9 @@ function ReelCard({ reel, active, go, meId, muted, onToggleMute, onOpenComments,
     return (React.createElement("div", { className: "relative w-full h-full shrink-0 snap-start bg-black flex items-center justify-center overflow-hidden" },
         React.createElement("video", { ref: videoRef, src: reel.videoURL, poster: reel.thumbURL || undefined, loop: true, muted: muted, playsInline: true, onClick: onToggleMute, className: "w-full h-full object-contain bg-black cursor-pointer" }),
         React.createElement("button", { onClick: onToggleMute, className: "absolute top-16 right-3 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center" }, React.createElement("i", { className: "fa-solid " + (muted ? "fa-volume-xmark" : "fa-volume-high") + " text-sm" })),
+        React.createElement("button", { onClick: skipForward10, title: "Forward 10 seconds", className: "absolute top-28 right-3 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-forward text-sm" })),
+        skipFlash && React.createElement("div", { className: "absolute inset-0 flex items-center justify-center pointer-events-none" },
+            React.createElement("span", { className: "bg-black/50 text-white text-sm font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 animate-pulse" }, React.createElement("i", { className: "fa-solid fa-forward text-xs" }), "10s")),
         reel.pinned && React.createElement("span", { className: "absolute top-3 left-3 bg-black/50 text-white text-[11px] font-semibold px-2 py-1 rounded-full" }, React.createElement("i", { className: "fa-solid fa-thumbtack mr-1" }), "Pinned"),
         React.createElement("div", { ref: seekBarRef, onPointerDown: onSeekPointerDown, onPointerMove: onSeekPointerMove, onPointerUp: endSeek, onPointerCancel: endSeek, className: "absolute inset-x-0 bottom-0 z-10 h-4 flex items-center px-0.5 cursor-pointer touch-none" },
             React.createElement("div", { className: "relative w-full bg-white/25 rounded-full overflow-hidden transition-all " + (scrubbing ? "h-1.5" : "h-[3px]") },
@@ -10474,12 +10493,13 @@ function ReelsFeedScreen({ go, route }) {
             React.createElement("button", { onClick: () => go({ name: 'home' }), className: "w-9 h-9 rounded-full bg-black/30 flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-arrow-left" })),
             !scope ? React.createElement("div", { className: "flex items-center gap-1 bg-black/30 rounded-full p-1" }, [['forYou', 'For You'], ['following', 'Following'], ['trending', 'Trending']].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setTabMode(k), className: "px-3 py-1 rounded-full text-xs font-semibold " + (tabMode === k ? "bg-white text-ink-900" : "text-white/80") }, l)))) :
                 React.createElement("p", { className: "font-semibold text-sm" }, "Reels"),
-            React.createElement("button", { onClick: () => setSearchOpen(true), className: "w-9 h-9 rounded-full bg-black/30 flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-magnifying-glass" }))),
+            React.createElement("div", { className: "flex items-center gap-2" },
+                React.createElement("button", { onClick: () => setSearchOpen(true), className: "w-9 h-9 rounded-full bg-black/30 flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-magnifying-glass" })),
+                React.createElement("button", { onClick: () => go({ name: 'reelUpload' }), title: "Add reel", className: "w-9 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white flex items-center justify-center shadow-lg" }, React.createElement("i", { className: "fa-solid fa-plus text-sm" })))),
         raw === null && React.createElement("div", { className: "h-full flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-spinner fa-spin text-2xl text-white/70" })),
         raw !== null && ordered.length === 0 && React.createElement("div", { className: "h-full flex flex-col items-center justify-center gap-2 text-white/60 px-8 text-center" }, React.createElement("i", { className: "fa-solid fa-clapperboard text-4xl mb-2" }), React.createElement("p", null, "No reels here yet."), React.createElement("button", { onClick: () => go({ name: 'reelUpload' }), className: "mt-3 px-4 py-2 rounded-full bg-white text-ink-900 text-sm font-semibold" }, "Upload the first one")),
         ordered.length > 0 && React.createElement("div", { ref: containerRef, onScroll: onScroll, className: "h-full w-full overflow-y-scroll snap-y snap-mandatory", style: { scrollbarWidth: 'none' } },
             ordered.map((r, i) => React.createElement(ReelCard, { key: r.id, reel: r, active: i === activeIndex, go: go, meId: me.id, muted: muted, onToggleMute: () => setMuted(m => !m), onOpenComments: setCommentsFor, onOpenReport: setReportFor }))),
-        React.createElement("button", { onClick: () => go({ name: 'reelUpload' }), className: "absolute bottom-6 right-4 z-10 w-12 h-12 rounded-full bg-brand-600 hover:bg-brand-700 text-white flex items-center justify-center shadow-lg" }, React.createElement("i", { className: "fa-solid fa-plus text-lg" })),
         commentsFor && React.createElement(ReelCommentsSheet, { reel: commentsFor, meId: me.id, isOwnerOrMod: commentsFor.authorId === me.id, onClose: () => setCommentsFor(null) }),
         reportFor && React.createElement(ReportModal, { title: "Report this reel", onClose: () => setReportFor(null), onSubmit: (reason) => reportReel(reportFor.id, reportFor.authorId, me.id, reason).then(() => { setReportFor(null); toast('Report submitted. Thank you.', 'success'); }) }),
         searchOpen && React.createElement(ReelsSearchOverlay, { onClose: () => setSearchOpen(false), go: (r) => { setSearchOpen(false); go(r); } })));
