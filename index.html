@@ -1879,6 +1879,12 @@ async function ensureYelofaceOfficialPage(adminUid) {
     await db.collection('pageNames').doc(normalizePageNameKey('Yeloface')).set({ pageId: YELOFACE_OFFICIAL_PAGE_ID }).catch(() => { });
 }
 async function createFanPage(profileId, fields) {
+    // Accounts are capped at 3 Pages. Checked here (not just in the UI) so the limit holds
+    // regardless of which screen calls this.
+    const existing = await db.collection('fanPages').where('ownerId', '==', profileId).get();
+    if (existing.size >= 3) {
+        throw new Error("You've reached the limit of 3 Pages per account.");
+    }
     const uname = fields.username.toLowerCase();
     const nameKey = normalizePageNameKey(fields.displayName);
     let newId = null;
@@ -4561,6 +4567,13 @@ function MainApp({ route, setRoute }) {
     }, [route.name]);
     return (React.createElement("div", { className: "min-h-screen flex" },
         React.createElement(CallOverlayHost, null),
+        // Always-on-top Home shortcut: several full-screen panels (create post, page/reel
+        // upload forms, admin, etc.) render as fixed overlays that visually cover the sidebar
+        // and mobile header underneath them, so the regular house icon isn't reachable from
+        // there. This floats above all of those (but stays below an active call screen) so
+        // pressing it works from literally anywhere in the app.
+        React.createElement("button", { onClick: () => goNav({ name: 'home' }), title: "Home", className: "fixed bottom-5 right-4 z-[150] w-12 h-12 rounded-full bg-[#0d9488] text-white shadow-lg flex items-center justify-center active:scale-95 transition" },
+            React.createElement("i", { className: "fa-solid fa-house text-lg" })),
         React.createElement("aside", { className: "hidden md:flex flex-col w-64 shrink-0 border-r border-slate-100 dark:border-ink-800 px-4 py-6 sticky top-0 h-screen" },
             React.createElement("div", { className: "flex items-center gap-2 px-2 mb-8" },
                 React.createElement(BrandWordmark, { size: "text-3xl" })),
@@ -7566,12 +7579,14 @@ function PageCard({ page, go }) {
 function MyPagesScreen({ go }) {
     const { profile } = useAuth();
     const myPages = useMyFanPages(profile.id);
+    const atLimit = (myPages || []).length >= 3;
     return (React.createElement("div", null,
         React.createElement("div", { className: "flex items-center justify-between mb-4" },
             React.createElement("h2", { className: "font-display text-xl font-bold" }, "Your Pages"),
-            React.createElement("button", { onClick: () => go({ name: 'pageForm' }), className: "bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-full" },
+            !atLimit && React.createElement("button", { onClick: () => go({ name: 'pageForm' }), className: "bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-full" },
                 React.createElement("i", { className: "fa-solid fa-plus mr-1.5" }), "Create Page")),
         React.createElement("p", { className: "text-sm text-slate-400 mb-4" }, "Pages let you build a presence separate from your personal profile \u2014 for a business, brand, or community \u2014 with its own followers, posts, and analytics."),
+        atLimit && React.createElement("p", { className: "text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2 mb-4" }, "You've reached the limit of 3 Pages per account."),
         myPages === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
         myPages && myPages.length === 0 && (React.createElement("div", { className: "text-center py-16 text-slate-400" },
             React.createElement("i", { className: "fa-regular fa-flag text-4xl mb-3" }),
@@ -7589,6 +7604,8 @@ function PageFormScreen({ id, go }) {
     const { profile } = useAuth();
     const toast = useToast();
     const isEdit = !!id;
+    const myPages = useMyFanPages(profile.id);
+    const atLimit = !isEdit && (myPages || []).length >= 3;
     const [page, setPage] = useState(isEdit ? undefined : null);
     const [displayName, setDisplayName] = useState('');
     const [username, setUsername] = useState('');
@@ -7643,6 +7660,11 @@ function PageFormScreen({ id, go }) {
         return React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026");
     if (isEdit && (page === null || page.ownerId !== profile.id))
         return React.createElement("p", { className: "text-sm text-slate-400" }, "You don't manage this Page.");
+    if (atLimit)
+        return React.createElement("div", { className: "text-center py-16" },
+            React.createElement("i", { className: "fa-solid fa-flag text-4xl text-slate-300 mb-3" }),
+            React.createElement("p", { className: "text-sm text-slate-500 dark:text-slate-400 mb-4" }, "You've reached the limit of 3 Pages per account."),
+            React.createElement("button", { onClick: () => go({ name: 'myPages' }), className: "text-brand-600 font-semibold text-sm" }, "Back to Your Pages"));
     // Contact fields are all optional, but validate format when something was actually typed
     // so bad data (e.g. a malformed email) never gets saved and silently breaks the About section.
     const emailValid = !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
