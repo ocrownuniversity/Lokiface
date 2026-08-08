@@ -4544,6 +4544,21 @@ function MainApp({ route, setRoute }) {
         }
         go(Object.assign({ name: n.name }, (n.params || {})));
     };
+    // The chat screen needs to know exactly how tall the sticky mobile header above it is, so
+    // it can size itself to fill the rest of the screen without guessing a fixed rem value (a
+    // guess that's wrong on some devices/font sizes leaves a gray gap above the nav bar — see
+    // ChatWindow). Measured live so it stays correct even if the header's content changes.
+    const headerRef = useRef(null);
+    const [headerHeight, setHeaderHeight] = useState(112);
+    useEffect(() => {
+        if (!headerRef.current) return;
+        const el = headerRef.current;
+        const update = () => setHeaderHeight(el.offsetHeight);
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [route.name]);
     return (React.createElement("div", { className: "min-h-screen flex" },
         React.createElement(CallOverlayHost, null),
         React.createElement("aside", { className: "hidden md:flex flex-col w-64 shrink-0 border-r border-slate-100 dark:border-ink-800 px-4 py-6 sticky top-0 h-screen" },
@@ -4561,7 +4576,7 @@ function MainApp({ route, setRoute }) {
                 React.createElement("i", { className: "fa-solid fa-arrow-right-from-bracket w-6 text-xl" }),
                 "Sign out")),
         React.createElement("div", { className: "flex-1 min-w-0 flex flex-col" },
-            route.name !== 'menu' && React.createElement("header", { className: "sticky top-0 z-30 bg-white dark:bg-ink-900 border-b border-slate-200 dark:border-ink-800 md:hidden" },
+            route.name !== 'menu' && React.createElement("header", { ref: headerRef, className: "sticky top-0 z-30 bg-white dark:bg-ink-900 border-b border-slate-200 dark:border-ink-800 md:hidden" },
                 React.createElement("div", { className: "px-3 py-2 flex items-center justify-between" },
                     React.createElement("div", { className: "flex items-center gap-1.5" },
                         React.createElement(BrandWordmark, { size: "text-3xl tracking-tight" })),
@@ -4599,7 +4614,7 @@ function MainApp({ route, setRoute }) {
                 route.name === 'listing' && React.createElement(ListingDetailScreen, { id: route.id, go: go }),
                 route.name === 'listingForm' && React.createElement(ListingFormScreen, { id: route.id, go: go }),
                 route.name === 'messages' && React.createElement(ChatListScreen, { go: go }),
-                route.name === 'chat' && React.createElement(ChatWindow, { chatId: route.chatId, otherUid: route.otherUid, pageId: route.pageId, go: go }),
+                route.name === 'chat' && React.createElement(ChatWindow, { chatId: route.chatId, otherUid: route.otherUid, pageId: route.pageId, go: go, headerHeight: headerHeight }),
                 route.name === 'notifications' && React.createElement(NotificationsScreen, { go: go }),
                 route.name === 'bookmarks' && React.createElement(BookmarksScreen, { go: go }),
                 route.name === 'memories' && React.createElement(MemoriesScreen, { go: go }),
@@ -9638,7 +9653,7 @@ function MessageBubble({ message, isMe, otherUid, otherUser, showAvatar, groupPo
                     React.createElement("button", { onClick: () => { onDeleteForMe(); setMenuOpen(false); }, className: "w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-slate-50 dark:hover:bg-ink-600" }, "Delete for me"),
                     isMe && React.createElement("button", { onClick: () => { if (confirm('Delete this message for everyone? This cannot be undone.')) { onDeleteForEveryone(); } setMenuOpen(false); }, className: "w-full text-left px-4 py-2 text-sm text-red-600 font-semibold hover:bg-slate-50 dark:hover:bg-ink-600 border-t border-slate-100 dark:border-ink-600" }, "Delete for everyone")))))));
 }
-function ChatWindow({ chatId, otherUid, pageId, go }) {
+function ChatWindow({ chatId, otherUid, pageId, go, headerHeight }) {
     var _a;
     const { profile } = useAuth();
     const toast = useToast();
@@ -9762,13 +9777,21 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
             toast(friendlyError(e), 'error');
         }
     };
+    // Only writes the "typing" flag to Firestore when it actually flips false->true (not on
+    // every keystroke). Writing on every character caused an onSnapshot echo -> re-render on
+    // every keystroke, which is what made the whole chat visibly jump while typing.
+    const isTypingRef = useRef(false);
     const onTextChange = (v) => {
         setText(v);
         if (!chatReady)
             return;
-        db.collection('chats').doc(chatId).set({ typing: { [profile.id]: true } }, { merge: true }).catch(() => { });
+        if (!isTypingRef.current) {
+            isTypingRef.current = true;
+            db.collection('chats').doc(chatId).set({ typing: { [profile.id]: true } }, { merge: true }).catch(() => { });
+        }
         clearTimeout(typingTimeout.current);
         typingTimeout.current = setTimeout(() => {
+            isTypingRef.current = false;
             db.collection('chats').doc(chatId).set({ typing: { [profile.id]: false } }, { merge: true }).catch(() => { });
         }, 2500);
     };
@@ -9790,6 +9813,7 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
             payload.replyTo = { id: replyTo.id, text: replyTo.text || ('[' + replyTo.type + ']'), senderId: replyTo.senderId };
         setText('');
         setReplyTo(null);
+        isTypingRef.current = false;
         if (chatReady)
             db.collection('chats').doc(chatId).set({ typing: { [profile.id]: false } }, { merge: true }).catch(() => { });
         try {
@@ -9908,10 +9932,11 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
     // live as the mobile browser's address/toolbar hides and shows while you scroll or type,
     // which resizes this container on every scroll tick — that's what read as the whole chat
     // "jumping up and down". svh is fixed to the viewport size WITH the browser chrome visible,
-    // so the container size never fluctuates; the only tradeoff is a sliver of unused space
-    // at the very bottom on browsers that auto-hide their chrome, which is a much better
-    // tradeoff than a bouncing layout.
-    return (React.createElement("div", { className: "flex flex-col bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 md:rounded-2xl overflow-hidden h-[calc(100svh-7.25rem)] md:h-[calc(100vh-2rem)]" },
+    // so the container size never fluctuates. headerHeight is the *actual measured* height of
+    // the sticky header above this screen (see AppShell) rather than a guessed rem value, so
+    // there's no leftover gray gap at the bottom when the real header is shorter/taller than
+    // guessed on a given device.
+    return (React.createElement("div", { className: "flex flex-col bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 md:rounded-2xl overflow-hidden h-[var(--chat-h)] md:h-[calc(100vh-2rem)]", style: { '--chat-h': `calc(100svh - ${headerHeight || 112}px)` } },
         React.createElement("div", { className: "flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-700 shrink-0 sticky top-0 z-30 bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm" },
             React.createElement("button", { onClick: () => go({ name: 'messages' }), className: "text-[#0d9488] w-8 h-8 flex items-center justify-center md:hidden" },
                 React.createElement("i", { className: "fa-solid fa-arrow-left" })),
