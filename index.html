@@ -5062,6 +5062,17 @@ function CreatePostScreen({ go, route }) {
             toast('Video exceeds 150MB', 'error');
             return;
         }
+        // Long videos upload slowly no matter what (it's the file size, not the app) — warn
+        // early so people aren't surprised a 100MB+ hour-long clip takes a while on mobile data.
+        const probe = document.createElement('video');
+        probe.preload = 'metadata';
+        probe.onloadedmetadata = () => {
+            URL.revokeObjectURL(probe.src);
+            if (probe.duration > 600) {
+                toast(`This video is ${Math.round(probe.duration / 60)} min long (${(f.size / (1024 * 1024)).toFixed(0)}MB) — upload may take a while on slow connections. Consider trimming it for a faster post.`, 'info');
+            }
+        };
+        probe.src = URL.createObjectURL(f);
         setFiles([]);
         setPreviews([]);
         setBgStyle(null);
@@ -5137,7 +5148,7 @@ function CreatePostScreen({ go, route }) {
             React.createElement("button", { onClick: () => go({ name: 'home' }), className: "text-slate-600 dark:text-slate-300 w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-ink-800" },
                 React.createElement("i", { className: "fa-solid fa-arrow-left text-lg" })),
             React.createElement("h2", { className: "font-display font-bold text-lg" }, timelineOwner ? ("On " + (timelineOwner.displayName || timelineOwner.username) + "'s timeline") : "Create post"),
-            React.createElement("button", { onClick: submit, disabled: !canPost, className: "text-brand-600 font-bold text-base disabled:opacity-30" }, busy ? 'Posting…' : 'POST')),
+            React.createElement("button", { onClick: submit, disabled: !canPost, className: "text-brand-600 font-bold text-base disabled:opacity-30" }, busy ? `Posting\u2026 ${progress}%` : 'POST')),
         React.createElement("div", { className: "flex-1 overflow-y-auto px-4 py-4" },
             timelineOwner && timelineOwner.id !== profile.id && React.createElement("p", { className: "text-xs text-slate-400 -mt-1 mb-2" }, "Anyone can see this on ", timelineOwner.displayName || timelineOwner.username, "'s timeline."),
             React.createElement("div", { className: "flex items-center gap-3 mb-4" },
@@ -5176,8 +5187,12 @@ function CreatePostScreen({ go, route }) {
                 music && (React.createElement("span", { className: "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 text-xs pl-1 pr-2 py-0.5 rounded-full flex items-center gap-1.5" }, React.createElement(MusicPlayBadge, { music: music, size: 4 }), music.title + ' · ' + music.artist, React.createElement("button", { onClick: () => setMusic(null), className: "ml-0.5" }, "\u2715"))),
                 feeling && (React.createElement("span", { className: "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs px-2 py-0.5 rounded-full flex items-center gap-1" }, feeling.emoji, ' ' + feeling.label, React.createElement("button", { onClick: () => setFeeling(null), className: "ml-0.5" }, "\u2715"))),
                 location && (React.createElement("span", { className: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs px-2 py-0.5 rounded-full flex items-center gap-1" }, React.createElement("i", { className: "fa-solid fa-location-dot" }), location, React.createElement("button", { onClick: () => setLocation(''), className: "ml-0.5" }, "\u2715"))))),
-            busy && progress > 0 && (React.createElement("div", { className: "w-full h-1.5 bg-slate-100 dark:bg-ink-700 rounded-full overflow-hidden mb-3" },
-                React.createElement("div", { className: "h-full bg-brand-600 transition-all", style: { width: progress + '%' } }))),
+            busy && (React.createElement("div", { className: "mb-3" },
+                React.createElement("div", { className: "flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1" },
+                    React.createElement("span", null, videoFile ? 'Uploading video\u2026' : 'Posting\u2026'),
+                    React.createElement("span", { className: "font-semibold" }, progress + '%')),
+                React.createElement("div", { className: "w-full h-1.5 bg-slate-100 dark:bg-ink-700 rounded-full overflow-hidden" },
+                    React.createElement("div", { className: "h-full bg-brand-600 transition-all", style: { width: progress + '%' } })))),
             React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", multiple: true, hidden: true, onChange: onFiles }),
             React.createElement("input", { ref: videoRef, type: "file", accept: "video/*", hidden: true, onChange: onVideoFile }),
             React.createElement("div", { className: "border border-slate-200 dark:border-ink-700 rounded-xl divide-y divide-slate-100 dark:divide-ink-700 mt-2" },
