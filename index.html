@@ -1269,6 +1269,7 @@ async function setPostReaction(postId, uid, authorId, type, pageId) {
             creditEngagementEarning({ pageId, source: 'like', ledgerId: 'like_' + postId + '_' + uid, actorId: uid }).catch(() => { });
         }
         if (authorId && authorId !== uid) {
+            creditPostEngagementReward({ uid: authorId, source: 'like', ledgerId: 'like_' + postId + '_' + uid }).catch(() => { });
             db.collection('notifications').doc(authorId).collection('items').add({
                 type: 'like', reactionType: type, fromUserId: uid, postId, read: false, createdAt: FieldValue.serverTimestamp()
             }).catch(() => { });
@@ -1409,6 +1410,14 @@ const DEFAULT_SITE_SETTINGS = {
     // Kill-switches for the WebRTC calling feature — flip off from admin Settings to
     // instantly disable voice and/or video calls site-wide without touching code.
     voiceCallEnabled: true, videoCallEnabled: true,
+    // Lets an admin turn video uploads in the main post composer on/off platform-wide at any
+    // time — when off, the composer only accepts photos, same as before this feature existed.
+    videoPostingEnabled: true,
+    // Kill-switch for the Go Live broadcast feature — when off, the "Go live" composer option
+    // and the "Live now" discovery bar on the home feed both disappear immediately. Streams
+    // already in progress when this is flipped off are left alone (existing viewers can keep
+    // watching / the host can still end it normally) — this only blocks *starting new* ones.
+    goLiveEnabled: true,
     // Page-owner engagement payout rates — all in USD, applied per every 100 *valid* events
     // (see creditEngagementEarning below). The defaults are the USD equivalent of ₦1,000 per
     // 100 video streams / ₦20 per 100 likes / ₦50 per 100 comments at roughly ₦1,550 = $1.
@@ -1423,6 +1432,11 @@ const DEFAULT_SITE_SETTINGS = {
     pendingClearanceHours: 24,
     // Soft per-page-per-actor-per-day caps so one account can't farm a single Page's payouts.
     dailyCapStreams: 500, dailyCapLikes: 500, dailyCapComments: 200,
+    // Flat Naira rewards paid to EVERY ordinary user (not just monetized Pages) for organic
+    // activity on their own posts: ₦ the moment they post, ₦ for every like their post gets,
+    // ₦ for every comment it gets. Admin-adjustable anytime from admin Settings > Monetization
+    // — takes effect on the very next post/like/comment, no code changes needed.
+    postCreateReward: 3, postLikeReward: 1, postCommentReward: 2,
 };
 function formatUSD(n) {
     return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1507,6 +1521,38 @@ async function creditEngagementEarning({ pageId, source, ledgerId, actorId }) {
         });
     }
     catch (e) { /* earnings are always best-effort — never block the like/comment/view itself */ }
+}
+/**
+ * Rewards an ORDINARY user's wallet (users/{uid}.walletBalance) for organic activity on their own
+ * posts — separate from creditEngagementEarning above, which only pays monetized fanPages in USD.
+ * This is the flat "everyone earns something" reward: ₦postCreateReward the instant they post,
+ * ₦postLikeReward per like their post gets, ₦postCommentReward per comment — all three fully
+ * admin-adjustable at any time from admin Settings > Monetization, no code changes needed.
+ * ledgerId must be deterministic and unique to the real-world event (post id / like_postId_uid /
+ * comment id) so a re-render, refresh, or duplicate call can never pay out twice for one event.
+ */
+async function creditPostEngagementReward({ uid, source, ledgerId }) {
+    if (!uid || !ledgerId)
+        return;
+    const field = source === 'post' ? 'postCreateReward' : source === 'like' ? 'postLikeReward' : 'postCommentReward';
+    const amount = Number(_liveSiteSettings[field] || 0);
+    if (!amount || amount <= 0)
+        return;
+    const ledgerRef = db.collection('postRewardLedger').doc(ledgerId);
+    try {
+        const alreadyPaid = await db.runTransaction(async (tx) => {
+            const snap = await tx.get(ledgerRef);
+            if (snap.exists)
+                return true;
+            tx.set(ledgerRef, { uid, source, amount, createdAt: FieldValue.serverTimestamp() });
+            return false;
+        });
+        if (alreadyPaid)
+            return;
+        const label = source === 'post' ? 'Reward for posting' : source === 'like' ? 'Reward for a like on your post' : 'Reward for a comment on your post';
+        await creditWallet(uid, amount, 'post_reward_' + source, { description: label });
+    }
+    catch (e) { /* rewards are always best-effort — never block the post/like/comment itself */ }
 }
 /**
  * Sweeps pending earnings older than the configured clearance window into the Page's
@@ -1643,6 +1689,7 @@ async function createReel({ authorId, authorType, pageId, caption, privacy, vide
         db.collection('fanPages').doc(pageId).update({ reelsCount: FieldValue.increment(1) }).catch(() => { });
     } else {
         db.collection('users').doc(authorId).update({ reelsCount: FieldValue.increment(1) }).catch(() => { });
+        creditPostEngagementReward({ uid: authorId, source: 'post', ledgerId: 'post_' + reelRef.id }).catch(() => { });
     }
     return reelRef.id;
 }
@@ -1685,6 +1732,7 @@ async function toggleLikeReel(reelId, uid, authorId, pageId) {
             creditEngagementEarning({ pageId, source: 'like', ledgerId: 'like_' + reelId + '_' + uid, actorId: uid }).catch(() => { });
         }
         if (authorId && authorId !== uid) {
+            creditPostEngagementReward({ uid: authorId, source: 'like', ledgerId: 'like_' + reelId + '_' + uid }).catch(() => { });
             db.collection('notifications').doc(authorId).collection('items').add({ type: 'reel_like', fromUserId: uid, reelId, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
         }
     }
@@ -1732,6 +1780,7 @@ async function addReelComment(reelId, authorId, uid, text, imageFile, parentId, 
         creditEngagementEarning({ pageId, source: 'comment', ledgerId: 'comment_' + ref.id, actorId: uid }).catch(() => { });
     }
     if (authorId && authorId !== uid) {
+        creditPostEngagementReward({ uid: authorId, source: 'comment', ledgerId: 'comment_' + ref.id }).catch(() => { });
         db.collection('notifications').doc(authorId).collection('items').add({ type: parentId ? 'reel_reply' : 'reel_comment', fromUserId: uid, reelId, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
     }
     return ref.id;
@@ -3420,6 +3469,350 @@ function CallOverlayHost() {
     return React.createElement(CallScreen, { call: call });
 }
 
+/* ============================== GO LIVE (broadcast) ==============================
+   Live video, signaled entirely through Firestore, same no-backend approach as the 1:1
+   calling feature above and reusing its ICE_SERVERS. Because there's no media server (SFU)
+   in a static app, this is a WebRTC "mesh": the host opens one separate RTCPeerConnection
+   per viewer and uploads their camera to each one individually. This works well for a modest
+   number of concurrent viewers on a decent connection, but — unlike a real broadcast/SFU
+   service — the host's upload bandwidth is shared across every viewer, so it will degrade
+   well before, say, a thousand concurrent viewers. Fine for creators/small-to-medium
+   audiences; swap in a real SFU (e.g. LiveKit, Mux) later if this needs to scale further.
+
+   Firestore layout used (new, does not touch any existing collection):
+     liveStreams/{liveId}                 hostId, hostName, hostPhoto, title, status:'live'|'ended',
+                                           viewerCount, likesCount, commentsCount, startedAt, endedAt
+     liveStreams/{liveId}/viewers/{uid}   offer{type,sdp}, answer{type,sdp}|null, joinedAt
+       .../hostCandidates/{auto}          ICE candidates from host -> this viewer
+       .../viewerCandidates/{auto}        ICE candidates from this viewer -> host
+     liveStreams/{liveId}/comments/{auto} uid, name, text, createdAt
+     liveStreams/{liveId}/likes/{uid}     createdAt (dedup so one heart-tap per viewer counts once)
+
+   Suggested Security Rules (Firestore console -> Rules):
+     match /liveStreams/{liveId} {
+       allow read: if request.auth != null;
+       allow create: if request.auth != null && request.auth.uid == request.resource.data.hostId;
+       allow update: if request.auth != null; // host ends it, viewers bump viewerCount — see caveat
+                                                // in creditEngagementEarning's docstring re: client trust
+       match /viewers/{uid} {
+         allow read, write: if request.auth != null;
+         match /{sub=**} { allow read, write: if request.auth != null; }
+       }
+       match /comments/{c} { allow read, create: if request.auth != null; }
+       match /likes/{uid} { allow read, write: if request.auth != null && request.auth.uid == uid; }
+     }
+*/
+let __liveHostSession = null; // { liveId, localStream, peers: {uid:{pc,candUnsub}}, viewersUnsub }
+const liveHostStore = (function () {
+    let state = { active: false };
+    let listeners = [];
+    return {
+        get: () => state,
+        set: (patch) => { state = Object.assign({}, state, typeof patch === 'function' ? patch(state) : patch); listeners.forEach(l => l(state)); },
+        subscribe: (fn) => { listeners.push(fn); return () => { listeners = listeners.filter(l => l !== fn); }; }
+    };
+})();
+function useLiveHostState() {
+    const [s, setS] = useState(liveHostStore.get());
+    useEffect(() => liveHostStore.subscribe(setS), []);
+    return s;
+}
+async function startGoingLive(profile, title) {
+    if (_liveSiteSettings.goLiveEnabled === false) throw new Error('Live streaming is currently disabled.');
+    if (__liveHostSession) throw new Error('You are already live.');
+    let localStream;
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } });
+    } catch (e) {
+        throw new Error('Could not access your camera/microphone. Please allow permission and try again.');
+    }
+    const liveRef = db.collection('liveStreams').doc();
+    __liveHostSession = { liveId: liveRef.id, localStream, peers: {} };
+    await liveRef.set({
+        hostId: profile.id, hostName: profile.displayName || 'Someone', hostPhoto: profile.photoURL || null,
+        title: (title || '').trim(), status: 'live', viewerCount: 0, likesCount: 0, commentsCount: 0,
+        startedAt: FieldValue.serverTimestamp(),
+    });
+    // Watch for new viewers joining (a viewer doc appears with an offer and no answer yet) and
+    // mesh-connect to each one individually.
+    __liveHostSession.viewersUnsub = liveRef.collection('viewers').onSnapshot(snap => {
+        snap.docChanges().forEach(change => {
+            const uid = change.doc.id;
+            const data = change.doc.data();
+            if (!__liveHostSession) return;
+            if (change.type === 'removed') {
+                const p = __liveHostSession.peers[uid];
+                if (p) { try { p.pc.close(); } catch (e) { } if (p.candUnsub) p.candUnsub(); delete __liveHostSession.peers[uid]; }
+                return;
+            }
+            if (data.offer && !data.answer && !__liveHostSession.peers[uid]) {
+                connectHostToViewer(liveRef, uid, data.offer).catch(() => { });
+            }
+        });
+    }, () => { });
+    liveHostStore.set({ active: true, liveId: liveRef.id, localStream, title: (title || '').trim(), viewerCount: 0, likesCount: 0 });
+    return liveRef.id;
+}
+async function connectHostToViewer(liveRef, uid, offer) {
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    __liveHostSession.localStream.getTracks().forEach(t => pc.addTrack(t, __liveHostSession.localStream));
+    const viewerRef = liveRef.collection('viewers').doc(uid);
+    pc.onicecandidate = (e) => { if (e.candidate) viewerRef.collection('hostCandidates').add({ candidate: e.candidate.toJSON(), createdAt: FieldValue.serverTimestamp() }).catch(() => { }); };
+    const candUnsub = viewerRef.collection('viewerCandidates').onSnapshot(snap => {
+        snap.docChanges().forEach(c => { if (c.type === 'added') { try { pc.addIceCandidate(c.doc.data().candidate); } catch (e) { } } });
+    }, () => { });
+    __liveHostSession.peers[uid] = { pc, candUnsub };
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await viewerRef.set({ answer: { type: answer.type, sdp: answer.sdp } }, { merge: true });
+}
+async function endGoingLive() {
+    const s = __liveHostSession;
+    if (!s) return;
+    __liveHostSession = null;
+    if (s.viewersUnsub) s.viewersUnsub();
+    Object.values(s.peers).forEach(p => { try { p.pc.close(); } catch (e) { } if (p.candUnsub) p.candUnsub(); });
+    try { s.localStream.getTracks().forEach(t => t.stop()); } catch (e) { }
+    db.collection('liveStreams').doc(s.liveId).update({ status: 'ended', endedAt: FieldValue.serverTimestamp() }).catch(() => { });
+    liveHostStore.set({ active: false });
+}
+// Viewer side: one RTCPeerConnection, receive-only, connecting straight to the host.
+let __liveViewerSession = null; // { liveId, uid, pc, remoteStream, candUnsub, docUnsub }
+const liveViewerStore = (function () {
+    let state = { remoteStream: null, status: 'connecting' };
+    let listeners = [];
+    return {
+        get: () => state,
+        set: (patch) => { state = Object.assign({}, state, typeof patch === 'function' ? patch(state) : patch); listeners.forEach(l => l(state)); },
+        subscribe: (fn) => { listeners.push(fn); return () => { listeners = listeners.filter(l => l !== fn); }; }
+    };
+})();
+function useLiveViewerState() {
+    const [s, setS] = useState(liveViewerStore.get());
+    useEffect(() => liveViewerStore.subscribe(setS), []);
+    return s;
+}
+async function joinLiveAsViewer(liveId, uid) {
+    if (__liveViewerSession) await leaveLiveAsViewer();
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    pc.addTransceiver('video', { direction: 'recvonly' });
+    pc.addTransceiver('audio', { direction: 'recvonly' });
+    const remoteStream = new MediaStream();
+    pc.ontrack = (e) => {
+        (e.streams[0] ? e.streams[0].getTracks() : [e.track]).forEach(t => { if (!remoteStream.getTracks().includes(t)) remoteStream.addTrack(t); });
+        liveViewerStore.set({ remoteStream, status: 'connected' });
+    };
+    const liveRef = db.collection('liveStreams').doc(liveId);
+    const viewerRef = liveRef.collection('viewers').doc(uid);
+    __liveViewerSession = { liveId, uid, pc, remoteStream };
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await viewerRef.set({ offer: { type: offer.type, sdp: offer.sdp }, answer: null, joinedAt: FieldValue.serverTimestamp() });
+    liveRef.update({ viewerCount: FieldValue.increment(1) }).catch(() => { });
+    __liveViewerSession.candUnsub = viewerRef.collection('hostCandidates').onSnapshot(snap => {
+        snap.docChanges().forEach(c => { if (c.type === 'added') { try { pc.addIceCandidate(c.doc.data().candidate); } catch (e) { } } });
+    }, () => { });
+    pc.onicecandidate = (e) => { if (e.candidate) viewerRef.collection('viewerCandidates').add({ candidate: e.candidate.toJSON(), createdAt: FieldValue.serverTimestamp() }).catch(() => { }); };
+    __liveViewerSession.docUnsub = viewerRef.onSnapshot(async (snap) => {
+        if (!snap.exists || !__liveViewerSession || __liveViewerSession.liveId !== liveId) return;
+        const data = snap.data();
+        if (data.answer && pc.signalingState === 'have-local-offer') {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.answer)).catch(() => { });
+        }
+    });
+    liveViewerStore.set({ remoteStream, status: 'connecting' });
+}
+async function leaveLiveAsViewer() {
+    const s = __liveViewerSession;
+    if (!s) return;
+    __liveViewerSession = null;
+    if (s.docUnsub) s.docUnsub();
+    if (s.candUnsub) s.candUnsub();
+    try { s.pc.close(); } catch (e) { }
+    db.collection('liveStreams').doc(s.liveId).collection('viewers').doc(s.uid).delete().catch(() => { });
+    db.collection('liveStreams').doc(s.liveId).update({ viewerCount: FieldValue.increment(-1) }).catch(() => { });
+    liveViewerStore.set({ remoteStream: null, status: 'connecting' });
+}
+function useLiveDoc(liveId) {
+    const [doc, setDoc] = useState(undefined);
+    useEffect(() => {
+        if (!liveId) { setDoc(null); return; }
+        const unsub = db.collection('liveStreams').doc(liveId).onSnapshot(s => setDoc(s.exists ? Object.assign({ id: s.id }, s.data()) : null), () => setDoc(null));
+        return unsub;
+    }, [liveId]);
+    return doc;
+}
+function useLiveComments(liveId) {
+    const [rows, setRows] = useState([]);
+    useEffect(() => {
+        if (!liveId) return;
+        const unsub = db.collection('liveStreams').doc(liveId).collection('comments').orderBy('createdAt', 'asc').limit(200)
+            .onSnapshot(snap => setRows(snap.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => { });
+        return unsub;
+    }, [liveId]);
+    return rows;
+}
+async function sendLiveComment(liveId, uid, name, text) {
+    if (!(text || '').trim()) return;
+    await db.collection('liveStreams').doc(liveId).collection('comments').add({ uid, name: name || 'Someone', text: text.trim(), createdAt: FieldValue.serverTimestamp() });
+    db.collection('liveStreams').doc(liveId).update({ commentsCount: FieldValue.increment(1) }).catch(() => { });
+}
+async function toggleLiveLike(liveId, uid) {
+    const ref = db.collection('liveStreams').doc(liveId).collection('likes').doc(uid);
+    const snap = await ref.get();
+    if (snap.exists) return; // hearts only count once per viewer per stream, tapping again is just a visual beat
+    await ref.set({ createdAt: FieldValue.serverTimestamp() });
+    db.collection('liveStreams').doc(liveId).update({ likesCount: FieldValue.increment(1) }).catch(() => { });
+}
+function useActiveLiveStreams() {
+    const [rows, setRows] = useState([]);
+    useEffect(() => {
+        const unsub = db.collection('liveStreams').where('status', '==', 'live').limit(20)
+            .onSnapshot(snap => setRows(snap.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => setRows([]));
+        return unsub;
+    }, []);
+    return rows;
+}
+/* ---- Go Live screens ---- */
+function LiveNowBar({ go }) {
+    const live = useActiveLiveStreams();
+    const siteSettings = useSiteSettings();
+    if (!siteSettings.goLiveEnabled || live.length === 0) return null;
+    return React.createElement("div", { className: "flex items-center gap-3 overflow-x-auto pb-1 mb-2", style: { scrollbarWidth: 'none' } },
+        live.map(l => React.createElement("button", { key: l.id, onClick: () => go({ name: 'liveView', liveId: l.id }), className: "flex flex-col items-center gap-1 shrink-0 w-16" },
+            React.createElement("div", { className: "relative w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-red-500 to-orange-400" },
+                React.createElement(Avatar, { user: { photoURL: l.hostPhoto, displayName: l.hostName }, size: 14 }),
+                React.createElement("span", { className: "absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full" }, "LIVE")),
+            React.createElement("span", { className: "text-[11px] truncate w-full text-center" }, l.hostName || 'Live'))));
+}
+function GoLiveScreen({ go }) {
+    const { profile } = useAuth();
+    const toast = useToast();
+    const siteSettings = useSiteSettings();
+    const host = useLiveHostState();
+    const [title, setTitle] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [previewStream, setPreviewStream] = useState(null);
+    const previewRef = useRef(null);
+    const liveVideoRef = useRef(null);
+    const liveDoc = useLiveDoc(host.active ? host.liveId : null);
+    const comments = useLiveComments(host.active ? host.liveId : null);
+    const [commentText, setCommentText] = useState('');
+    useEffect(() => {
+        if (host.active) return; // already broadcasting — no separate preview stream needed
+        let stream;
+        navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } })
+            .then(s => { stream = s; setPreviewStream(s); }).catch(() => { });
+        return () => { if (stream) stream.getTracks().forEach(t => t.stop()); };
+    }, [host.active]);
+    useEffect(() => { if (previewRef.current) previewRef.current.srcObject = previewStream; }, [previewStream]);
+    useEffect(() => { if (liveVideoRef.current) liveVideoRef.current.srcObject = host.localStream || null; }, [host.localStream]);
+    // Safety net: if the person navigates away (back button, closes tab) while still
+    // broadcasting, tear the stream down instead of leaving it dangling forever.
+    useEffect(() => () => { if (liveHostStore.get().active) endGoingLive(); }, []);
+    const start = async () => {
+        if (!siteSettings.goLiveEnabled) { toast('Live streaming is currently disabled', 'error'); return; }
+        setBusy(true);
+        try {
+            if (previewStream) previewStream.getTracks().forEach(t => t.stop());
+            setPreviewStream(null);
+            await startGoingLive(profile, title);
+        } catch (e) { toast(friendlyError(e), 'error'); }
+        finally { setBusy(false); }
+    };
+    const end = async () => {
+        await endGoingLive();
+        toast('Live ended', 'success');
+        go({ name: 'home' });
+    };
+    const sendComment = async () => {
+        if (!commentText.trim() || !host.liveId) return;
+        const t = commentText;
+        setCommentText('');
+        await sendLiveComment(host.liveId, profile.id, profile.displayName, t).catch(() => { });
+    };
+    if (!host.active) {
+        return React.createElement("div", { className: "fixed inset-0 bg-black z-50 flex flex-col" },
+            React.createElement("div", { className: "flex items-center justify-between px-4 py-3 shrink-0" },
+                React.createElement("button", { onClick: () => go({ name: 'home' }), className: "text-white w-9 h-9 flex items-center justify-center rounded-full bg-white/10" },
+                    React.createElement("i", { className: "fa-solid fa-arrow-left" })),
+                React.createElement("h2", { className: "font-display font-bold text-white" }, "Go Live")),
+            React.createElement("div", { className: "flex-1 relative bg-ink-900" },
+                previewStream ? React.createElement("video", { ref: previewRef, autoPlay: true, playsInline: true, muted: true, className: "absolute inset-0 w-full h-full object-cover" }) :
+                    React.createElement("div", { className: "absolute inset-0 flex items-center justify-center text-white/50 text-sm" }, "Starting camera\u2026")),
+            React.createElement("div", { className: "p-4 shrink-0 space-y-3 bg-black" },
+                React.createElement("input", { value: title, onChange: e => setTitle(e.target.value), placeholder: "Say something about your live\u2026 (optional)", maxLength: 100, className: "w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/40 text-sm focus:outline-none" }),
+                React.createElement("button", { onClick: start, disabled: busy || !previewStream, className: "w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-bold" }, busy ? 'Starting…' : 'Go Live')));
+    }
+    return React.createElement("div", { className: "fixed inset-0 bg-black z-50 flex flex-col" },
+        React.createElement("video", { ref: liveVideoRef, autoPlay: true, playsInline: true, muted: true, className: "absolute inset-0 w-full h-full object-cover" }),
+        React.createElement("div", { className: "relative z-10 flex items-center justify-between px-4 py-3" },
+            React.createElement("div", { className: "flex items-center gap-2" },
+                React.createElement("span", { className: "bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full" }, "LIVE"),
+                React.createElement("span", { className: "bg-black/50 text-white text-xs font-semibold px-2.5 py-1 rounded-full" }, React.createElement("i", { className: "fa-solid fa-eye mr-1" }), (liveDoc && liveDoc.viewerCount) || 0)),
+            React.createElement("button", { onClick: end, className: "bg-white text-red-600 text-xs font-bold px-3 py-1.5 rounded-full" }, "End Live")),
+        React.createElement("div", { className: "relative z-10 mt-auto px-3 pb-4" },
+            React.createElement("div", { className: "max-h-40 overflow-y-auto flex flex-col gap-1 mb-2" },
+                comments.slice(-30).map(c => React.createElement("p", { key: c.id, className: "text-white text-xs bg-black/30 rounded-full px-3 py-1.5 w-fit max-w-[85%]" },
+                    React.createElement("span", { className: "font-bold" }, c.name), " ", c.text))),
+            React.createElement("div", { className: "flex items-center gap-2" },
+                React.createElement("input", { value: commentText, onChange: e => setCommentText(e.target.value), onKeyDown: e => e.key === 'Enter' && sendComment(), placeholder: "Comment\u2026", className: "flex-1 px-4 py-2.5 rounded-full bg-white/15 text-white placeholder-white/50 text-sm focus:outline-none" }),
+                React.createElement("button", { onClick: sendComment, className: "w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white" }, React.createElement("i", { className: "fa-solid fa-paper-plane text-sm" })))));
+}
+function LiveViewerScreen({ liveId, go }) {
+    const { profile } = useAuth();
+    const doc = useLiveDoc(liveId);
+    const viewer = useLiveViewerState();
+    const comments = useLiveComments(liveId);
+    const [commentText, setCommentText] = useState('');
+    const [liked, setLiked] = useState(false);
+    const videoRef = useRef(null);
+    useEffect(() => { if (videoRef.current) videoRef.current.srcObject = viewer.remoteStream || null; }, [viewer.remoteStream]);
+    useEffect(() => {
+        if (!liveId || !profile.id) return;
+        joinLiveAsViewer(liveId, profile.id).catch(() => { });
+        return () => { leaveLiveAsViewer(); };
+    }, [liveId, profile.id]);
+    const sendComment = async () => {
+        if (!commentText.trim()) return;
+        const t = commentText;
+        setCommentText('');
+        await sendLiveComment(liveId, profile.id, profile.displayName, t).catch(() => { });
+    };
+    const like = async () => { setLiked(true); await toggleLiveLike(liveId, profile.id).catch(() => { }); };
+    if (doc === undefined) return null;
+    if (doc === null || doc.status === 'ended') {
+        return React.createElement("div", { className: "fixed inset-0 bg-black z-50 flex flex-col items-center justify-center text-white gap-4 px-6 text-center" },
+            React.createElement("i", { className: "fa-solid fa-video-slash text-4xl text-white/40" }),
+            React.createElement("p", { className: "font-semibold" }, "This live stream has ended"),
+            React.createElement("button", { onClick: () => go({ name: 'home' }), className: "px-5 py-2.5 rounded-full bg-white/15 text-sm font-semibold" }, "Back to Home"));
+    }
+    return React.createElement("div", { className: "fixed inset-0 bg-black z-50 flex flex-col" },
+        React.createElement("video", { ref: videoRef, autoPlay: true, playsInline: true, className: "absolute inset-0 w-full h-full object-cover" }),
+        viewer.status !== 'connected' && React.createElement("div", { className: "absolute inset-0 flex items-center justify-center text-white/60 text-sm" }, "Connecting to live\u2026"),
+        React.createElement("div", { className: "relative z-10 flex items-center justify-between px-4 py-3" },
+            React.createElement("div", { className: "flex items-center gap-2" },
+                React.createElement(Avatar, { user: { photoURL: doc.hostPhoto, displayName: doc.hostName }, size: 8 }),
+                React.createElement("div", null,
+                    React.createElement("p", { className: "text-white text-sm font-bold" }, doc.hostName),
+                    React.createElement("p", { className: "text-white/70 text-[11px]" }, React.createElement("i", { className: "fa-solid fa-eye mr-1" }), doc.viewerCount || 0, " watching")),
+                React.createElement("span", { className: "bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full" }, "LIVE")),
+            React.createElement("button", { onClick: () => go({ name: 'home' }), className: "w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-white" },
+                React.createElement("i", { className: "fa-solid fa-xmark" }))),
+        React.createElement("div", { className: "relative z-10 mt-auto px-3 pb-4" },
+            React.createElement("div", { className: "flex items-end justify-between gap-2" },
+                React.createElement("div", { className: "flex-1 min-w-0" },
+                    React.createElement("div", { className: "max-h-40 overflow-y-auto flex flex-col gap-1 mb-2" },
+                        comments.slice(-30).map(c => React.createElement("p", { key: c.id, className: "text-white text-xs bg-black/30 rounded-full px-3 py-1.5 w-fit max-w-[95%]" },
+                            React.createElement("span", { className: "font-bold" }, c.name), " ", c.text))),
+                    React.createElement("div", { className: "flex items-center gap-2" },
+                        React.createElement("input", { value: commentText, onChange: e => setCommentText(e.target.value), onKeyDown: e => e.key === 'Enter' && sendComment(), placeholder: "Comment\u2026", className: "flex-1 px-4 py-2.5 rounded-full bg-white/15 text-white placeholder-white/50 text-sm focus:outline-none" }),
+                        React.createElement("button", { onClick: sendComment, className: "w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white shrink-0" }, React.createElement("i", { className: "fa-solid fa-paper-plane text-sm" })))),
+                React.createElement("button", { onClick: like, className: "w-11 h-11 rounded-full bg-white/15 flex items-center justify-center shrink-0 mb-1" },
+                    React.createElement("i", { className: "fa-solid fa-heart text-lg " + (liked ? "text-red-500" : "text-white") })))));
+}
+
 /* ============================== MULTI-ACCOUNT: locally remembered logins ==============================
    Firebase Auth only keeps one active session per browser tab, so "another account" here means:
    we remember (in localStorage, on this device only — never a password) which accounts have signed
@@ -4088,6 +4481,8 @@ function MainApp({ route, setRoute }) {
                 route.name === 'reelAnalytics' && React.createElement(ReelAnalyticsScreen, { go: go, route: route }),
                 route.name === 'savedReels' && React.createElement(SavedReelsScreen, { go: go }),
                 route.name === 'createPost' && React.createElement(CreatePostScreen, { go: go, route: route }),
+                route.name === 'goLive' && React.createElement(GoLiveScreen, { go: go }),
+                route.name === 'liveView' && React.createElement(LiveViewerScreen, { liveId: route.liveId, go: go }),
                 route.name === 'search' && React.createElement(SearchScreen, { go: go, route: route }),
                 route.name === 'marketplace' && React.createElement(MarketplaceScreen, { go: go }),
                 route.name === 'games' && React.createElement(GamesHomeScreen, { go: go }),
@@ -4456,11 +4851,14 @@ function CreatePostScreen({ go, route }) {
     const { profile } = useAuth();
     const toast = useToast();
     const myPages = useMyFanPages(profile.id);
+    const siteSettings = useSiteSettings();
     const [postingAs, setPostingAs] = useState({ type: 'user' });
     const [showIdentityPicker, setShowIdentityPicker] = useState(false);
     const [text, setText] = useState((route === null || route === void 0 ? void 0 : route.initialText) || '');
     const [files, setFiles] = useState([]);
     const [previews, setPreviews] = useState([]);
+    const [videoFile, setVideoFile] = useState(null);
+    const [videoPreview, setVideoPreview] = useState(null);
     const [busy, setBusy] = useState(false);
     const [progress, setProgress] = useState(0);
     const [bold, setBold] = useState(false);
@@ -4476,6 +4874,7 @@ function CreatePostScreen({ go, route }) {
     const [audience, setAudience] = useState('public');
     const [showAudiencePicker, setShowAudiencePicker] = useState(false);
     const fileRef = useRef();
+    const videoRef = useRef();
     const textareaRef = useRef();
     const timelineOwnerId = (route === null || route === void 0 ? void 0 : route.timelineOwnerId) || null;
     const [timelineOwner, setTimelineOwner] = useState(null);
@@ -4531,18 +4930,44 @@ function CreatePostScreen({ go, route }) {
             }
             return true;
         });
+        if (valid.length) {
+            setVideoFile(null);
+            setVideoPreview(null);
+        }
         setFiles(f => [...f, ...valid]);
         setPreviews(p => [...p, ...valid.map(f => URL.createObjectURL(f))]);
         if (valid.length)
             setBgStyle(null);
     };
+    const onVideoFile = (e) => {
+        if (!siteSettings.videoPostingEnabled) {
+            toast('Video posting is currently disabled', 'error');
+            return;
+        }
+        const f = e.target.files[0];
+        if (!f) return;
+        if (!f.type.startsWith('video/')) {
+            toast(f.name + ' is not a video', 'error');
+            return;
+        }
+        if (f.size > 150 * 1024 * 1024) {
+            toast('Video exceeds 150MB', 'error');
+            return;
+        }
+        setFiles([]);
+        setPreviews([]);
+        setBgStyle(null);
+        setVideoFile(f);
+        setVideoPreview(URL.createObjectURL(f));
+    };
+    const removeVideo = () => { setVideoFile(null); setVideoPreview(null); };
     const removeFile = (idx) => {
         setFiles(f => f.filter((_, i) => i !== idx));
         setPreviews(p => p.filter((_, i) => i !== idx));
     };
     const soon = () => toast('Coming soon', 'info');
     const submit = async () => {
-        if (!text.trim() && files.length === 0 && !feeling && !location && !music)
+        if (!text.trim() && files.length === 0 && !videoFile && !feeling && !location && !music)
             return;
         setBusy(true);
         setProgress(0);
@@ -4561,11 +4986,15 @@ function CreatePostScreen({ go, route }) {
                 });
                 imageUrls.push(await ref.getDownloadURL());
             }
+            let videoURL = null;
+            if (videoFile && siteSettings.videoPostingEnabled) {
+                videoURL = await uploadPostVideo(profile.id, videoFile, setProgress);
+            }
             const postRef = await db.collection('posts').add({
                 authorId: profile.id, pageId: postingAs.type === 'page' ? postingAs.page.id : null,
                 timelineOwnerId: timelineOwnerId || null,
-                text: text.trim(), images: imageUrls,
-                bold, bgStyle: imageUrls.length ? null : bgStyle, taggedUsers: tagged, audience,
+                text: text.trim(), images: imageUrls, videoURL,
+                bold, bgStyle: (imageUrls.length || videoURL) ? null : bgStyle, taggedUsers: tagged, audience,
                 music: music || null, feeling: feeling || null, location: location || null,
                 createdAt: FieldValue.serverTimestamp(), likesCount: 0, commentsCount: 0, sharesCount: 0
             });
@@ -4574,6 +5003,7 @@ function CreatePostScreen({ go, route }) {
             }
             else {
                 await db.collection('users').doc(profile.id).update({ postsCount: FieldValue.increment(1) });
+                creditPostEngagementReward({ uid: profile.id, source: 'post', ledgerId: 'post_' + postRef.id }).catch(() => { });
             }
             if (timelineOwnerId && timelineOwnerId !== profile.id) {
                 db.collection('notifications').doc(timelineOwnerId).collection('items').add({
@@ -4592,7 +5022,7 @@ function CreatePostScreen({ go, route }) {
             setProgress(0);
         }
     };
-    const canPost = !busy && (text.trim() || files.length > 0 || feeling || location || music);
+    const canPost = !busy && (text.trim() || files.length > 0 || videoFile || feeling || location || music);
     const audienceOpt = AUDIENCE_OPTIONS.find(a => a.id === audience);
     return (React.createElement("div", { className: "fixed inset-0 bg-white dark:bg-ink-900 z-50 flex flex-col" },
         React.createElement("div", { className: "flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-ink-700 shrink-0" },
@@ -4627,7 +5057,10 @@ function CreatePostScreen({ go, route }) {
             previews.length > 0 && (React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-3" }, previews.map((p, i) => (React.createElement("div", { key: i, className: "relative rounded-lg overflow-hidden aspect-square group" },
                 React.createElement("img", { src: p, className: "w-full h-full object-cover" }),
                 React.createElement("button", { onClick: () => removeFile(i), className: "absolute top-1 right-1 bg-black/60 text-white rounded-full w-6 h-6 text-xs" }, "\u2715")))))),
-            !previews.length && (React.createElement("div", { className: "flex items-center gap-2.5 overflow-x-auto pb-3 mb-2" },
+            videoPreview && (React.createElement("div", { className: "relative rounded-lg overflow-hidden mb-3 bg-black" },
+                React.createElement("video", { src: videoPreview, controls: true, className: "w-full max-h-[360px]" }),
+                React.createElement("button", { onClick: removeVideo, className: "absolute top-2 right-2 bg-black/60 text-white rounded-full w-7 h-7 text-xs" }, "\u2715"))),
+            !previews.length && !videoPreview && (React.createElement("div", { className: "flex items-center gap-2.5 overflow-x-auto pb-3 mb-2" },
                 React.createElement("button", { onClick: () => setBgStyle(null), title: "No background", className: `w-9 h-9 shrink-0 rounded-full bg-white border-2 ${!bgStyle ? 'border-brand-600' : 'border-slate-200 dark:border-ink-600'} flex items-center justify-center text-slate-400 text-xs` }, "Aa"),
                 POST_BG_STYLES.map(s => (React.createElement("button", { key: s.id, onClick: () => setBgStyle(s.id), className: `w-9 h-9 shrink-0 rounded-full ${s.className} ${bgStyle === s.id ? 'ring-2 ring-offset-2 ring-brand-600 dark:ring-offset-ink-900' : ''}` }))))),
             (tagged.length > 0 || music || feeling || location) && (React.createElement("div", { className: "flex flex-wrap gap-1 mb-2" },
@@ -4638,17 +5071,19 @@ function CreatePostScreen({ go, route }) {
             busy && progress > 0 && (React.createElement("div", { className: "w-full h-1.5 bg-slate-100 dark:bg-ink-700 rounded-full overflow-hidden mb-3" },
                 React.createElement("div", { className: "h-full bg-brand-600 transition-all", style: { width: progress + '%' } }))),
             React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", multiple: true, hidden: true, onChange: onFiles }),
+            React.createElement("input", { ref: videoRef, type: "file", accept: "video/*", hidden: true, onChange: onVideoFile }),
             React.createElement("div", { className: "border border-slate-200 dark:border-ink-700 rounded-xl divide-y divide-slate-100 dark:divide-ink-700 mt-2" },
                 [
-                    { icon: 'fa-regular fa-image', color: 'text-emerald-500', label: 'Photos/Videos', onClick: () => fileRef.current.click() },
+                    { icon: 'fa-regular fa-image', color: 'text-emerald-500', label: 'Photos', onClick: () => fileRef.current.click() },
+                    siteSettings.videoPostingEnabled && { icon: 'fa-solid fa-video', color: 'text-sky-500', label: 'Video', onClick: () => videoRef.current.click() },
                     { icon: 'fa-solid fa-music', color: 'text-pink-500', label: music ? music.title + ' · ' + music.artist : 'Music', badge: !music ? 'New' : null, onClick: () => setShowMusicPicker(true) },
                     { icon: 'fa-solid fa-user-plus', color: 'text-brand-600', label: tagged.length ? tagged.length + ' tagged' : 'Tag people', onClick: () => setShowTagPicker(v => !v) },
                     { icon: 'fa-solid fa-location-dot', color: 'text-red-500', label: location || 'Add location', onClick: () => setShowLocationPicker(true) },
                     { icon: 'fa-regular fa-face-smile', color: 'text-amber-500', label: feeling ? `${feeling.emoji} ${feeling.label}` : 'Feeling/activity', onClick: () => setShowFeelingPicker(true) },
                     { icon: 'fa-solid fa-paper-plane', color: 'text-brand-600', label: 'Get messages', onClick: soon },
                     { icon: 'fa-solid fa-calendar-days', color: 'text-red-500', label: 'Create Event', onClick: soon },
-                    { icon: 'fa-solid fa-video', color: 'text-red-500', label: 'Go live', onClick: soon },
-                ].map((item, i) => (React.createElement("button", { key: i, onClick: item.onClick, className: "w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-slate-50 dark:hover:bg-ink-800 transition" },
+                    siteSettings.goLiveEnabled && { icon: 'fa-solid fa-video', color: 'text-red-500', label: 'Go live', onClick: () => go({ name: 'goLive' }) },
+                ].filter(Boolean).map((item, i) => (React.createElement("button", { key: i, onClick: item.onClick, className: "w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-slate-50 dark:hover:bg-ink-800 transition" },
                     React.createElement("i", { className: `${item.icon} ${item.color} text-lg w-6 text-center` }),
                     React.createElement("span", { className: "flex-1 text-[15px] truncate" }, item.label),
                     item.badge && React.createElement("span", { className: "bg-brand-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full" }, item.badge))))),
@@ -5515,6 +5950,9 @@ function Comments({ postId, go }) {
             // re-adding a comment creates a new doc/id, which is fine, that's genuinely new engagement.
             creditEngagementEarning({ pageId: post.pageId, source: 'comment', ledgerId: 'comment_' + commentRef.id, actorId: profile.id }).catch(() => { });
         }
+        if (post.authorId && post.authorId !== profile.id) {
+            creditPostEngagementReward({ uid: post.authorId, source: 'comment', ledgerId: 'comment_' + commentRef.id }).catch(() => { });
+        }
         const notifyUid = parentId && replyToUser ? replyToUser.id : post.authorId;
         if (notifyUid && notifyUid !== profile.id) {
             db.collection('notifications').doc(notifyUid).collection('items').add({
@@ -5935,6 +6373,7 @@ function HomeFeed({ go }) {
     }, [posts, reels, listings, activeCampaigns, promotedListings, officialRepeats]);
     return (React.createElement("div", null,
         React.createElement(PostTriggerBar, { go: go }),
+        React.createElement(LiveNowBar, { go: go }),
         React.createElement(ReelsStrip, { go: go }),
         items === null && React.createElement(React.Fragment, null, [1, 2, 3].map(i => React.createElement(PostSkeleton, { key: i }))),
         items !== null && items.length === 0 && (React.createElement("div", { className: "text-center py-16 text-slate-400" },
@@ -8581,6 +9020,19 @@ function AdminMonetizationSettingsForm({ form, adminUid, adminEmail }) {
                         React.createElement("label", { className: "text-[11px] text-slate-400" }, "Per 100 comments"),
                         React.createElement("input", { type: "number", step: "0.01", value: local.earningsRatePerComments100, onChange: setNum('earningsRatePerComments100'), className: "w-full mt-1 px-2 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }))),
                 React.createElement("p", { className: "text-[11px] text-slate-400 mt-1" }, "Every like/comment/unique-viewer on approved Pages' content credits automatically, in near real time \u2014 see creditEngagementEarning in the code.")),
+            React.createElement("div", { className: "border-t border-slate-100 dark:border-ink-700 pt-3" },
+                React.createElement("p", { className: "text-xs font-semibold text-slate-500 mb-2" }, "Post rewards for EVERY user (\u20A6, flat amount \u2014 not just monetized Pages)"),
+                React.createElement("div", { className: "grid grid-cols-3 gap-2" },
+                    React.createElement("div", null,
+                        React.createElement("label", { className: "text-[11px] text-slate-400" }, "\u20A6 per post"),
+                        React.createElement("input", { type: "number", step: "1", value: local.postCreateReward, onChange: setNum('postCreateReward'), className: "w-full mt-1 px-2 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" })),
+                    React.createElement("div", null,
+                        React.createElement("label", { className: "text-[11px] text-slate-400" }, "\u20A6 per like"),
+                        React.createElement("input", { type: "number", step: "1", value: local.postLikeReward, onChange: setNum('postLikeReward'), className: "w-full mt-1 px-2 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" })),
+                    React.createElement("div", null,
+                        React.createElement("label", { className: "text-[11px] text-slate-400" }, "\u20A6 per comment"),
+                        React.createElement("input", { type: "number", step: "1", value: local.postCommentReward, onChange: setNum('postCommentReward'), className: "w-full mt-1 px-2 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }))),
+                React.createElement("p", { className: "text-[11px] text-slate-400 mt-1" }, "Credited straight to the user's Wallet the instant they post, and the instant their post gets a new like or comment. Set any field to 0 to switch it off. Changes apply to the very next post/like/comment \u2014 no code changes, no redeploy.")),
             React.createElement("div", null,
                 React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Pending \u2192 withdrawable clearance (hours)"),
                 React.createElement("input", { type: "number", value: local.pendingClearanceHours, onChange: setNum('pendingClearanceHours'), className: "w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" })),
@@ -8781,6 +9233,16 @@ function AdminSettingsForm({ form, adminUid, adminEmail }) {
                     React.createElement("input", { type: "checkbox", checked: local.voiceCallEnabled !== false, onChange: setBool('voiceCallEnabled') }), "Voice calls enabled platform-wide"),
                 React.createElement("label", { className: "flex items-center gap-2 text-sm" },
                     React.createElement("input", { type: "checkbox", checked: local.videoCallEnabled !== false, onChange: setBool('videoCallEnabled') }), "Video calls enabled platform-wide")),
+            React.createElement("div", { className: "border-t border-slate-100 dark:border-ink-700 pt-3" },
+                React.createElement("p", { className: "text-xs font-semibold text-slate-500 mb-2" }, "Post composer"),
+                React.createElement("label", { className: "flex items-center gap-2 text-sm" },
+                    React.createElement("input", { type: "checkbox", checked: local.videoPostingEnabled !== false, onChange: setBool('videoPostingEnabled') }), "Video posting enabled (users can attach a video to a post)"),
+                React.createElement("p", { className: "text-[11px] text-slate-400 mt-1" }, "When off, the composer only accepts photos \u2014 takes effect immediately, no redeploy.")),
+            React.createElement("div", { className: "border-t border-slate-100 dark:border-ink-700 pt-3" },
+                React.createElement("p", { className: "text-xs font-semibold text-slate-500 mb-2" }, "Live streaming"),
+                React.createElement("label", { className: "flex items-center gap-2 text-sm" },
+                    React.createElement("input", { type: "checkbox", checked: local.goLiveEnabled !== false, onChange: setBool('goLiveEnabled') }), "Go Live enabled (users can start a live broadcast from the composer)"),
+                React.createElement("p", { className: "text-[11px] text-slate-400 mt-1" }, "When off, \"Go live\" disappears from the composer and the \"Live now\" bar disappears from the home feed. Any stream already in progress isn't cut off \u2014 this only blocks starting new ones.")),
             React.createElement("button", { disabled: busy, type: "submit", className: "px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white text-sm font-semibold" }, busy ? 'Saving…' : 'Save Settings')));
 }
 /* ============================== SUPER ADMIN: AUDIT LOG ROW ============================== */
@@ -10714,6 +11176,16 @@ async function uploadGroupPostGif(groupId, uid, file) {
 }
 async function uploadGroupPostVideo(groupId, uid, file, onProgress) {
     const ref = storage.ref(`groupPosts/${groupId}/${uid}_${Date.now()}_video.mp4`);
+    await new Promise((resolve, reject) => {
+        const task = ref.put(file, { contentType: file.type || 'video/mp4' });
+        task.on('state_changed', s => onProgress && onProgress(Math.round((s.bytesTransferred / s.totalBytes) * 100)), reject, resolve);
+    });
+    return ref.getDownloadURL();
+}
+// Video attachment for the main feed/timeline composer (CreatePostScreen). Gated behind the
+// admin-adjustable settings.videoPostingEnabled kill-switch — see AdminSettingsForm.
+async function uploadPostVideo(uid, file, onProgress) {
+    const ref = storage.ref(`posts/${uid}/${Date.now()}_video.mp4`);
     await new Promise((resolve, reject) => {
         const task = ref.put(file, { contentType: file.type || 'video/mp4' });
         task.on('state_changed', s => onProgress && onProgress(Math.round((s.bytesTransferred / s.totalBytes) * 100)), reject, resolve);
