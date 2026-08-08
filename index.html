@@ -974,7 +974,13 @@ async function ensureChat(meId, otherId) {
 }
 async function sendChatMessage(meId, chatId, otherUid, payload) {
     await ensureChat(meId, otherUid);
-    const previewText = payload.type === 'text' ? payload.text : ('[' + payload.type + ']');
+    const callPreview = () => {
+        const isVideo = payload.callType === 'video';
+        if (payload.callStatus === 'ended') return (isVideo ? 'Video call' : 'Voice call');
+        if (payload.callStatus === 'rejected') return 'Declined call';
+        return 'Missed ' + (isVideo ? 'video' : 'voice') + ' call';
+    };
+    const previewText = payload.type === 'text' ? payload.text : payload.type === 'call' ? callPreview() : ('[' + payload.type + ']');
     await db.collection('chats').doc(chatId).collection('messages').add(Object.assign({ senderId: meId, createdAt: FieldValue.serverTimestamp(), readBy: [], deliveredTo: [], deletedFor: [], reactions: {} }, payload));
     await db.collection('chats').doc(chatId).set({
         lastMessage: { type: payload.type, text: previewText, senderId: meId }, lastMessageAt: FieldValue.serverTimestamp()
@@ -3202,19 +3208,47 @@ function __teardownSession() {
     try { s.pc && s.pc.close(); } catch (e) { }
     try { (s.localStream ? s.localStream.getTracks() : []).forEach(t => t.stop()); } catch (e) { }
 }
+// Drops a WhatsApp-style call-log entry into the two participants' chat as soon as a call
+// reaches a terminal state (answered-then-ended, no answer, declined, or busy) — this is the
+// ONLY place that writes these, called from whichever side's browser is doing the terminating
+// action (hang up / ring timeout / decline), so senderId always matches the writer's own uid
+// (required by the chat Security Rules) and every real-world call produces exactly one entry.
+// `session` just needs { me, callerId, calleeId, callType }; `status` is the raw calls/{id}
+// status ('ended' | 'missed' | 'rejected' | 'busy'). If the call never actually connected
+// (no connectedAt on the live call state), an 'ended' status is treated as 'missed' instead —
+// from the callee's point of view a call the caller cancelled before pickup IS a missed call.
+function logCallMessage(session, status) {
+    if (!session || !session.callerId || !session.calleeId || !session.me)
+        return;
+    const liveCall = callStore.get().call;
+    const connectedAt = liveCall ? liveCall.connectedAt : null;
+    const finalStatus = (status === 'ended' && !connectedAt) ? 'missed' : status;
+    const durationSec = connectedAt ? Math.max(0, Math.round((Date.now() - connectedAt) / 1000)) : 0;
+    const otherUid = session.me === session.callerId ? session.calleeId : session.callerId;
+    sendChatMessage(session.me, chatIdFor(session.callerId, session.calleeId), otherUid, {
+        type: 'call', callType: session.callType || 'voice', callStatus: finalStatus,
+        callerId: session.callerId, calleeId: session.calleeId, durationSec
+    }).catch(() => { });
+}
 function endActiveCall(reason) {
     const s = __session;
+    const finalStatus = reason || 'ended';
     if (s && s.callId) {
-        db.collection('calls').doc(s.callId).update({ status: reason || 'ended', updatedAt: FieldValue.serverTimestamp() }).catch(() => { });
+        db.collection('calls').doc(s.callId).update({ status: finalStatus, updatedAt: FieldValue.serverTimestamp() }).catch(() => { });
+        logCallMessage(s, finalStatus);
     }
     __teardownSession();
     callStore.set({ call: null });
 }
-function declineIncomingCall(callId) {
+function declineIncomingCall(callId, meId, call) {
     if (__ringtone) { __ringtone.stop(); __ringtone = null; }
     const current = callStore.get().call;
     if (current && current.incomingUnsub) current.incomingUnsub();
     db.collection('calls').doc(callId).update({ status: 'rejected', updatedAt: FieldValue.serverTimestamp() }).catch(() => { });
+    const c = call || current;
+    if (meId && c && c.peer && c.peer.id) {
+        logCallMessage({ me: meId, callerId: c.peer.id, calleeId: meId, callType: c.type }, 'rejected');
+    }
     callStore.set({ call: null });
 }
 function attachRemoteTrackHandlers(pc) {
@@ -3253,7 +3287,7 @@ async function startOutgoingCall(profile, otherUid, otherUser, type) {
     const callRef = db.collection('calls').doc();
     pc.onicecandidate = (e) => { if (e.candidate) callRef.collection('candidates').add({ from: profile.id, candidate: e.candidate.toJSON(), createdAt: FieldValue.serverTimestamp() }).catch(() => { }); };
     const otherPhoto = otherUser.photoURL || (otherUser.photos && otherUser.photos[0]) || null;
-    __session = { pc, localStream, callId: callRef.id, role: 'caller', otherUid };
+    __session = { pc, localStream, callId: callRef.id, role: 'caller', otherUid, me: profile.id, callerId: profile.id, calleeId: otherUid, callType: type };
     callStore.set({
         call: { id: callRef.id, role: 'caller', type, status: 'ringing', peer: { id: otherUid, name: otherUser.displayName, photo: otherPhoto }, localStream, remoteStream, muted: false, cameraOff: false }
     });
@@ -3291,6 +3325,7 @@ async function startOutgoingCall(profile, otherUid, otherUser, type) {
     __session.ringTimeout = setTimeout(() => {
         if (__session && __session.callId === callRef.id) {
             callRef.update({ status: 'missed', updatedAt: FieldValue.serverTimestamp() }).catch(() => { });
+            logCallMessage(__session, 'missed');
             callStore.set({ call: null }); __teardownSession();
         }
     }, RING_TIMEOUT_MS);
@@ -3305,6 +3340,7 @@ function listenForIncomingCalls(profile) {
                 if (ageMs > RING_TIMEOUT_MS) return; // stale ringing doc left over from a previous session
                 if (__session || callStore.get().call) { // already on/showing a call — auto-decline as busy
                     db.collection('calls').doc(ch.doc.id).update({ status: 'busy', updatedAt: FieldValue.serverTimestamp() }).catch(() => { });
+                    logCallMessage({ me: profile.id, callerId: data.callerId, calleeId: profile.id, callType: data.type }, 'busy');
                     return;
                 }
                 __ringtone = makeRingtone(392);
@@ -3345,7 +3381,7 @@ async function acceptIncomingCall(profile) {
     const remoteStream = attachRemoteTrackHandlers(pc);
     watchConnectionState(pc);
     pc.onicecandidate = (e) => { if (e.candidate) callRef.collection('candidates').add({ from: profile.id, candidate: e.candidate.toJSON(), createdAt: FieldValue.serverTimestamp() }).catch(() => { }); };
-    __session = { pc, localStream, callId, role: 'callee', otherUid: data.callerId };
+    __session = { pc, localStream, callId, role: 'callee', otherUid: data.callerId, me: profile.id, callerId: data.callerId, calleeId: profile.id, callType: data.type };
     callStore.set({ call: { id: callId, role: 'callee', type: data.type, status: 'connecting', peer: { id: data.callerId, name: data.callerName, photo: data.callerPhoto }, localStream, remoteStream, muted: false, cameraOff: false } });
     try {
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
@@ -3410,7 +3446,7 @@ function IncomingCallModal({ call }) {
     const [busy, setBusy] = useState(false);
     const { profile } = useAuth();
     const accept = async () => { setBusy(true); try { await acceptIncomingCall(profile); } catch (e) { toast(friendlyError(e), 'error'); } finally { setBusy(false); } };
-    const decline = () => declineIncomingCall(call.id);
+    const decline = () => declineIncomingCall(call.id, profile.id, call);
     return React.createElement("div", { className: "fixed inset-0 z-[200] bg-ink-900/98 flex flex-col items-center justify-center text-white px-6" },
         React.createElement("div", { className: "absolute inset-0 flex items-center justify-center" },
             React.createElement("div", { className: "w-56 h-56 rounded-full bg-brand-500/10 animate-ping absolute" })),
@@ -9327,7 +9363,7 @@ function ChatRow({ row, go, search, onPin, onArchive, onDelete, onAccept, onDecl
         return null;
     if (search && !(((_a = user.displayName) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(search.toLowerCase())) || ((_b = user.username) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes(search.toLowerCase()))))
         return null;
-    const previewMap = { image: '📷 Photo', video: '🎥 Video', audio: '🎤 Voice note', document: '📄 Document' };
+    const previewMap = { image: '📷 Photo', video: '🎥 Video', audio: '🎤 Voice note', document: '📄 Document', call: '📞 ' + ((row.lastMessage && row.lastMessage.text) || 'Call') };
     const preview = row.lastMessage ? (row.lastMessage.type === 'text' ? row.lastMessage.text : (previewMap[row.lastMessage.type] || 'Message')) : 'Say hello 👋';
     const openChat = () => go({ name: 'chat', chatId: row.chatId, otherUid: row.otherUid });
     const unread = row.unreadCount > 0;
@@ -9453,6 +9489,36 @@ function MessageBubble({ message, isMe, otherUid, otherUser, showAvatar, groupPo
     const onTouchStart = () => { movedRef.current = false; pressTimer.current = setTimeout(() => { if (!movedRef.current && navigator.vibrate) navigator.vibrate(15); if (!movedRef.current) setMenuOpen(true); }, 450); };
     const onTouchMove = () => { movedRef.current = true; if (pressTimer.current) clearTimeout(pressTimer.current); };
     const onTouchEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
+    // Call-log entries (a voice/video call that just ended, went unanswered, was declined, or
+    // hit "busy") render as a centered pill, like WhatsApp/Messenger's call log rows, instead
+    // of a left/right chat bubble — they aren't "sent" by either side in the usual sense.
+    // Perspective (who called whom) is read straight off callerId/calleeId rather than off
+    // isMe/senderId, since the message can be written by either party (see logCallMessage).
+    if (message.type === 'call') {
+        const myUid = message.callerId === otherUid ? message.calleeId : message.callerId;
+        const iAmCaller = myUid === message.callerId;
+        const isVideo = message.callType === 'video';
+        const missed = message.callStatus === 'missed' || message.callStatus === 'busy' || (message.callStatus === 'rejected' && !iAmCaller);
+        let label;
+        if (message.callStatus === 'ended' && message.durationSec > 0) {
+            const mins = Math.floor(message.durationSec / 60), secs = String(message.durationSec % 60).padStart(2, '0');
+            label = (isVideo ? 'Video call' : 'Voice call') + ' \u00B7 ' + mins + ':' + secs;
+        } else if (message.callStatus === 'rejected') {
+            label = iAmCaller ? (isVideo ? 'Video call declined' : 'Voice call declined') : 'You declined this call';
+        } else if (message.callStatus === 'busy') {
+            label = iAmCaller ? (isVideo ? 'Video call \u2014 line busy' : 'Voice call \u2014 line busy') : 'Missed ' + (isVideo ? 'video' : 'voice') + ' call';
+        } else {
+            label = iAmCaller ? 'No answer' : 'Missed ' + (isVideo ? 'video' : 'voice') + ' call';
+        }
+        const timeLabel = (message.createdAt && message.createdAt.toDate) ? message.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        return (React.createElement("div", { className: "flex justify-center my-1.5" },
+            React.createElement("div", { className: "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs bg-slate-100 dark:bg-ink-700 " + (missed ? "text-red-500" : "text-slate-500 dark:text-slate-300") },
+                React.createElement("i", { className: "fa-solid " + (isVideo ? "fa-video" : "fa-phone") }),
+                React.createElement("span", { className: "font-medium" }, label),
+                timeLabel && React.createElement(React.Fragment, null,
+                    React.createElement("span", { className: "text-slate-300 dark:text-slate-500" }, "\u00B7"),
+                    React.createElement("span", null, timeLabel)))));
+    }
     // "Unsent" messages (deleted for everyone) still exist as a doc — for readBy/order/ordering
     // integrity — but render as a muted placeholder instead of their original content, the same
     // way WhatsApp/Messenger show "This message was deleted." to both sides.
@@ -9766,7 +9832,14 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
     const displayIdentity = pageId && pageInfo ? pageInfo : otherUser;
     const identityRoute = pageId && pageInfo ? { name: 'page', id: pageId } : { name: 'profile', uid: otherUid };
     const visibleMessages = (messages || []).filter(m => !(m.deletedFor || []).includes(profile.id));
-    return (React.createElement("div", { className: "flex flex-col bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 md:rounded-2xl overflow-hidden h-[calc(100dvh-7.25rem)] md:h-[calc(100vh-2rem)]" },
+    // Uses the "small viewport height" unit (100svh), not 100dvh, on purpose: dvh changes
+    // live as the mobile browser's address/toolbar hides and shows while you scroll or type,
+    // which resizes this container on every scroll tick — that's what read as the whole chat
+    // "jumping up and down". svh is fixed to the viewport size WITH the browser chrome visible,
+    // so the container size never fluctuates; the only tradeoff is a sliver of unused space
+    // at the very bottom on browsers that auto-hide their chrome, which is a much better
+    // tradeoff than a bouncing layout.
+    return (React.createElement("div", { className: "flex flex-col bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 md:rounded-2xl overflow-hidden h-[calc(100svh-7.25rem)] md:h-[calc(100vh-2rem)]" },
         React.createElement("div", { className: "flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-700 shrink-0 sticky top-0 z-30 bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm" },
             React.createElement("button", { onClick: () => go({ name: 'messages' }), className: "text-[#0d9488] w-8 h-8 flex items-center justify-center md:hidden" },
                 React.createElement("i", { className: "fa-solid fa-arrow-left" })),
