@@ -3144,14 +3144,41 @@ function ToastProvider({ children }) {
    shared publicly and rate-limited — fine to get started, but swap in your own TURN
    credentials below (e.g. a free Metered.ca or Cloudflare Calls account) if calls start
    failing to connect under real traffic. */
-const ICE_SERVERS = {
-    iceServers: [
-        { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
-        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-    ]
-};
+/* OPTIONAL BUT RECOMMENDED: get your own free TURN credentials at metered.ca (free tier,
+   ~20GB/mo) then paste your API key + app name below. Free personal credentials are far
+   more reliable than the shared public demo ones below, which get rate-limited/overloaded
+   under real traffic — this is the #1 cause of calls that ring fine but never connect when
+   the two people are on different networks (e.g. WiFi <-> mobile data). Sign up at
+   https://dashboard.metered.ca, create an "Application", copy its API key + app name here: */
+const METERED_TURN_API_KEY = ''; // e.g. 'abcd1234...' — leave blank to just use the free shared servers below
+const METERED_APP_NAME = ''; // e.g. 'myapp' — the subdomain shown in your Metered dashboard
+
+const STATIC_ICE_SERVERS = [
+    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302', 'stun:stun3.l.google.com:19302', 'stun:stun4.l.google.com:19302'] },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:80?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+];
+let _cachedIceServers = null, _iceServersFetchedAt = 0;
+// Fetches fresh TURN credentials from Metered if an API key is configured (their servers are
+// far more reliable than the shared public demo ones), otherwise just uses the static list.
+// Result is cached for an hour since credentials are time-boxed but calls happen in bursts.
+async function getIceServers() {
+    if (!METERED_TURN_API_KEY || !METERED_APP_NAME) return { iceServers: STATIC_ICE_SERVERS, iceCandidatePoolSize: 10 };
+    if (_cachedIceServers && (Date.now() - _iceServersFetchedAt) < 3600000) return _cachedIceServers;
+    try {
+        const res = await fetch(`https://${METERED_APP_NAME}.metered.live/api/v1/turn/credentials?apiKey=${METERED_TURN_API_KEY}`);
+        const servers = await res.json();
+        if (Array.isArray(servers) && servers.length) {
+            _cachedIceServers = { iceServers: servers.concat(STATIC_ICE_SERVERS), iceCandidatePoolSize: 10 };
+            _iceServersFetchedAt = Date.now();
+            return _cachedIceServers;
+        }
+    } catch (e) { /* fall through to static list below */ }
+    return { iceServers: STATIC_ICE_SERVERS, iceCandidatePoolSize: 10 };
+}
 const RING_TIMEOUT_MS = 45000;
 // Tiny module-level store (outside React) so any component can trigger/observe the
 // active call without needing a Context Provider wrapped around the whole app.
@@ -3203,6 +3230,7 @@ function __teardownSession() {
     const s = __session;
     __session = null;
     if (s.ringTimeout) clearTimeout(s.ringTimeout);
+    if (s.connectTimeout) clearTimeout(s.connectTimeout);
     if (s.callDocUnsub) s.callDocUnsub();
     if (s.candidatesUnsub) s.candidatesUnsub();
     try { s.pc && s.pc.close(); } catch (e) { }
@@ -3263,11 +3291,37 @@ function watchConnectionState(pc) {
     pc.onconnectionstatechange = () => {
         const st = pc.connectionState;
         if (st === 'connected') {
+            if (__session && __session.connectTimeout) { clearTimeout(__session.connectTimeout); __session.connectTimeout = null; }
             callStore.set(s => (s.call && s.call.status !== 'connected') ? { call: Object.assign({}, s.call, { status: 'connected', connectedAt: Date.now() }) } : s);
         } else if (st === 'failed' || st === 'closed') {
-            if (__session) endActiveCall('ended');
+            if (__session) failActiveCall();
         }
     };
+}
+// Called once the local peer has an answer/offer set and is actively trying to establish
+// a connection. On some devices (notably iOS Safari) a hopeless ICE gathering attempt can
+// sit at "connecting" indefinitely instead of ever reaching connectionState "failed" — most
+// often because no TURN relay candidate worked across the two networks. This gives up after
+// a fixed window instead of leaving the caller staring at "Connecting..." forever.
+function armConnectTimeout() {
+    if (!__session) return;
+    if (__session.connectTimeout) clearTimeout(__session.connectTimeout);
+    __session.connectTimeout = setTimeout(() => {
+        if (__session && __session.pc && __session.pc.connectionState !== 'connected') failActiveCall();
+    }, 20000);
+}
+// Ends the call the same way a normal hangup does, but first flashes a "Couldn't connect"
+// message in the call screen for a couple seconds instead of just silently vanishing —
+// silently closing is what makes a failed connection look identical to a stuck one.
+function failActiveCall() {
+    const s = __session;
+    if (s && s.callId) {
+        db.collection('calls').doc(s.callId).update({ status: 'ended', updatedAt: FieldValue.serverTimestamp() }).catch(() => { });
+        logCallMessage(s, 'ended');
+    }
+    __teardownSession();
+    callStore.set(c => ({ call: c.call ? Object.assign({}, c.call, { status: 'failed' }) : c.call }));
+    setTimeout(() => callStore.set({ call: null }), 2500);
 }
 async function startOutgoingCall(profile, otherUid, otherUser, type) {
     if (__session || callStore.get().call) throw new Error('You are already on a call.');
@@ -3280,7 +3334,7 @@ async function startOutgoingCall(profile, otherUid, otherUser, type) {
     } catch (e) {
         throw new Error('Could not access your ' + (type === 'video' ? 'camera/microphone' : 'microphone') + '. Please allow permission and try again.');
     }
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+    const pc = new RTCPeerConnection(await getIceServers());
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     const remoteStream = attachRemoteTrackHandlers(pc);
     watchConnectionState(pc);
@@ -3318,6 +3372,7 @@ async function startOutgoingCall(profile, otherUid, otherUser, type) {
             if (__session.ringTimeout) clearTimeout(__session.ringTimeout);
             try { await pc.setRemoteDescription(new RTCSessionDescription(data.answer)); } catch (e) { }
             callStore.set(s => ({ call: s.call ? Object.assign({}, s.call, { status: 'connecting' }) : s.call }));
+            armConnectTimeout();
         } else if (data.status === 'rejected' || data.status === 'busy' || data.status === 'ended' || data.status === 'missed') {
             callStore.set({ call: null }); __teardownSession();
         }
@@ -3376,7 +3431,7 @@ async function acceptIncomingCall(profile) {
         callStore.set({ call: null });
         throw new Error('Could not access your ' + (data.type === 'video' ? 'camera/microphone' : 'microphone') + '. Please allow permission and try again.');
     }
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+    const pc = new RTCPeerConnection(await getIceServers());
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     const remoteStream = attachRemoteTrackHandlers(pc);
     watchConnectionState(pc);
@@ -3388,6 +3443,7 @@ async function acceptIncomingCall(profile) {
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         await callRef.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'accepted', updatedAt: FieldValue.serverTimestamp() });
+        armConnectTimeout();
     } catch (e) {
         __teardownSession(); callStore.set({ call: null });
         throw new Error('Could not connect the call: ' + e.message);
@@ -3469,8 +3525,9 @@ function CallScreen({ call }) {
     useEffect(() => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = call.remoteStream || null; }, [call.remoteStream, call.type]);
     const isVideo = call.type === 'video';
     const statusLabel = call.status === 'connected' ? React.createElement(CallTimer, { connectedAt: call.connectedAt })
-        : call.status === 'connecting' ? 'Connecting\u2026'
-            : call.role === 'caller' ? 'Ringing\u2026' : 'Connecting\u2026';
+        : call.status === 'failed' ? "Couldn't connect \u2014 check your internet and try again"
+            : call.status === 'connecting' ? 'Connecting\u2026'
+                : call.role === 'caller' ? 'Ringing\u2026' : 'Connecting\u2026';
     return React.createElement("div", { className: "fixed inset-0 z-[200] bg-ink-900 text-white flex flex-col" },
         isVideo && React.createElement("video", { ref: remoteVideoRef, autoPlay: true, playsInline: true, className: "absolute inset-0 w-full h-full object-cover bg-ink-900" }),
         !isVideo && React.createElement("audio", { ref: remoteAudioRef, autoPlay: true }),
@@ -3590,7 +3647,7 @@ async function startGoingLive(profile, title) {
     return liveRef.id;
 }
 async function connectHostToViewer(liveRef, uid, offer) {
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+    const pc = new RTCPeerConnection(await getIceServers());
     __liveHostSession.localStream.getTracks().forEach(t => pc.addTrack(t, __liveHostSession.localStream));
     const viewerRef = liveRef.collection('viewers').doc(uid);
     pc.onicecandidate = (e) => { if (e.candidate) viewerRef.collection('hostCandidates').add({ candidate: e.candidate.toJSON(), createdAt: FieldValue.serverTimestamp() }).catch(() => { }); };
@@ -3631,7 +3688,7 @@ function useLiveViewerState() {
 }
 async function joinLiveAsViewer(liveId, uid) {
     if (__liveViewerSession) await leaveLiveAsViewer();
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+    const pc = new RTCPeerConnection(await getIceServers());
     pc.addTransceiver('video', { direction: 'recvonly' });
     pc.addTransceiver('audio', { direction: 'recvonly' });
     const remoteStream = new MediaStream();
