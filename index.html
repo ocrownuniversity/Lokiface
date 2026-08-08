@@ -3694,6 +3694,8 @@ function GoLiveScreen({ go }) {
     const [title, setTitle] = useState('');
     const [busy, setBusy] = useState(false);
     const [previewStream, setPreviewStream] = useState(null);
+    const [previewError, setPreviewError] = useState(null);
+    const [retryTick, setRetryTick] = useState(0);
     const previewRef = useRef(null);
     const liveVideoRef = useRef(null);
     const liveDoc = useLiveDoc(host.active ? host.liveId : null);
@@ -3701,11 +3703,20 @@ function GoLiveScreen({ go }) {
     const [commentText, setCommentText] = useState('');
     useEffect(() => {
         if (host.active) return; // already broadcasting — no separate preview stream needed
-        let stream;
+        let stream, cancelled = false;
+        setPreviewError(null);
         navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } })
-            .then(s => { stream = s; setPreviewStream(s); }).catch(() => { });
-        return () => { if (stream) stream.getTracks().forEach(t => t.stop()); };
-    }, [host.active]);
+            .then(s => { if (cancelled) { s.getTracks().forEach(t => t.stop()); return; } stream = s; setPreviewStream(s); })
+            .catch(e => {
+                if (cancelled) return;
+                const msg = e && e.name === 'NotAllowedError' ? 'Camera/microphone access was blocked. Tap the site info icon next to the address bar, allow Camera and Microphone, then try again.'
+                    : e && e.name === 'NotFoundError' ? 'No camera was found on this device.'
+                        : e && e.name === 'NotReadableError' ? 'Your camera is already in use by another app or tab. Close it and try again.'
+                            : 'Could not access your camera/microphone. Please check permissions and try again.';
+                setPreviewError(msg);
+            });
+        return () => { cancelled = true; if (stream) stream.getTracks().forEach(t => t.stop()); };
+    }, [host.active, retryTick]);
     useEffect(() => { if (previewRef.current) previewRef.current.srcObject = previewStream; }, [previewStream]);
     useEffect(() => { if (liveVideoRef.current) liveVideoRef.current.srcObject = host.localStream || null; }, [host.localStream]);
     // Safety net: if the person navigates away (back button, closes tab) while still
@@ -3718,7 +3729,7 @@ function GoLiveScreen({ go }) {
             if (previewStream) previewStream.getTracks().forEach(t => t.stop());
             setPreviewStream(null);
             await startGoingLive(profile, title);
-        } catch (e) { toast(friendlyError(e), 'error'); }
+        } catch (e) { toast(friendlyError(e), 'error'); setRetryTick(t => t + 1); }
         finally { setBusy(false); }
     };
     const end = async () => {
@@ -3740,7 +3751,11 @@ function GoLiveScreen({ go }) {
                 React.createElement("h2", { className: "font-display font-bold text-white" }, "Go Live")),
             React.createElement("div", { className: "flex-1 relative bg-ink-900" },
                 previewStream ? React.createElement("video", { ref: previewRef, autoPlay: true, playsInline: true, muted: true, className: "absolute inset-0 w-full h-full object-cover" }) :
-                    React.createElement("div", { className: "absolute inset-0 flex items-center justify-center text-white/50 text-sm" }, "Starting camera\u2026")),
+                    previewError ? React.createElement("div", { className: "absolute inset-0 flex flex-col items-center justify-center text-center px-8 gap-4" },
+                        React.createElement("i", { className: "fa-solid fa-video-slash text-3xl text-white/40" }),
+                        React.createElement("p", { className: "text-white/70 text-sm" }, previewError),
+                        React.createElement("button", { onClick: () => setRetryTick(t => t + 1), className: "px-4 py-2 rounded-full bg-white/15 text-white text-sm font-semibold" }, "Try again")) :
+                        React.createElement("div", { className: "absolute inset-0 flex items-center justify-center text-white/50 text-sm" }, "Starting camera\u2026")),
             React.createElement("div", { className: "p-4 shrink-0 space-y-3 bg-black" },
                 React.createElement("input", { value: title, onChange: e => setTitle(e.target.value), placeholder: "Say something about your live\u2026 (optional)", maxLength: 100, className: "w-full px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/40 text-sm focus:outline-none" }),
                 React.createElement("button", { onClick: start, disabled: busy || !previewStream, className: "w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-bold" }, busy ? 'Starting…' : 'Go Live')));
