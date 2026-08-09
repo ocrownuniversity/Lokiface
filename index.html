@@ -630,16 +630,30 @@ function AutoPauseVideo(props) {
     }, []);
     return React.createElement("video", Object.assign({ ref }, props));
 }
-function ExpandableText({ text, className, limit }) {
+// "See more" now triggers off the actual rendered line count (3 lines, like Facebook),
+// instead of a fixed character count — a character limit either cuts short lines off way too
+// early or lets one long run of short words go on much longer than 3 lines, neither of which
+// matches how the text actually wraps on the person's own screen width.
+function ExpandableText({ text, className }) {
     const [expanded, setExpanded] = useState(false);
-    const maxChars = limit || 220;
+    const [needsToggle, setNeedsToggle] = useState(false);
+    const pRef = useRef(null);
+    useEffect(() => {
+        const el = pRef.current;
+        if (!el || expanded)
+            return;
+        const measure = () => setNeedsToggle(el.scrollHeight > el.clientHeight + 1);
+        measure();
+        const ro = new ResizeObserver(measure);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [text, expanded]);
     if (!text)
         return null;
-    const isLong = String(text).length > maxChars;
-    const shown = expanded || !isLong ? text : String(text).slice(0, maxChars).trimEnd() + '…';
     return React.createElement("div", null,
-        React.createElement("p", { className: className }, formatRichText(shown), isLong && React.createElement("span", { onClick: (e) => { e.stopPropagation(); setExpanded(v => !v); }, className: "text-brand-600 dark:text-brand-400 font-semibold cursor-pointer ml-1 select-none" }, expanded ? ' See less' : ' See more')),
-        React.createElement(LinkPreviewList, { text: shown }));
+        React.createElement("p", { ref: pRef, className: className, style: expanded ? undefined : { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' } }, formatRichText(text)),
+        needsToggle && React.createElement("span", { onClick: (e) => { e.stopPropagation(); setExpanded(v => !v); }, className: "text-brand-600 dark:text-brand-400 font-semibold cursor-pointer select-none text-sm block mt-0.5" }, expanded ? 'See less' : 'See more'),
+        React.createElement(LinkPreviewList, { text: text }));
 }
 /* ---- global zoomable image lightbox: any image on the site can call openLightbox(src|[srcs], index) ---- */
 let _lightboxSetState = null;
