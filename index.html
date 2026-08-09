@@ -9838,11 +9838,17 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
         if (!messages || messages.length === 0)
             return;
         const unread = messages.filter(m => m.senderId !== profile.id && !(m.readBy || []).includes(profile.id));
-        if (unread.length === 0)
-            return;
-        const batch = db.batch();
-        unread.forEach(m => batch.update(db.collection('chats').doc(chatId).collection('messages').doc(m.id), { readBy: FieldValue.arrayUnion(profile.id), deliveredTo: FieldValue.arrayUnion(profile.id) }));
-        batch.commit().catch(() => { });
+        if (unread.length > 0) {
+            const batch = db.batch();
+            unread.forEach(m => batch.update(db.collection('chats').doc(chatId).collection('messages').doc(m.id), { readBy: FieldValue.arrayUnion(profile.id), deliveredTo: FieldValue.arrayUnion(profile.id) }));
+            batch.commit().catch(() => { });
+        }
+        // Always clear the badge counter while this chat is open with messages loaded, even if
+        // none of the loaded messages themselves needed a readBy update. chatMembers.unreadCount
+        // is a separate running counter (incremented whenever a message is sent) that can drift
+        // out of sync with the per-message readBy flags — previously this only got reset when
+        // there was also an unread message to mark, so a stale badge could stay stuck on "9+"
+        // even after everything had actually been seen.
         db.collection('chatMembers').doc(chatId + '_' + profile.id).set({ unreadCount: 0 }, { merge: true }).catch(() => { });
     }, [messages, chatId, profile.id]);
     const chatReadyRef = useRef(false);
