@@ -651,7 +651,7 @@ function ExpandableText({ text, className }) {
     if (!text)
         return null;
     return React.createElement("div", null,
-        React.createElement("p", { ref: pRef, className: className, style: expanded ? undefined : { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' } }, formatRichText(text)),
+        React.createElement("p", { ref: pRef, className: className, style: expanded ? undefined : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } }, formatRichText(text)),
         needsToggle && React.createElement("span", { onClick: (e) => { e.stopPropagation(); setExpanded(v => !v); }, className: "text-brand-600 dark:text-brand-400 font-semibold cursor-pointer select-none text-sm block mt-0.5" }, expanded ? 'See less' : 'See more'),
         React.createElement(LinkPreviewList, { text: text }));
 }
