@@ -593,6 +593,43 @@ function LinkPreviewList({ text, max }) {
     return React.createElement(React.Fragment, null, urls.slice(0, max || 2).map(u => React.createElement(LinkPreviewCard, { key: u, url: u })));
 }
 // Truncates long text to a preview and lets the user expand/collapse it with a "See more"/"See less" toggle.
+// MediaRecorder's actual output format varies by browser/device (Chrome records webm/opus,
+// Safari/iOS records mp4/aac, etc.) — but the recording code used to always hardcode the
+// Blob/File as "audio/webm" regardless of what was actually recorded. On a browser that
+// didn't really produce webm, that mislabeled file plays inconsistently (or not at all) when
+// opened elsewhere — which is what caused voice notes to "play sometimes, not others"
+// depending on which device recorded vs. which device is listening. This picks (and reports)
+// the real format actually used instead of assuming.
+function pickAudioMimeType() {
+    const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg;codecs=opus'];
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported) {
+        for (const c of candidates) { if (MediaRecorder.isTypeSupported(c)) return c; }
+    }
+    return '';
+}
+function audioExtFromMime(mime) {
+    if (!mime) return 'webm';
+    if (mime.includes('mp4') || mime.includes('m4a')) return 'm4a';
+    if (mime.includes('ogg')) return 'ogg';
+    return 'webm';
+}
+// Pauses itself the moment it's scrolled out of the viewport — a plain <video> keeps playing
+// (and keeps making sound) even once you've scrolled past it in the feed, since nothing tells
+// it to stop. Only calls the standard .pause(), so unlike an audio-processing wrapper this
+// can't ever leave the video silent — worst case it just doesn't auto-pause.
+function AutoPauseVideo(props) {
+    const ref = useRef(null);
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (!entry.isIntersecting && !el.paused) el.pause(); });
+        }, { threshold: 0 });
+        io.observe(el);
+        return () => io.disconnect();
+    }, []);
+    return React.createElement("video", Object.assign({ ref }, props));
+}
 function ExpandableText({ text, className, limit }) {
     const [expanded, setExpanded] = useState(false);
     const maxChars = limit || 220;
@@ -4543,6 +4580,12 @@ function MainApp({ route, setRoute }) {
     // admin panel is only reachable through the hidden secret-URL door (see App()), never
     // through visible navigation, per the "not discoverable by regular users" requirement.
     const go = (r) => { setRoute(r); };
+    // Videos were sometimes still audibly playing after navigating elsewhere — this is a
+    // blunt but reliable safety net: whenever the route changes, pause every <video> still in
+    // the document, regardless of which screen/overlay it belongs to.
+    useEffect(() => {
+        document.querySelectorAll('video').forEach(v => { if (!v.paused) v.pause(); });
+    }, [route]);
     const goNav = (n) => {
         if (n.name === 'home' && route.name === 'home') {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4550,30 +4593,8 @@ function MainApp({ route, setRoute }) {
         }
         go(Object.assign({ name: n.name }, (n.params || {})));
     };
-    // The chat screen needs to know exactly how tall the sticky mobile header above it is, so
-    // it can size itself to fill the rest of the screen without guessing a fixed rem value (a
-    // guess that's wrong on some devices/font sizes leaves a gray gap above the nav bar — see
-    // ChatWindow). Measured live so it stays correct even if the header's content changes.
-    const headerRef = useRef(null);
-    const [headerHeight, setHeaderHeight] = useState(112);
-    useEffect(() => {
-        if (!headerRef.current) return;
-        const el = headerRef.current;
-        const update = () => setHeaderHeight(el.offsetHeight);
-        update();
-        const ro = new ResizeObserver(update);
-        ro.observe(el);
-        return () => ro.disconnect();
-    }, [route.name]);
     return (React.createElement("div", { className: "min-h-screen flex" },
         React.createElement(CallOverlayHost, null),
-        // Always-on-top Home shortcut: several full-screen panels (create post, page/reel
-        // upload forms, admin, etc.) render as fixed overlays that visually cover the sidebar
-        // and mobile header underneath them, so the regular house icon isn't reachable from
-        // there. This floats above all of those (but stays below an active call screen) so
-        // pressing it works from literally anywhere in the app.
-        React.createElement("button", { onClick: () => goNav({ name: 'home' }), title: "Home", className: "fixed bottom-5 right-4 z-[150] w-12 h-12 rounded-full bg-[#0d9488] text-white shadow-lg flex items-center justify-center active:scale-95 transition" },
-            React.createElement("i", { className: "fa-solid fa-house text-lg" })),
         React.createElement("aside", { className: "hidden md:flex flex-col w-64 shrink-0 border-r border-slate-100 dark:border-ink-800 px-4 py-6 sticky top-0 h-screen" },
             React.createElement("div", { className: "flex items-center gap-2 px-2 mb-8" },
                 React.createElement(BrandWordmark, { size: "text-3xl" })),
@@ -4589,7 +4610,7 @@ function MainApp({ route, setRoute }) {
                 React.createElement("i", { className: "fa-solid fa-arrow-right-from-bracket w-6 text-xl" }),
                 "Sign out")),
         React.createElement("div", { className: "flex-1 min-w-0 flex flex-col" },
-            route.name !== 'menu' && React.createElement("header", { ref: headerRef, className: "sticky top-0 z-30 bg-white dark:bg-ink-900 border-b border-slate-200 dark:border-ink-800 md:hidden" },
+            route.name !== 'menu' && React.createElement("header", { className: "sticky top-0 z-30 bg-white dark:bg-ink-900 border-b border-slate-200 dark:border-ink-800 md:hidden" },
                 React.createElement("div", { className: "px-3 py-2 flex items-center justify-between" },
                     React.createElement("div", { className: "flex items-center gap-1.5" },
                         React.createElement(BrandWordmark, { size: "text-3xl tracking-tight" })),
@@ -4627,7 +4648,7 @@ function MainApp({ route, setRoute }) {
                 route.name === 'listing' && React.createElement(ListingDetailScreen, { id: route.id, go: go }),
                 route.name === 'listingForm' && React.createElement(ListingFormScreen, { id: route.id, go: go }),
                 route.name === 'messages' && React.createElement(ChatListScreen, { go: go }),
-                route.name === 'chat' && React.createElement(ChatWindow, { chatId: route.chatId, otherUid: route.otherUid, pageId: route.pageId, go: go, headerHeight: headerHeight }),
+                route.name === 'chat' && React.createElement(ChatWindow, { chatId: route.chatId, otherUid: route.otherUid, pageId: route.pageId, go: go }),
                 route.name === 'notifications' && React.createElement(NotificationsScreen, { go: go }),
                 route.name === 'bookmarks' && React.createElement(BookmarksScreen, { go: go }),
                 route.name === 'memories' && React.createElement(MemoriesScreen, { go: go }),
@@ -5856,7 +5877,7 @@ function PostCard({ post, go, groupCtx, autoOpenComments, sponsored, repeated })
         post.gifURL && React.createElement("div", { className: "bg-slate-100 dark:bg-ink-900 mb-2" },
             React.createElement("img", { src: post.gifURL, loading: "lazy", onClick: () => openLightbox([post.gifURL], 0), className: "w-full max-h-[420px] object-contain cursor-zoom-in mx-auto" })),
         post.videoURL && React.createElement("div", { className: "bg-black mb-2" },
-            React.createElement("video", { src: post.videoURL, controls: true, playsInline: true, className: "w-full max-h-[480px]" })),
+            React.createElement(AutoPauseVideo, { src: post.videoURL, controls: true, playsInline: true, className: "w-full max-h-[480px]" })),
         post.documentURL && React.createElement("div", { className: "px-3 sm:px-4 mb-2" },
             React.createElement("a", { href: post.documentURL, target: "_blank", rel: "noopener noreferrer", className: "flex items-center gap-3 bg-slate-50 dark:bg-ink-700 rounded-xl p-3 hover:bg-slate-100 dark:hover:bg-ink-600 transition" },
                 React.createElement("span", { className: "w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0" }, React.createElement("i", { className: "fa-solid fa-file-lines" })),
@@ -9508,6 +9529,7 @@ function ChatRow({ row, go, search, onPin, onArchive, onDelete, onAccept, onDecl
 // UI chrome is custom.
 function VoiceMessagePlayer({ src, isMe }) {
     const audioRef = useRef(null);
+    const toast = useToast();
     const [playing, setPlaying] = useState(false);
     const [duration, setDuration] = useState(0);
     const [current, setCurrent] = useState(0);
@@ -9530,14 +9552,50 @@ function VoiceMessagePlayer({ src, isMe }) {
         if (!a)
             return;
         const onTime = () => setCurrent(a.currentTime || 0);
-        const onMeta = () => setDuration(a.duration && isFinite(a.duration) ? a.duration : 0);
+        // Voice notes recorded with MediaRecorder (Chrome especially) often produce a webm
+        // file whose header doesn't carry a real duration — the browser reports Infinity/NaN
+        // until you seek near the end once, which is what actually makes it compute and expose
+        // the real length. Without this, the player is stuck showing "0:00" forever even
+        // though the recording is there and plays fine.
+        const onMeta = () => {
+            if (a.duration && isFinite(a.duration)) {
+                setDuration(a.duration);
+                return;
+            }
+            const fixDuration = () => {
+                a.removeEventListener('timeupdate', fixDuration);
+                setDuration(isFinite(a.duration) ? a.duration : 0);
+                a.currentTime = 0;
+            };
+            a.addEventListener('timeupdate', fixDuration);
+            a.currentTime = 1e101;
+        };
         const onEnd = () => { setPlaying(false); setCurrent(0); };
+        const onPlay = () => setPlaying(true);
+        const onPause = () => setPlaying(false);
+        const onError = () => toast("Couldn't play this voice note", 'error');
         a.addEventListener('timeupdate', onTime);
         a.addEventListener('loadedmetadata', onMeta);
+        a.addEventListener('durationchange', onMeta);
         a.addEventListener('ended', onEnd);
-        return () => { a.removeEventListener('timeupdate', onTime); a.removeEventListener('loadedmetadata', onMeta); a.removeEventListener('ended', onEnd); };
+        a.addEventListener('play', onPlay);
+        a.addEventListener('pause', onPause);
+        a.addEventListener('error', onError);
+        return () => {
+            a.removeEventListener('timeupdate', onTime);
+            a.removeEventListener('loadedmetadata', onMeta);
+            a.removeEventListener('durationchange', onMeta);
+            a.removeEventListener('ended', onEnd);
+            a.removeEventListener('play', onPlay);
+            a.removeEventListener('pause', onPause);
+            a.removeEventListener('error', onError);
+        };
     }, []);
-    const toggle = () => { const a = audioRef.current; if (!a) return; if (playing) { a.pause(); } else { a.play().catch(() => { }); } setPlaying(!playing); };
+    // Relies entirely on the audio element's own play/pause events to know whether it's
+    // actually playing (see onPlay/onPause above) instead of optimistically flipping state
+    // here — that mismatch (UI says "playing" when playback actually failed to start) is
+    // what made it look like "sometimes it just won't play".
+    const toggle = () => { const a = audioRef.current; if (!a) return; if (playing) { a.pause(); } else { a.play().catch(() => toast("Couldn't play this voice note", 'error')); } };
     const cycleRate = () => { const rates = [1, 1.5, 2, 0.5]; const next = rates[(rates.indexOf(rate) + 1) % rates.length]; setRate(next); if (audioRef.current) audioRef.current.playbackRate = next; };
     const fmt = (s) => { if (!s || !isFinite(s)) return '0:00'; const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return m + ':' + String(sec).padStart(2, '0'); };
     const progressRatio = duration ? Math.min(1, current / duration) : 0;
@@ -9675,7 +9733,7 @@ function MessageBubble({ message, isMe, otherUid, otherUser, showAvatar, groupPo
                     React.createElement("button", { onClick: () => { onDeleteForMe(); setMenuOpen(false); }, className: "w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-slate-50 dark:hover:bg-ink-600" }, "Delete for me"),
                     isMe && React.createElement("button", { onClick: () => { if (confirm('Delete this message for everyone? This cannot be undone.')) { onDeleteForEveryone(); } setMenuOpen(false); }, className: "w-full text-left px-4 py-2 text-sm text-red-600 font-semibold hover:bg-slate-50 dark:hover:bg-ink-600 border-t border-slate-100 dark:border-ink-600" }, "Delete for everyone")))))));
 }
-function ChatWindow({ chatId, otherUid, pageId, go, headerHeight }) {
+function ChatWindow({ chatId, otherUid, pageId, go }) {
     var _a;
     const { profile } = useAuth();
     const toast = useToast();
@@ -9886,7 +9944,8 @@ function ChatWindow({ chatId, otherUid, pageId, go, headerHeight }) {
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const rec = new MediaRecorder(stream);
+            const mimeType = pickAudioMimeType();
+            const rec = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
             recorderRef.current = rec;
             chunksRef.current = [];
             rec.ondataavailable = e => chunksRef.current.push(e.data);
@@ -9894,8 +9953,12 @@ function ChatWindow({ chatId, otherUid, pageId, go, headerHeight }) {
                 stream.getTracks().forEach(t => t.stop());
                 if (rec.__cancelled || chunksRef.current.length === 0)
                     return;
-                const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+                // Use whatever format the browser actually recorded in (see pickAudioMimeType),
+                // not a hardcoded "audio/webm" that may not match reality on this device.
+                const actualType = rec.mimeType || mimeType || 'audio/webm';
+                const ext = audioExtFromMime(actualType);
+                const blob = new Blob(chunksRef.current, { type: actualType });
+                const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: actualType });
                 await uploadAndSend(file, 'audio');
             };
             rec.start();
@@ -9950,15 +10013,12 @@ function ChatWindow({ chatId, otherUid, pageId, go, headerHeight }) {
     const displayIdentity = pageId && pageInfo ? pageInfo : otherUser;
     const identityRoute = pageId && pageInfo ? { name: 'page', id: pageId } : { name: 'profile', uid: otherUid };
     const visibleMessages = (messages || []).filter(m => !(m.deletedFor || []).includes(profile.id));
-    // Uses the "small viewport height" unit (100svh), not 100dvh, on purpose: dvh changes
-    // live as the mobile browser's address/toolbar hides and shows while you scroll or type,
-    // which resizes this container on every scroll tick — that's what read as the whole chat
-    // "jumping up and down". svh is fixed to the viewport size WITH the browser chrome visible,
-    // so the container size never fluctuates. headerHeight is the *actual measured* height of
-    // the sticky header above this screen (see AppShell) rather than a guessed rem value, so
-    // there's no leftover gray gap at the bottom when the real header is shorter/taller than
-    // guessed on a given device.
-    return (React.createElement("div", { className: "flex flex-col bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 md:rounded-2xl overflow-hidden h-[var(--chat-h)] md:h-[calc(100vh-2rem)]", style: { '--chat-h': `calc(100svh - ${headerHeight || 112}px)` } },
+    // The whole chat is a dedicated, fixed full-screen view on mobile (matching how Facebook
+    // Messenger's own chat screen works) instead of being sized to fit inside the normal page
+    // flow. That removes the "jumping" for good: there's no outer page for the browser to
+    // scroll when the keyboard opens, and no header-height math to get wrong. Desktop keeps
+    // the original in-page card layout (md:static reverts it back into the sidebar layout).
+    return (React.createElement("div", { className: "fixed inset-0 z-40 md:static md:z-auto flex flex-col bg-white dark:bg-ink-800 md:border md:border-slate-100 md:dark:border-ink-700 md:rounded-2xl overflow-hidden md:h-[calc(100vh-2rem)]" },
         React.createElement("div", { className: "flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-700 shrink-0 sticky top-0 z-30 bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm" },
             React.createElement("button", { onClick: () => go({ name: 'messages' }), className: "text-[#0d9488] w-8 h-8 flex items-center justify-center md:hidden" },
                 React.createElement("i", { className: "fa-solid fa-arrow-left" })),
@@ -10029,30 +10089,32 @@ function ChatWindow({ chatId, otherUid, pageId, go, headerHeight }) {
                     uploadAndSend(e.target.files[0], 'video'); e.target.value = ''; } }),
             React.createElement("input", { ref: docInputRef, type: "file", accept: ".pdf,.doc,.docx,.zip,.txt,.xlsx,.pptx", hidden: true, onChange: e => { if (e.target.files[0])
                     uploadAndSend(e.target.files[0], 'document'); e.target.value = ''; } }),
-            recording ? (React.createElement("div", { className: "flex items-center gap-3 bg-red-50 dark:bg-red-900/20 rounded-full px-4 py-2" },
-                React.createElement("span", { className: "w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" }),
-                React.createElement("span", { className: "text-sm text-red-500 flex-1" },
-                    "Recording\u2026 ",
-                    Math.floor(recordSeconds / 60),
-                    ":",
-                    String(recordSeconds % 60).padStart(2, '0')),
-                React.createElement("button", { onClick: () => stopRecording(true), className: "text-slate-400 text-sm" }, "Cancel"),
-                React.createElement("button", { onClick: () => stopRecording(false), className: "bg-brand-600 text-white rounded-full w-8 h-8 flex items-center justify-center" },
-                    React.createElement("i", { className: "fa-solid fa-paper-plane text-xs" })))) : (React.createElement("div", { className: "flex items-center gap-2" },
-                React.createElement("button", { onClick: () => { setAttachOpen(a => !a); setEmojiOpen(false); }, disabled: blocked, className: "text-[#0d9488] w-9 h-9 flex items-center justify-center disabled:opacity-40 text-lg" },
+            React.createElement("div", { className: "flex items-center gap-2" },
+                !recording && React.createElement("button", { onClick: () => { setAttachOpen(a => !a); setEmojiOpen(false); }, disabled: blocked, className: "text-[#0d9488] w-9 h-9 flex items-center justify-center disabled:opacity-40 text-lg" },
                     React.createElement("i", { className: "fa-solid fa-circle-plus" })),
-                React.createElement("button", { onClick: () => { imageInputRef.current.click(); }, disabled: blocked, className: "text-[#0d9488] w-9 h-9 hidden sm:flex items-center justify-center disabled:opacity-40 text-lg" },
+                !recording && React.createElement("button", { onClick: () => { imageInputRef.current.click(); }, disabled: blocked, className: "text-[#0d9488] w-9 h-9 hidden sm:flex items-center justify-center disabled:opacity-40 text-lg" },
                     React.createElement("i", { className: "fa-solid fa-image" })),
-                React.createElement("div", { className: "flex-1 relative flex items-center" },
+                !recording ? React.createElement("div", { className: "flex-1 relative flex items-center" },
                     React.createElement("input", { value: text, onChange: e => onTextChange(e.target.value), onKeyDown: e => { if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
                             sendText();
                         } }, disabled: blocked, placeholder: blocked ? "You can't message this user" : "Message", className: "w-full bg-[#F0F0F0] dark:bg-ink-700 rounded-full pl-4 pr-9 py-2 text-sm disabled:opacity-50" }),
                     React.createElement("button", { onClick: () => { setEmojiOpen(a => !a); setAttachOpen(false); }, disabled: blocked, className: "absolute right-2 text-[#0d9488] w-6 h-6 flex items-center justify-center disabled:opacity-40" },
-                        React.createElement("i", { className: "fa-regular fa-face-smile" }))),
-                text.trim() ? (React.createElement("button", { onClick: sendText, className: "text-[#0d9488] rounded-full w-9 h-9 flex items-center justify-center shrink-0 text-xl" },
-                    React.createElement("i", { className: "fa-solid fa-paper-plane" }))) : (React.createElement("button", { onClick: startRecording, disabled: blocked, className: "text-[#0d9488] w-9 h-9 flex items-center justify-center disabled:opacity-40 text-xl" },
-                    React.createElement("i", { className: "fa-solid fa-microphone" })))))),
+                        React.createElement("i", { className: "fa-regular fa-face-smile" })))
+                    // Facebook-style recording bar: trash button to cancel, a live timer, and
+                    // an explicit send button — no gesture required to actually send it.
+                    : React.createElement("div", { className: "flex-1 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 rounded-full pl-1.5 pr-1.5 py-1.5" },
+                        React.createElement("button", { onClick: () => stopRecording(true), className: "text-red-500 w-7 h-7 flex items-center justify-center shrink-0" },
+                            React.createElement("i", { className: "fa-solid fa-trash text-xs" })),
+                        React.createElement("span", { className: "w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" }),
+                        React.createElement("span", { className: "text-sm text-red-500 font-mono flex-1" },
+                            Math.floor(recordSeconds / 60) + ":" + String(recordSeconds % 60).padStart(2, '0')),
+                        React.createElement("button", { onClick: () => stopRecording(false), className: "bg-brand-600 text-white rounded-full w-8 h-8 flex items-center justify-center shrink-0" },
+                            React.createElement("i", { className: "fa-solid fa-paper-plane text-xs" }))),
+                !recording && text.trim() && React.createElement("button", { onClick: sendText, className: "text-[#0d9488] rounded-full w-9 h-9 flex items-center justify-center shrink-0 text-xl" },
+                    React.createElement("i", { className: "fa-solid fa-paper-plane" })),
+                !recording && !text.trim() && React.createElement("button", { onClick: startRecording, disabled: blocked, className: "text-[#0d9488] w-9 h-9 flex items-center justify-center disabled:opacity-40 text-xl" },
+                    React.createElement("i", { className: "fa-solid fa-microphone" })))),
         forwardMsg && React.createElement(ForwardModal, { message: forwardMsg, onClose: () => setForwardMsg(null) }),
         reportUserOpen && React.createElement(ReportReasonSheet, { targetType: "user", targetId: otherUid, targetOwnerId: otherUid, onClose: () => setReportUserOpen(false) })));
 }
@@ -12033,7 +12095,7 @@ function GroupPhotosTab({ posts, go }) {
 function GroupVideosTab({ posts }) {
     const videos = posts.filter(p => p.videoURL);
     if (videos.length === 0) return React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "No videos yet.");
-    return React.createElement("div", { className: "grid grid-cols-2 gap-2" }, videos.map(p => React.createElement("video", { key: p.id, src: p.videoURL, controls: true, className: "w-full rounded-lg bg-black aspect-video" })));
+    return React.createElement("div", { className: "grid grid-cols-2 gap-2" }, videos.map(p => React.createElement(AutoPauseVideo, { key: p.id, src: p.videoURL, controls: true, className: "w-full rounded-lg bg-black aspect-video" })));
 }
 function GroupFilesTab({ posts, go }) {
     const files = posts.filter(p => p.documentURL);
@@ -13686,15 +13748,18 @@ function DatingChatScreen({ matchId, go }) {
         if (!chatUnlocked) { setChatGateOpen(true); return; }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const rec = new MediaRecorder(stream);
+            const mimeType = pickAudioMimeType();
+            const rec = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
             recorderRef.current = rec;
             chunksRef.current = [];
             rec.ondataavailable = e => chunksRef.current.push(e.data);
             rec.onstop = async () => {
                 stream.getTracks().forEach(t => t.stop());
                 if (rec.__cancelled || chunksRef.current.length === 0) return;
-                const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+                const actualType = rec.mimeType || mimeType || 'audio/webm';
+                const ext = audioExtFromMime(actualType);
+                const blob = new Blob(chunksRef.current, { type: actualType });
+                const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: actualType });
                 await uploadAndSend(file, 'audio');
             };
             rec.start();
@@ -13743,7 +13808,7 @@ function DatingChatScreen({ matchId, go }) {
                     (!m.type || m.type === 'text') && React.createElement("span", { className: "whitespace-pre-wrap break-words" }, m.text),
                     m.type === 'image' && React.createElement("img", { src: m.mediaURL, onClick: () => openLightbox(m.mediaURL), loading: "lazy", className: "rounded-lg max-w-[220px] cursor-zoom-in" }),
                     m.type === 'video' && React.createElement("video", { src: m.mediaURL, controls: true, className: "rounded-lg max-w-[220px]" }),
-                    m.type === 'audio' && React.createElement("audio", { src: m.mediaURL, controls: true, className: "w-52" })))),
+                    m.type === 'audio' && React.createElement(VoiceMessagePlayer, { src: m.mediaURL, isMe: m.senderId === profile.id })))),
             React.createElement("div", { ref: bottomRef })),
         uploading && (React.createElement("div", { className: "px-3 pt-2 shrink-0" },
             React.createElement("div", { className: "w-full h-1.5 bg-slate-100 dark:bg-ink-700 rounded-full overflow-hidden" },
