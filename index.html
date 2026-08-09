@@ -95,6 +95,10 @@
   .tile-new { animation: tileAppear 150ms ease-in-out; }
   @keyframes msgIn { from { opacity:0; transform: translateY(6px) scale(.98); } to { opacity:1; transform:none; } }
   .msg-in { animation: msgIn .18s ease-out; }
+  @keyframes heartPop { 0% { opacity:0; transform: scale(0.3); } 30% { opacity:1; transform: scale(1.25); } 60% { transform: scale(1); } 100% { opacity:0; transform: scale(1) translateY(-14px); } }
+  .heart-pop { display:inline-block; animation: heartPop .65s ease-out forwards; filter: drop-shadow(0 2px 4px rgba(0,0,0,.25)); }
+  @keyframes typingDot { 0%,60%,100% { transform: translateY(0); opacity:.5; } 30% { transform: translateY(-4px); opacity:1; } }
+  .typing-dot { animation: typingDot 1.2s ease-in-out infinite; }
   @keyframes waveBar { 0%,100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
 </style>
 </head>
@@ -593,40 +597,6 @@ function LinkPreviewList({ text, max }) {
     return React.createElement(React.Fragment, null, urls.slice(0, max || 2).map(u => React.createElement(LinkPreviewCard, { key: u, url: u })));
 }
 // Truncates long text to a preview and lets the user expand/collapse it with a "See more"/"See less" toggle.
-// A native <video>'s volume tops out at 1.0 (however loud the file itself was recorded) — if
-// the source audio is quiet, turning system volume all the way up is the only native option.
-// This drop-in replacement for <video> routes playback through a Web Audio GainNode so it can
-// be amplified beyond 1.0, which is what actually fixes a quietly-recorded video sounding
-// quiet. Used anywhere a user-uploaded video plays (posts, reels, group media, chat videos).
-// Falls back to a plain, unboosted <video> if the browser doesn't support Web Audio.
-const VIDEO_VOLUME_BOOST = 2.2;
-const BoostedVideo = React.forwardRef(function BoostedVideo(props, forwardedRef) {
-    const localRef = useRef(null);
-    const setRef = (node) => {
-        localRef.current = node;
-        if (typeof forwardedRef === 'function') forwardedRef(node);
-        else if (forwardedRef) forwardedRef.current = node;
-    };
-    useEffect(() => {
-        const v = localRef.current;
-        if (!v) return;
-        let ctx;
-        try {
-            const AC = window.AudioContext || window.webkitAudioContext;
-            ctx = new AC();
-            const src = ctx.createMediaElementSource(v);
-            const gainNode = ctx.createGain();
-            gainNode.gain.value = VIDEO_VOLUME_BOOST;
-            src.connect(gainNode).connect(ctx.destination);
-            // Audio contexts start "suspended" until a user gesture; playing the video counts,
-            // but we still nudge it awake in case autoplay muted/unmuted state confuses that.
-            const resume = () => { if (ctx.state === 'suspended') ctx.resume().catch(() => { }); };
-            v.addEventListener('play', resume);
-            return () => { v.removeEventListener('play', resume); try { ctx.close(); } catch (e) { } };
-        } catch (e) { /* unsupported browser — falls back to normal, unboosted playback */ }
-    }, []);
-    return React.createElement("video", Object.assign({ ref: setRef }, props));
-});
 function ExpandableText({ text, className, limit }) {
     const [expanded, setExpanded] = useState(false);
     const maxChars = limit || 220;
@@ -4584,6 +4554,21 @@ function MainApp({ route, setRoute }) {
         }
         go(Object.assign({ name: n.name }, (n.params || {})));
     };
+    // The chat screen needs to know exactly how tall the sticky mobile header above it is, so
+    // it can size itself to fill the rest of the screen without guessing a fixed rem value (a
+    // guess that's wrong on some devices/font sizes leaves a gray gap above the nav bar — see
+    // ChatWindow). Measured live so it stays correct even if the header's content changes.
+    const headerRef = useRef(null);
+    const [headerHeight, setHeaderHeight] = useState(112);
+    useEffect(() => {
+        if (!headerRef.current) return;
+        const el = headerRef.current;
+        const update = () => setHeaderHeight(el.offsetHeight);
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [route.name]);
     return (React.createElement("div", { className: "min-h-screen flex" },
         React.createElement(CallOverlayHost, null),
         React.createElement("aside", { className: "hidden md:flex flex-col w-64 shrink-0 border-r border-slate-100 dark:border-ink-800 px-4 py-6 sticky top-0 h-screen" },
@@ -4601,7 +4586,7 @@ function MainApp({ route, setRoute }) {
                 React.createElement("i", { className: "fa-solid fa-arrow-right-from-bracket w-6 text-xl" }),
                 "Sign out")),
         React.createElement("div", { className: "flex-1 min-w-0 flex flex-col" },
-            route.name !== 'menu' && React.createElement("header", { className: "sticky top-0 z-30 bg-white dark:bg-ink-900 border-b border-slate-200 dark:border-ink-800 md:hidden" },
+            route.name !== 'menu' && React.createElement("header", { ref: headerRef, className: "sticky top-0 z-30 bg-white dark:bg-ink-900 border-b border-slate-200 dark:border-ink-800 md:hidden" },
                 React.createElement("div", { className: "px-3 py-2 flex items-center justify-between" },
                     React.createElement("div", { className: "flex items-center gap-1.5" },
                         React.createElement(BrandWordmark, { size: "text-3xl tracking-tight" })),
@@ -4639,7 +4624,7 @@ function MainApp({ route, setRoute }) {
                 route.name === 'listing' && React.createElement(ListingDetailScreen, { id: route.id, go: go }),
                 route.name === 'listingForm' && React.createElement(ListingFormScreen, { id: route.id, go: go }),
                 route.name === 'messages' && React.createElement(ChatListScreen, { go: go }),
-                route.name === 'chat' && React.createElement(ChatWindow, { chatId: route.chatId, otherUid: route.otherUid, pageId: route.pageId, go: go }),
+                route.name === 'chat' && React.createElement(ChatWindow, { chatId: route.chatId, otherUid: route.otherUid, pageId: route.pageId, go: go, headerHeight: headerHeight }),
                 route.name === 'notifications' && React.createElement(NotificationsScreen, { go: go }),
                 route.name === 'bookmarks' && React.createElement(BookmarksScreen, { go: go }),
                 route.name === 'memories' && React.createElement(MemoriesScreen, { go: go }),
@@ -5868,7 +5853,7 @@ function PostCard({ post, go, groupCtx, autoOpenComments, sponsored, repeated })
         post.gifURL && React.createElement("div", { className: "bg-slate-100 dark:bg-ink-900 mb-2" },
             React.createElement("img", { src: post.gifURL, loading: "lazy", onClick: () => openLightbox([post.gifURL], 0), className: "w-full max-h-[420px] object-contain cursor-zoom-in mx-auto" })),
         post.videoURL && React.createElement("div", { className: "bg-black mb-2" },
-            React.createElement(BoostedVideo, { src: post.videoURL, controls: true, playsInline: true, className: "w-full max-h-[480px]" })),
+            React.createElement("video", { src: post.videoURL, controls: true, playsInline: true, className: "w-full max-h-[480px]" })),
         post.documentURL && React.createElement("div", { className: "px-3 sm:px-4 mb-2" },
             React.createElement("a", { href: post.documentURL, target: "_blank", rel: "noopener noreferrer", className: "flex items-center gap-3 bg-slate-50 dark:bg-ink-700 rounded-xl p-3 hover:bg-slate-100 dark:hover:bg-ink-600 transition" },
                 React.createElement("span", { className: "w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0" }, React.createElement("i", { className: "fa-solid fa-file-lines" })),
@@ -6263,7 +6248,7 @@ function TimelineReelCard({ reel, go }) {
         reel.caption && React.createElement("div", { className: "px-3 sm:px-4" },
             React.createElement("p", { className: "text-base whitespace-pre-wrap mb-2 leading-relaxed" }, captionParts.map((part, i) => part.startsWith('#') ? React.createElement("span", { key: i, className: "text-brand-600 dark:text-brand-400 font-medium" }, part) : part))),
         React.createElement("div", { className: "relative bg-black w-full flex items-center justify-center overflow-hidden mb-2", style: { maxHeight: '520px', aspectRatio: (reel.width && reel.height) ? (reel.width + ' / ' + reel.height) : '9 / 16' } },
-            React.createElement(BoostedVideo, { ref: videoRef, src: reel.videoURL, poster: reel.thumbURL || undefined, loop: true, muted: muted, playsInline: true, onClick: togglePlay, className: "w-full h-full object-contain cursor-pointer" }),
+            React.createElement("video", { ref: videoRef, src: reel.videoURL, poster: reel.thumbURL || undefined, loop: true, muted: muted, playsInline: true, onClick: togglePlay, className: "w-full h-full object-contain cursor-pointer" }),
             !playing && React.createElement("button", { onClick: togglePlay, className: "absolute inset-0 flex items-center justify-center" },
                 React.createElement("span", { className: "w-14 h-14 rounded-full bg-black/50 text-white flex items-center justify-center text-xl" }, React.createElement("i", { className: "fa-solid fa-play ml-0.5" }))),
             playing && React.createElement("button", { onClick: toggleMute, className: "absolute top-2.5 right-2.5 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center" },
@@ -9586,7 +9571,7 @@ function UnreadDivider() {
         React.createElement("span", { className: "text-[11px] font-semibold text-[#0d9488]" }, "New messages"),
         React.createElement("div", { className: "flex-1 h-px bg-[#0d9488]/25" }));
 }
-function MessageBubble({ message, isMe, otherUid, otherUser, showAvatar, groupPos, menuOpen, setMenuOpen, onReply, onForward, onCopy, onEdit, onDeleteForMe, onDeleteForEveryone, onReact }) {
+function MessageBubble({ message, isMe, otherUid, otherUser, showAvatar, groupPos, menuOpen, setMenuOpen, onReply, onForward, onCopy, onEdit, onDeleteForMe, onDeleteForEveryone, onReact, isLastSeen }) {
     var _a;
     const status = () => {
         if ((message.readBy || []).includes(otherUid))
@@ -9607,9 +9592,62 @@ function MessageBubble({ message, isMe, otherUid, otherUser, showAvatar, groupPo
     // *only* way to reach message actions, no persistent icon sitting on the bubble.
     const pressTimer = useRef(null);
     const movedRef = useRef(false);
-    const onTouchStart = () => { movedRef.current = false; pressTimer.current = setTimeout(() => { if (!movedRef.current && navigator.vibrate) navigator.vibrate(15); if (!movedRef.current) setMenuOpen(true); }, 450); };
-    const onTouchMove = () => { movedRef.current = true; if (pressTimer.current) clearTimeout(pressTimer.current); };
-    const onTouchEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
+    // Swipe-to-reply (Messenger gesture: drag any bubble right to quote-reply to it) and
+    // double-tap-to-heart (Messenger's quick "double tap a bubble to love it" shortcut).
+    const touchStartRef = useRef({ x: 0, y: 0 });
+    const swipingRef = useRef(false);
+    const [swipeX, setSwipeX] = useState(0);
+    const lastTapRef = useRef(0);
+    const [heartPop, setHeartPop] = useState(false);
+    const doubleTapReact = () => {
+        onReact('\u2764\uFE0F');
+        setHeartPop(true);
+        if (navigator.vibrate) navigator.vibrate(15);
+        setTimeout(() => setHeartPop(false), 650);
+    };
+    const onTouchStart = (e) => {
+        movedRef.current = false;
+        swipingRef.current = false;
+        const t = e.touches[0];
+        touchStartRef.current = { x: t.clientX, y: t.clientY };
+        pressTimer.current = setTimeout(() => { if (!movedRef.current && navigator.vibrate) navigator.vibrate(15); if (!movedRef.current) setMenuOpen(true); }, 450);
+    };
+    const onTouchMove = (e) => {
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartRef.current.x;
+        const dy = t.clientY - touchStartRef.current.y;
+        if (!swipingRef.current && dx > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            swipingRef.current = true;
+            if (pressTimer.current)
+                clearTimeout(pressTimer.current);
+        }
+        if (swipingRef.current) {
+            movedRef.current = true;
+            setSwipeX(Math.max(0, Math.min(dx, 56)));
+        }
+        else if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+            movedRef.current = true;
+            if (pressTimer.current)
+                clearTimeout(pressTimer.current);
+        }
+    };
+    const onTouchEnd = () => {
+        if (pressTimer.current)
+            clearTimeout(pressTimer.current);
+        if (swipingRef.current && swipeX > 36) {
+            if (navigator.vibrate)
+                navigator.vibrate(10);
+            onReply();
+        }
+        else if (!movedRef.current) {
+            const now = Date.now();
+            if (now - lastTapRef.current < 300)
+                doubleTapReact();
+            lastTapRef.current = now;
+        }
+        swipingRef.current = false;
+        setSwipeX(0);
+    };
     // Call-log entries (a voice/video call that just ended, went unanswered, was declined, or
     // hit "busy") render as a centered pill, like WhatsApp/Messenger's call log rows, instead
     // of a left/right chat bubble — they aren't "sent" by either side in the usual sense.
@@ -9649,24 +9687,40 @@ function MessageBubble({ message, isMe, otherUid, otherUser, showAvatar, groupPo
             React.createElement("div", { className: "max-w-[75%] px-3 py-[6px] rounded-[18px] text-[13px] italic border " + (isMe ? "border-white/20 text-white/60 bg-[#0d9488]/40" : "border-slate-200 dark:border-ink-600 text-slate-400 bg-transparent") },
                 React.createElement("i", { className: "fa-solid fa-ban mr-1.5 text-[11px]" }), isMe ? "You deleted this message" : "This message was deleted")));
     }
+    // Messenger renders a message that's *only* one or two emoji (no other text) large and
+    // without the bubble background — this is what makes a lone 👍/❤️ read as a deliberate
+    // reaction-style message instead of ordinary text.
+    const emojiOnlyMatch = message.type === 'text' && message.text && /^(\p{Extended_Pictographic}\uFE0F?\u200D?){1,3}$/u.test(message.text.trim());
     return (React.createElement("div", { className: "flex items-end gap-1.5 msg-in " + (isMe ? "justify-end" : "justify-start") + " " + (groupPos === 'single' || groupPos === 'last' ? 'mb-2' : 'mb-0.5') },
         !isMe && React.createElement("div", { className: "w-6 shrink-0" }, showAvatar && React.createElement(Avatar, { user: otherUser, size: 6 })),
-        React.createElement("div", { className: "max-w-[75%] group relative" },
+        swipeX > 0 && React.createElement("div", { className: "self-center text-[#0d9488] shrink-0", style: { opacity: Math.min(swipeX / 36, 1), width: swipeX, marginRight: -swipeX } },
+            React.createElement("i", { className: "fa-solid fa-reply text-sm" })),
+        React.createElement("div", { className: "max-w-[75%] group relative", style: { transform: `translateX(${swipeX}px)`, transition: swipingRef.current ? 'none' : 'transform 0.2s ease-out' } },
             message.forwardedFrom && React.createElement("p", { className: "text-[10px] text-slate-400 mb-0.5 flex items-center gap-1" },
                 React.createElement("i", { className: "fa-solid fa-share" }),
                 "Forwarded"),
             message.replyTo && (React.createElement("div", { className: "text-xs px-2.5 py-1 rounded-t-lg border-l-2 border-brand-400 bg-black/5 dark:bg-white/5" },
                 React.createElement("p", { className: "truncate opacity-70 max-w-[220px]" }, message.replyTo.text))),
-            React.createElement("div", {
+            heartPop && React.createElement("div", { className: "absolute inset-0 flex items-center justify-center pointer-events-none z-10" },
+                React.createElement("span", { className: "text-4xl heart-pop" }, "\u2764\uFE0F")),
+            emojiOnlyMatch ? (
+                React.createElement("div", {
+                    className: "text-[52px] leading-none py-1 select-none sm:select-text",
+                    onContextMenu: (e) => { e.preventDefault(); setMenuOpen(!menuOpen); },
+                    onDoubleClick: doubleTapReact,
+                    onTouchStart: onTouchStart, onTouchMove: onTouchMove, onTouchEnd: onTouchEnd, onTouchCancel: onTouchEnd
+                }, message.text.trim())
+            ) : React.createElement("div", {
                 style: cornerStyle,
                 className: "relative px-3 py-[6px] text-[15px] leading-snug select-none sm:select-text " + (isMe ? "bg-[#0d9488] text-white" : "bg-[#F0F0F0] dark:bg-[#3A3B3C] text-[#050505] dark:text-white"),
                 onContextMenu: (e) => { e.preventDefault(); setMenuOpen(!menuOpen); },
+                onDoubleClick: doubleTapReact,
                 onTouchStart: onTouchStart, onTouchMove: onTouchMove, onTouchEnd: onTouchEnd, onTouchCancel: onTouchEnd
             },
                 message.type === 'text' && React.createElement("p", { className: "whitespace-pre-wrap break-words" }, formatRichText(message.text)),
                 message.type === 'text' && React.createElement(LinkPreviewList, { text: message.text, max: 2 }),
                 message.type === 'image' && React.createElement("img", { src: message.mediaURL, onClick: () => openLightbox(message.mediaURL), loading: "lazy", className: "rounded-lg max-w-[240px] cursor-zoom-in" }),
-                message.type === 'video' && React.createElement(BoostedVideo, { src: message.mediaURL, controls: true, className: "rounded-lg max-w-[240px]" }),
+                message.type === 'video' && React.createElement("video", { src: message.mediaURL, controls: true, className: "rounded-lg max-w-[240px]" }),
                 message.type === 'audio' && React.createElement(VoiceMessagePlayer, { src: message.mediaURL, isMe: isMe }),
                 message.type === 'document' && (React.createElement("a", { href: message.mediaURL, target: "_blank", className: "flex items-center gap-2 " + (isMe ? "text-white" : "text-[#0d9488]") },
                     React.createElement("i", { className: "fa-solid fa-file-lines text-lg" }),
@@ -9676,6 +9730,8 @@ function MessageBubble({ message, isMe, otherUid, otherUser, showAvatar, groupPo
                     React.createElement("span", null, ((_a = message.createdAt) === null || _a === void 0 ? void 0 : _a.toDate) ? message.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''),
                     isMe && status())),
             reactions.length > 0 && (React.createElement("div", { className: "flex gap-0.5 mt-0.5" }, reactions.map(([uid, emoji]) => React.createElement("span", { key: uid, className: "text-xs bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-600 rounded-full px-1.5" }, emoji)))),
+            isMe && isLastSeen && React.createElement("div", { className: "flex justify-end mt-0.5" },
+                React.createElement(Avatar, { user: otherUser, size: 4 })),
             menuOpen && (React.createElement(React.Fragment, null,
                 React.createElement("div", { className: "fixed inset-0 z-10", onClick: () => setMenuOpen(false) }),
                 React.createElement("div", { className: "absolute z-20 mt-1 bg-white dark:bg-ink-700 shadow-lg rounded-xl border border-slate-100 dark:border-ink-600 overflow-hidden w-44 " + (isMe ? "right-0" : "left-0") },
@@ -9687,7 +9743,7 @@ function MessageBubble({ message, isMe, otherUid, otherUser, showAvatar, groupPo
                     React.createElement("button", { onClick: () => { onDeleteForMe(); setMenuOpen(false); }, className: "w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-slate-50 dark:hover:bg-ink-600" }, "Delete for me"),
                     isMe && React.createElement("button", { onClick: () => { if (confirm('Delete this message for everyone? This cannot be undone.')) { onDeleteForEveryone(); } setMenuOpen(false); }, className: "w-full text-left px-4 py-2 text-sm text-red-600 font-semibold hover:bg-slate-50 dark:hover:bg-ink-600 border-t border-slate-100 dark:border-ink-600" }, "Delete for everyone")))))));
 }
-function ChatWindow({ chatId, otherUid, pageId, go }) {
+function ChatWindow({ chatId, otherUid, pageId, go, headerHeight }) {
     var _a;
     const { profile } = useAuth();
     const toast = useToast();
@@ -9857,6 +9913,24 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
             toast(friendlyError(e), 'error');
         }
     };
+    // Messenger's thumbs-up button: tapping it (instead of holding to record) fires off an
+    // instant 👍 the same way the real app's "like" send button does when the composer is empty.
+    const sendLike = async () => {
+        if (blocked) {
+            toast("You can't message this user", 'error');
+            return;
+        }
+        const payload = { type: 'text', text: '\uD83D\uDC4D' };
+        if (replyTo)
+            payload.replyTo = { id: replyTo.id, text: replyTo.text || ('[' + replyTo.type + ']'), senderId: replyTo.senderId };
+        setReplyTo(null);
+        try {
+            await sendChatMessage(profile.id, chatId, otherUid, payload);
+        }
+        catch (e) {
+            toast(friendlyError(e), 'error');
+        }
+    };
     const uploadAndSend = async (file, type) => {
         if (blocked) {
             toast("You can't message this user", 'error');
@@ -9962,12 +10036,23 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
     const displayIdentity = pageId && pageInfo ? pageInfo : otherUser;
     const identityRoute = pageId && pageInfo ? { name: 'page', id: pageId } : { name: 'profile', uid: otherUid };
     const visibleMessages = (messages || []).filter(m => !(m.deletedFor || []).includes(profile.id));
-    // The whole chat is a dedicated, fixed full-screen view on mobile (matching how Facebook
-    // Messenger's own chat screen works) instead of being sized to fit inside the normal page
-    // flow. That removes the "jumping" for good: there's no outer page for the browser to
-    // scroll when the keyboard opens, and no header-height math to get wrong. Desktop keeps
-    // the original in-page card layout (md:static reverts it back into the sidebar layout).
-    return (React.createElement("div", { className: "fixed inset-0 z-40 md:static md:z-auto flex flex-col bg-white dark:bg-ink-800 md:border md:border-slate-100 md:dark:border-ink-700 md:rounded-2xl overflow-hidden md:h-[calc(100vh-2rem)]" },
+    // Last message I sent that the other person has actually read — Messenger marks this one
+    // with their tiny avatar instead of stacking a checkmark on every read message.
+    let lastSeenMessageId = null;
+    for (let i = visibleMessages.length - 1; i >= 0; i--) {
+        const mm = visibleMessages[i];
+        if (mm.senderId === profile.id && (mm.readBy || []).includes(otherUid)) { lastSeenMessageId = mm.id; break; }
+    }
+    const otherIsTyping = !pageId && !!((_a = chatDoc === null || chatDoc === void 0 ? void 0 : chatDoc.typing) === null || _a === void 0 ? void 0 : _a[otherUid]);
+    // Uses the "small viewport height" unit (100svh), not 100dvh, on purpose: dvh changes
+    // live as the mobile browser's address/toolbar hides and shows while you scroll or type,
+    // which resizes this container on every scroll tick — that's what read as the whole chat
+    // "jumping up and down". svh is fixed to the viewport size WITH the browser chrome visible,
+    // so the container size never fluctuates. headerHeight is the *actual measured* height of
+    // the sticky header above this screen (see AppShell) rather than a guessed rem value, so
+    // there's no leftover gray gap at the bottom when the real header is shorter/taller than
+    // guessed on a given device.
+    return (React.createElement("div", { className: "flex flex-col bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 md:rounded-2xl overflow-hidden h-[var(--chat-h)] md:h-[calc(100vh-2rem)]", style: { '--chat-h': `calc(100svh - ${headerHeight || 112}px)` } },
         React.createElement("div", { className: "flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-700 shrink-0 sticky top-0 z-30 bg-white/95 dark:bg-ink-800/95 backdrop-blur-sm" },
             React.createElement("button", { onClick: () => go({ name: 'messages' }), className: "text-[#0d9488] w-8 h-8 flex items-center justify-center md:hidden" },
                 React.createElement("i", { className: "fa-solid fa-arrow-left" })),
@@ -10007,11 +10092,18 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
                 const groupedWithPrev = !!prevMsg && prevMsg.senderId === m.senderId && Math.abs(t(m) - t(prevMsg)) < 3 * 60 * 1000;
                 const groupedWithNext = !!nextMsg && nextMsg.senderId === m.senderId && Math.abs(t(nextMsg) - t(m)) < 3 * 60 * 1000;
                 const groupPos = groupedWithPrev && groupedWithNext ? 'middle' : groupedWithPrev ? 'last' : groupedWithNext ? 'first' : 'single';
+                // Messenger shows the other person's tiny avatar under the single most recent
+                // message they've actually seen, instead of a checkmark on every read message.
+                const isLastSeen = m.id === lastSeenMessageId;
                 return React.createElement(React.Fragment, { key: m.id },
                     React.createElement(DateSeparator, { prev: prevMsg, curr: m }),
                     firstUnreadIdRef.current === m.id && React.createElement(UnreadDivider, null),
-                    React.createElement(MessageBubble, { message: m, isMe: m.senderId === profile.id, otherUid: otherUid, otherUser: displayIdentity, showAvatar: !groupedWithNext, groupPos: groupPos, menuOpen: activeMenuId === m.id, setMenuOpen: (v) => setActiveMenuId(v ? m.id : null), onReply: () => setReplyTo(m), onForward: () => setForwardMsg(m), onCopy: () => copyText(m), onEdit: () => { setEditingMessage(m); setText(m.text || ''); }, onDeleteForMe: () => deleteForMe(m), onDeleteForEveryone: () => deleteForEveryone(m), onReact: (e) => react(m, e) }));
+                    React.createElement(MessageBubble, { message: m, isMe: m.senderId === profile.id, otherUid: otherUid, otherUser: displayIdentity, showAvatar: !groupedWithNext, groupPos: groupPos, menuOpen: activeMenuId === m.id, setMenuOpen: (v) => setActiveMenuId(v ? m.id : null), onReply: () => setReplyTo(m), onForward: () => setForwardMsg(m), onCopy: () => copyText(m), onEdit: () => { setEditingMessage(m); setText(m.text || ''); }, onDeleteForMe: () => deleteForMe(m), onDeleteForEveryone: () => deleteForEveryone(m), onReact: (e) => react(m, e), isLastSeen: isLastSeen }));
             }),
+            otherIsTyping && React.createElement("div", { className: "flex items-end gap-1.5 mb-2 msg-in" },
+                React.createElement("div", { className: "w-6 shrink-0" }, React.createElement(Avatar, { user: displayIdentity, size: 6 })),
+                React.createElement("div", { className: "bg-[#F0F0F0] dark:bg-[#3A3B3C] rounded-[18px] px-4 py-3 flex items-center gap-1" },
+                    [0, 1, 2].map(i => React.createElement("span", { key: i, className: "typing-dot w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-300 inline-block", style: { animationDelay: (i * 0.15) + 's' } })))),
             React.createElement("div", { ref: bottomRef })),
         blocked && (React.createElement("div", { className: "px-4 py-2 text-xs text-center text-red-500 bg-red-50 dark:bg-red-900/20 shrink-0" }, iBlockedThem ? "You've blocked this user." : "You can't reply to this conversation.")),
         (replyTo || editingMessage) && (React.createElement("div", { className: "flex items-center justify-between px-4 py-2 border-t border-slate-100 dark:border-ink-700 bg-slate-50 dark:bg-ink-700 shrink-0" },
@@ -10051,7 +10143,9 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
                 React.createElement("button", { onClick: () => { setAttachOpen(a => !a); setEmojiOpen(false); }, disabled: blocked, className: "text-[#0d9488] w-9 h-9 flex items-center justify-center disabled:opacity-40 text-lg" },
                     React.createElement("i", { className: "fa-solid fa-circle-plus" })),
                 React.createElement("button", { onClick: () => { imageInputRef.current.click(); }, disabled: blocked, className: "text-[#0d9488] w-9 h-9 hidden sm:flex items-center justify-center disabled:opacity-40 text-lg" },
-                    React.createElement("i", { className: "fa-solid fa-image" })),
+                    React.createElement("i", { className: "fa-solid fa-camera" })),
+                React.createElement("button", { onClick: startRecording, disabled: blocked, className: "text-[#0d9488] w-9 h-9 flex items-center justify-center disabled:opacity-40 text-lg" },
+                    React.createElement("i", { className: "fa-solid fa-microphone" })),
                 React.createElement("div", { className: "flex-1 relative flex items-center" },
                     React.createElement("input", { value: text, onChange: e => onTextChange(e.target.value), onKeyDown: e => { if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
@@ -10060,8 +10154,8 @@ function ChatWindow({ chatId, otherUid, pageId, go }) {
                     React.createElement("button", { onClick: () => { setEmojiOpen(a => !a); setAttachOpen(false); }, disabled: blocked, className: "absolute right-2 text-[#0d9488] w-6 h-6 flex items-center justify-center disabled:opacity-40" },
                         React.createElement("i", { className: "fa-regular fa-face-smile" }))),
                 text.trim() ? (React.createElement("button", { onClick: sendText, className: "text-[#0d9488] rounded-full w-9 h-9 flex items-center justify-center shrink-0 text-xl" },
-                    React.createElement("i", { className: "fa-solid fa-paper-plane" }))) : (React.createElement("button", { onClick: startRecording, disabled: blocked, className: "text-[#0d9488] w-9 h-9 flex items-center justify-center disabled:opacity-40 text-xl" },
-                    React.createElement("i", { className: "fa-solid fa-microphone" })))))),
+                    React.createElement("i", { className: "fa-solid fa-paper-plane" }))) : (React.createElement("button", { onClick: sendLike, disabled: blocked, className: "text-[#0d9488] w-9 h-9 flex items-center justify-center disabled:opacity-40 text-xl active:scale-90 transition" },
+                    React.createElement("i", { className: "fa-solid fa-thumbs-up" })))))),
         forwardMsg && React.createElement(ForwardModal, { message: forwardMsg, onClose: () => setForwardMsg(null) }),
         reportUserOpen && React.createElement(ReportReasonSheet, { targetType: "user", targetId: otherUid, targetOwnerId: otherUid, onClose: () => setReportUserOpen(false) })));
 }
@@ -10844,7 +10938,7 @@ function ReelCard({ reel, active, go, meId, muted, onToggleMute, onOpenComments,
     const onScrubCommit = (e) => { seekTo(Number(e.target.value)); setScrubbing(false); };
     const captionParts = (reel.caption || '').split(/(\s+)/);
     return (React.createElement("div", { className: "relative w-full h-full shrink-0 snap-start bg-black flex items-center justify-center overflow-hidden" },
-        React.createElement(BoostedVideo, { ref: videoRef, src: reel.videoURL, poster: reel.thumbURL || undefined, loop: true, muted: muted, playsInline: true, onClick: onToggleMute, onTimeUpdate: onTimeUpdate, onLoadedMetadata: onLoadedMetadata, className: "w-full h-full object-contain bg-black cursor-pointer" }),
+        React.createElement("video", { ref: videoRef, src: reel.videoURL, poster: reel.thumbURL || undefined, loop: true, muted: muted, playsInline: true, onClick: onToggleMute, onTimeUpdate: onTimeUpdate, onLoadedMetadata: onLoadedMetadata, className: "w-full h-full object-contain bg-black cursor-pointer" }),
         React.createElement("button", { onClick: onToggleMute, className: "absolute top-16 right-3 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center" }, React.createElement("i", { className: "fa-solid " + (muted ? "fa-volume-xmark" : "fa-volume-high") + " text-sm" })),
         duration > 0 && React.createElement("button", { onClick: (e) => { e.stopPropagation(); skip(10); }, title: "Forward 10 seconds", className: "absolute top-28 right-3 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-rotate-right text-sm" })),
         reel.pinned && React.createElement("span", { className: "absolute top-3 left-3 bg-black/50 text-white text-[11px] font-semibold px-2 py-1 rounded-full" }, React.createElement("i", { className: "fa-solid fa-thumbtack mr-1" }), "Pinned"),
@@ -12042,7 +12136,7 @@ function GroupPhotosTab({ posts, go }) {
 function GroupVideosTab({ posts }) {
     const videos = posts.filter(p => p.videoURL);
     if (videos.length === 0) return React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "No videos yet.");
-    return React.createElement("div", { className: "grid grid-cols-2 gap-2" }, videos.map(p => React.createElement(BoostedVideo, { key: p.id, src: p.videoURL, controls: true, className: "w-full rounded-lg bg-black aspect-video" })));
+    return React.createElement("div", { className: "grid grid-cols-2 gap-2" }, videos.map(p => React.createElement("video", { key: p.id, src: p.videoURL, controls: true, className: "w-full rounded-lg bg-black aspect-video" })));
 }
 function GroupFilesTab({ posts, go }) {
     const files = posts.filter(p => p.documentURL);
@@ -13751,7 +13845,7 @@ function DatingChatScreen({ matchId, go }) {
                 React.createElement("div", { className: "max-w-[75%] rounded-2xl px-3 py-2 text-sm " + (m.senderId === profile.id ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") },
                     (!m.type || m.type === 'text') && React.createElement("span", { className: "whitespace-pre-wrap break-words" }, m.text),
                     m.type === 'image' && React.createElement("img", { src: m.mediaURL, onClick: () => openLightbox(m.mediaURL), loading: "lazy", className: "rounded-lg max-w-[220px] cursor-zoom-in" }),
-                    m.type === 'video' && React.createElement(BoostedVideo, { src: m.mediaURL, controls: true, className: "rounded-lg max-w-[220px]" }),
+                    m.type === 'video' && React.createElement("video", { src: m.mediaURL, controls: true, className: "rounded-lg max-w-[220px]" }),
                     m.type === 'audio' && React.createElement("audio", { src: m.mediaURL, controls: true, className: "w-52" })))),
             React.createElement("div", { ref: bottomRef })),
         uploading && (React.createElement("div", { className: "px-3 pt-2 shrink-0" },
@@ -15364,6 +15458,46 @@ function AdminReferralsPanel({ adminUid, adminEmail }) {
 }
 
 /* ============================== RENDER ============================== */
+// Volume booster: browsers cap a <video>/<audio> element's own volume at 100%, which is why
+// quietly-recorded posted videos still sound low even with the built-in controls turned all the
+// way up. This routes every media element's output through a Web Audio GainNode set above 100%
+// so posted videos (and any other video/audio on the site) play noticeably louder. It attaches
+// lazily the first time each element starts playing, and only ever attaches once per element
+// (required — connecting the same element to a MediaElementSource twice throws).
+(function () {
+    var VOLUME_BOOST = 2.2; // ~220% loudness
+    var ctx = null;
+    var boosted = new WeakSet();
+    function getCtx() {
+        if (!ctx) {
+            var AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return null;
+            ctx = new AC();
+        }
+        if (ctx.state === 'suspended') ctx.resume().catch(function () { });
+        return ctx;
+    }
+    function boost(el) {
+        if (boosted.has(el)) return;
+        var audioCtx = getCtx();
+        if (!audioCtx) return;
+        try {
+            var source = audioCtx.createMediaElementSource(el);
+            var gainNode = audioCtx.createGain();
+            gainNode.gain.value = VOLUME_BOOST;
+            source.connect(gainNode).connect(audioCtx.destination);
+            boosted.add(el);
+        } catch (e) {
+            // Element already routed elsewhere (e.g. a WebRTC call stream) or CORS-tainted — leave
+            // it playing through its normal, unboosted output rather than breaking playback.
+            boosted.add(el);
+        }
+    }
+    document.addEventListener('play', function (e) {
+        var el = e.target;
+        if (el && (el.tagName === 'VIDEO' || el.tagName === 'AUDIO')) boost(el);
+    }, true);
+})();
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App, null));
 document.getElementById('root').dataset.mounted = 'true';
 
