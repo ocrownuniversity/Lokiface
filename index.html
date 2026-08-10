@@ -9288,17 +9288,85 @@ function AdminPostRow({ post, adminUid, adminEmail }) {
         catch (e) { toast(friendlyError(e), 'error'); }
         finally { setBusy(false); }
     };
+    // --- Admin like/comment: mirrors the consumer PostCard's live reaction + comment wiring
+    // (see setPostReaction/removePostReaction and Comments' postComment above) so an admin can
+    // react to and comment on any post directly from this panel, using their own admin uid.
+    const [liked, setLiked] = useState(false);
+    const [likeBusy, setLikeBusy] = useState(false);
+    useEffect(() => {
+        if (!adminUid) return;
+        const unsub = db.collection('posts').doc(post.id).collection('likes').doc(adminUid)
+            .onSnapshot(s => setLiked(s.exists), () => { });
+        return unsub;
+    }, [post.id, adminUid]);
+    const toggleAdminLike = async () => {
+        setLikeBusy(true);
+        try {
+            if (liked) await removePostReaction(post.id, adminUid);
+            else await setPostReaction(post.id, adminUid, post.authorId, 'like', post.pageId);
+            logAdminAction(adminUid, adminEmail, liked ? 'unlike_post' : 'like_post', 'post', post.id, (post.text || '').slice(0, 60));
+        }
+        catch (e) { toast(friendlyError(e), 'error'); }
+        finally { setLikeBusy(false); }
+    };
+    const [commentsOpen, setCommentsOpen] = useState(false);
+    const [comments, setComments] = useState([]);
+    useEffect(() => {
+        if (!commentsOpen) return;
+        const unsub = db.collection('posts').doc(post.id).collection('comments').orderBy('createdAt', 'asc').limit(200)
+            .onSnapshot(snap => setComments(snap.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => { });
+        return unsub;
+    }, [post.id, commentsOpen]);
+    const [commentText, setCommentText] = useState('');
+    const [commentBusy, setCommentBusy] = useState(false);
+    const submitAdminComment = async () => {
+        const text = commentText.trim();
+        if (!text || !adminUid) return;
+        setCommentBusy(true);
+        try {
+            const commentRef = await db.collection('posts').doc(post.id).collection('comments').add({
+                authorId: adminUid, text, bold: false, taggedUsers: [], image: null,
+                parentId: null, replyToDisplayName: null, createdAt: FieldValue.serverTimestamp()
+            });
+            db.collection('posts').doc(post.id).update({ commentsCount: FieldValue.increment(1) }).catch(() => { });
+            if (post.pageId) creditEngagementEarning({ pageId: post.pageId, source: 'comment', ledgerId: 'comment_' + commentRef.id, actorId: adminUid }).catch(() => { });
+            if (post.authorId && post.authorId !== adminUid) creditPostEngagementReward({ uid: post.authorId, source: 'comment', ledgerId: 'comment_' + commentRef.id }).catch(() => { });
+            logAdminAction(adminUid, adminEmail, 'comment_post', 'post', post.id, text.slice(0, 60));
+            setCommentText('');
+            setCommentsOpen(true);
+        }
+        catch (e) { toast(friendlyError(e), 'error'); }
+        finally { setCommentBusy(false); }
+    };
+    const hasImages = (post.images || []).length > 0;
     return React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-xl p-3 border border-slate-100 dark:border-ink-700" },
         React.createElement("p", { className: "text-sm mb-1 line-clamp-3" }, post.text || React.createElement("span", { className: "italic text-slate-400" }, "(no text \u2014 media post)")),
+        hasImages && (post.images.length === 1 ? (
+            React.createElement("img", { src: post.images[0], loading: "lazy", onClick: () => openLightbox(post.images, 0), className: "w-full max-h-64 object-contain bg-slate-50 dark:bg-ink-900 rounded-lg cursor-zoom-in mb-2" })) : (
+            React.createElement("div", { className: "grid grid-cols-3 gap-0.5 overflow-hidden rounded-lg mb-2" }, post.images.map((img, i) => React.createElement("img", { key: i, src: img, loading: "lazy", onClick: () => openLightbox(post.images, i), className: "w-full h-20 object-cover cursor-zoom-in" }))))),
+        post.videoURL && React.createElement("div", { className: "bg-black rounded-lg overflow-hidden mb-2" },
+            React.createElement("video", { src: post.videoURL, controls: true, className: "w-full max-h-64" })),
         React.createElement("p", { className: "text-xs text-slate-400 mb-2" },
             React.createElement(AdminUserLabel, { uid: post.authorId }), " \u00B7 ", post.likesCount || 0, " likes \u00B7 ", post.commentsCount || 0, " comments",
             post.pinned && " \u00B7 pinned", post.featured && " \u00B7 featured", post.hiddenByAdmin && " \u00B7 hidden by admin"),
-        React.createElement("div", { className: "flex flex-wrap gap-1.5" },
+        React.createElement("div", { className: "flex flex-wrap gap-1.5 mb-2" },
+            React.createElement("button", { disabled: likeBusy || !adminUid, onClick: toggleAdminLike, className: "text-[11px] font-semibold px-2 py-1 rounded-lg " + (liked ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") },
+                React.createElement("i", { className: "fa-solid fa-thumbs-up mr-1" }), liked ? 'Liked' : 'Like'),
+            React.createElement("button", { onClick: () => setCommentsOpen(o => !o), className: "text-[11px] font-semibold px-2 py-1 rounded-lg bg-slate-100 dark:bg-ink-700" },
+                React.createElement("i", { className: "fa-solid fa-comment mr-1" }), commentsOpen ? 'Hide comments' : 'Comments'),
             React.createElement("button", { disabled: busy, onClick: () => run(() => adminTogglePin(post), 'toggle_pin_post'), className: "text-[11px] font-semibold px-2 py-1 rounded-lg bg-slate-100 dark:bg-ink-700" }, post.pinned ? 'Unpin' : 'Pin'),
             React.createElement("button", { disabled: busy, onClick: () => run(() => adminToggleFeature(post), 'toggle_feature_post'), className: "text-[11px] font-semibold px-2 py-1 rounded-lg bg-slate-100 dark:bg-ink-700" }, post.featured ? 'Unfeature' : 'Feature'),
             !post.hiddenByAdmin ? React.createElement("button", { disabled: busy, onClick: () => run(() => adminHidePost(post), 'hide_post'), className: "text-[11px] font-semibold px-2 py-1 rounded-lg bg-amber-500 text-white" }, "Remove (hide)") :
                 React.createElement("button", { disabled: busy, onClick: () => run(() => adminRestorePost(post), 'restore_post'), className: "text-[11px] font-semibold px-2 py-1 rounded-lg bg-emerald-500 text-white" }, "Restore"),
-            React.createElement("button", { disabled: busy, onClick: () => confirm('Permanently delete this post? This cannot be undone.') && run(() => adminDeletePostPermanently(post), 'delete_post'), className: "text-[11px] font-semibold px-2 py-1 rounded-lg bg-red-50 text-red-500 dark:bg-red-900/20" }, "Delete Permanently")));
+            React.createElement("button", { disabled: busy, onClick: () => confirm('Permanently delete this post? This cannot be undone.') && run(() => adminDeletePostPermanently(post), 'delete_post'), className: "text-[11px] font-semibold px-2 py-1 rounded-lg bg-red-50 text-red-500 dark:bg-red-900/20" }, "Delete Permanently")),
+        React.createElement("div", { className: "flex items-center gap-1.5 mb-1" },
+            React.createElement("input", { type: "text", value: commentText, onChange: e => setCommentText(e.target.value), onKeyDown: e => { if (e.key === 'Enter') submitAdminComment(); }, placeholder: "Write a comment as admin\u2026", className: "flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent" }),
+            React.createElement("button", { disabled: commentBusy || !commentText.trim() || !adminUid, onClick: submitAdminComment, className: "text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white shrink-0" }, commentBusy ? '\u2026' : 'Send')),
+        commentsOpen && React.createElement("div", { className: "mt-2 space-y-1.5 max-h-56 overflow-y-auto border-t border-slate-100 dark:border-ink-700 pt-2" },
+            comments.length === 0 ? React.createElement("p", { className: "text-[11px] text-slate-400" }, "No comments yet.") :
+                comments.map(c => React.createElement("div", { key: c.id, className: "text-xs" },
+                    React.createElement("span", { className: "font-semibold" }, React.createElement(AdminUserLabel, { uid: c.authorId })), " ",
+                    React.createElement("span", { className: "text-slate-500 dark:text-slate-400" }, c.text)))));
 }
 /* ============================== SUPER ADMIN: ANNOUNCEMENTS ============================== */
 /* Lets the super admin publish an actual timeline post (not just a notification, unlike
