@@ -1917,6 +1917,14 @@ const YELOFACE_OFFICIAL_PAGE_ID = 'yeloface-official';
 async function ensureYelofaceOfficialPage(adminUid) {
     const ref = db.collection('fanPages').doc(YELOFACE_OFFICIAL_PAGE_ID);
     const snap = await ref.get();
+    // NOTE: deliberately NOT reassigning ownerId here if the Page already exists. All existing
+    // "Yeloface" chats (chatId, chatMembers, message history) are keyed off whichever real uid
+    // is currently stored as ownerId. Silently reassigning it would make every existing
+    // conversation invisible to the admin panel (it queries chatMembers by ownerId), even
+    // though the data isn't lost. If you need "Reply as Yeloface" to be sent from a different
+    // real account than whatever currently owns the Page, that's a deliberate one-time data
+    // migration (reassigning ownerId AND migrating the chatMembers/chats docs to the new uid),
+    // not something to do automatically on every panel load.
     if (snap.exists) return;
     await ref.set(Object.assign({
         ownerId: adminUid, displayName: 'Yeloface', username: 'yeloface',
@@ -4942,9 +4950,9 @@ function ProgressBar({ value, max, colorClass = 'bg-brand-600' }) {
     return React.createElement("div", { className: "w-full h-2.5 rounded-full bg-slate-100 dark:bg-ink-700 overflow-hidden" },
         React.createElement("div", { className: colorClass + " h-full rounded-full transition-all", style: { width: pct + '%' } }));
 }
-function Avatar({ user, size = 10, onClick }) {
+function Avatar({ user, size = 10, onClick, className = '' }) {
     const src = (user === null || user === void 0 ? void 0 : user.photoURL) || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent((user === null || user === void 0 ? void 0 : user.displayName) || (user === null || user === void 0 ? void 0 : user.username) || '?')}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
-    return React.createElement("img", { onClick: onClick, src: src, className: `w-${size} h-${size} rounded-lg object-cover shrink-0 ${onClick ? 'cursor-pointer' : ''}`, style: { width: size * 4, height: size * 4 } });
+    return React.createElement("img", { onClick: onClick, src: src, className: `w-${size} h-${size} rounded-lg object-cover shrink-0 ${onClick ? 'cursor-pointer' : ''} ${className}`, style: { width: size * 4, height: size * 4 } });
 }
 /* ============================== FRIEND ACTION BUTTON ============================== */
 function FriendActionButton({ meId, otherId, compact }) {
@@ -6160,7 +6168,11 @@ function Comments({ postId, go }) {
         }
         notifyTagged(tagged, profile.id, postId, 'tag');
     };
-    const topLevel = comments.filter(c => !c.parentId);
+    // Official "Yeloface" replies are pinned to the top of the thread, like a Page reply on
+    // Facebook — comments already come from Firestore in chronological order, so within each
+    // group (official vs. everyone else) that original order is preserved.
+    const topLevel = comments.filter(c => !c.parentId)
+        .sort((a, b) => (b.officialAs === YELOFACE_OFFICIAL_PAGE_ID ? 1 : 0) - (a.officialAs === YELOFACE_OFFICIAL_PAGE_ID ? 1 : 0));
     return (React.createElement("div", { className: "mt-3 pt-3 border-t border-slate-100 dark:border-ink-700 space-y-3" },
         topLevel.map(c => React.createElement(CommentThread, { key: c.id, comment: c, allComments: comments, depth: 0, go: go, postComment: postComment })),
         React.createElement(CommentComposer, { avatarUser: profile, onSubmit: (p) => postComment(Object.assign({}, p, { parentId: null })) })));
@@ -6171,33 +6183,42 @@ function Comments({ postId, go }) {
 // readable on a phone screen, while still remaining fully threaded in the data.
 function CommentThread({ comment, allComments, depth, go, postComment }) {
     const { profile } = useAuth();
-    const [author, setAuthor] = useState(null);
+    // Comments posted "as Yeloface" from the Super Admin panel are written under the admin's
+    // own real uid (authorId) so the write satisfies normal Firestore rules — but carry a
+    // separate `officialAs` flag so they render with the "Yeloface" identity instead of the
+    // admin's personal profile. This is purely a display override: no Firestore doc lookup is
+    // needed or possible for a fixed non-self id, so a hardcoded snapshot is used instead.
+    const isOfficial = comment.officialAs === YELOFACE_OFFICIAL_PAGE_ID;
+    const officialAuthor = { displayName: 'Yeloface', username: 'yeloface', photoURL: (typeof window !== 'undefined' ? window.YELOFACE_MARK : null), verified: true };
+    const [author, setAuthor] = useState(isOfficial ? officialAuthor : null);
     const [replying, setReplying] = useState(false);
     const [showReplies, setShowReplies] = useState(false);
     useEffect(() => {
+        if (isOfficial) { setAuthor(officialAuthor); return; }
         const unsub = db.collection('users').doc(comment.authorId).onSnapshot(s => setAuthor(s.exists ? s.data() : null));
         return unsub;
-    }, [comment.authorId]);
+    }, [comment.authorId, isOfficial]);
     const children = allComments.filter(c => c.parentId === comment.id);
     const indent = Math.min(depth, 3) * 28;
     if (!author)
         return null;
-    // Comments authored by the official "Yeloface" identity (posted from the Super Admin
-    // panel — see ensureYelofaceSystemUser) get a branded bubble + verified badge so they
-    // read distinctly from ordinary user comments, same idea as verified Pages elsewhere.
-    const isOfficial = comment.authorId === YELOFACE_OFFICIAL_PAGE_ID;
+    // For an official comment, authorId is the admin's real personal uid (see above) — tapping
+    // the name/avatar should go to the public "Yeloface" page, not expose the admin's own
+    // personal profile.
+    const goToAuthor = () => isOfficial ? go({ name: 'page', id: YELOFACE_OFFICIAL_PAGE_ID }) : go({ name: 'profile', uid: comment.authorId });
     return (React.createElement("div", { style: { marginLeft: indent } },
         React.createElement("div", { className: "flex items-start gap-2" },
-            React.createElement(Avatar, { user: author, size: 7, onClick: () => go({ name: 'profile', uid: comment.authorId }) }),
+            React.createElement("div", { className: isOfficial ? "rounded-full p-[2px] bg-gradient-to-br from-brand-400 via-amber-400 to-brand-600 shrink-0" : "shrink-0" },
+                React.createElement(Avatar, { user: author, size: 7, onClick: goToAuthor, className: isOfficial ? "ring-2 ring-white dark:ring-ink-800" : undefined })),
             React.createElement("div", { className: "flex-1 min-w-0" },
-                React.createElement("div", { className: (isOfficial ? "bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800" : "bg-slate-50 dark:bg-ink-700") + " rounded-2xl px-3 py-2 inline-block max-w-full" },
-                    React.createElement("p", { className: "text-xs font-semibold" },
-                        React.createElement("span", { className: "cursor-pointer" + (isOfficial ? " text-brand-600" : ""), onClick: () => go({ name: 'profile', uid: comment.authorId }) }, author.displayName),
-                        isOfficial && React.createElement("i", { className: "fa-solid fa-badge-check text-brand-500 text-[11px] ml-1" }),
-                        " ",
-                        React.createElement("span", { className: "text-slate-400 font-normal ml-1" }, timeAgo(comment.createdAt))),
+                React.createElement("div", { className: (isOfficial ? "bg-gradient-to-br from-brand-50 to-amber-50 dark:from-brand-900/30 dark:to-amber-900/10 border-2 border-brand-200 dark:border-brand-700 shadow-sm" : "bg-slate-50 dark:bg-ink-700") + " rounded-2xl px-3 py-2 inline-block max-w-full" },
+                    React.createElement("p", { className: "text-xs font-semibold flex items-center flex-wrap gap-1" },
+                        React.createElement("span", { className: "cursor-pointer" + (isOfficial ? " text-brand-700 dark:text-brand-300 font-extrabold tracking-tight" : ""), onClick: goToAuthor }, author.displayName),
+                        isOfficial && React.createElement("i", { className: "fa-solid fa-badge-check text-brand-500 text-xs" }),
+                        isOfficial && React.createElement("span", { className: "text-[9px] font-bold uppercase tracking-wide text-white bg-gradient-to-r from-brand-600 to-brand-500 px-1.5 py-0.5 rounded-full" }, "Official"),
+                        React.createElement("span", { className: "text-slate-400 font-normal" }, timeAgo(comment.createdAt))),
                     React.createElement(TaggedLine, { users: comment.taggedUsers, go: go }),
-                    comment.text && (React.createElement("p", { className: "text-sm " + (comment.bold ? 'font-bold' : '') },
+                    comment.text && (React.createElement("p", { className: "text-sm " + (isOfficial ? 'font-semibold' : comment.bold ? 'font-bold' : '') },
                         comment.replyToDisplayName && React.createElement("span", { className: "text-brand-600 font-semibold mr-1" }, "@" + comment.replyToDisplayName),
                         formatRichText(comment.text))),
                     comment.image && React.createElement("img", { src: comment.image, onClick: () => openLightbox(comment.image), loading: "lazy", className: "mt-1.5 rounded-lg max-h-56 max-w-full object-cover cursor-zoom-in" })),
@@ -9346,12 +9367,15 @@ function AdminPostRow({ post, adminUid, adminEmail }) {
         if (!text || !adminUid) return;
         setCommentBusy(true);
         try {
-            // Commented as the official "Yeloface" identity (not the admin's personal account)
-            // so it reads the same as any other official Page comment site-wide — see
-            // ensureYelofaceSystemUser and CommentThread's isOfficial styling.
-            await ensureYelofaceSystemUser(adminUid);
+            // Written under the admin's own real uid so it satisfies standard Firestore rules
+            // requiring a comment's authorId to match the writer (request.auth.uid) — the
+            // earlier version wrote authorId as the fixed 'yeloface-official' id, which never
+            // equals the signed-in admin's uid and was rejected outright, silently blocking
+            // every admin comment. `officialAs` is a separate, purely cosmetic flag that tells
+            // CommentThread to render this as the "Yeloface" identity instead of the admin's
+            // personal profile — see CommentThread's isOfficial check.
             const commentRef = await db.collection('posts').doc(post.id).collection('comments').add({
-                authorId: YELOFACE_OFFICIAL_PAGE_ID, text, bold: false, taggedUsers: [], image: null,
+                authorId: adminUid, officialAs: YELOFACE_OFFICIAL_PAGE_ID, text, bold: false, taggedUsers: [], image: null,
                 parentId: null, replyToDisplayName: null, createdAt: FieldValue.serverTimestamp()
             });
             db.collection('posts').doc(post.id).update({ commentsCount: FieldValue.increment(1) }).catch(() => { });
@@ -9391,8 +9415,8 @@ function AdminPostRow({ post, adminUid, adminEmail }) {
         commentsOpen && React.createElement("div", { className: "mt-2 space-y-1.5 max-h-56 overflow-y-auto border-t border-slate-100 dark:border-ink-700 pt-2" },
             comments.length === 0 ? React.createElement("p", { className: "text-[11px] text-slate-400" }, "No comments yet.") :
                 comments.map(c => React.createElement("div", { key: c.id, className: "text-xs" },
-                    React.createElement("span", { className: "font-semibold" + (c.authorId === YELOFACE_OFFICIAL_PAGE_ID ? " text-brand-600" : "") }, React.createElement(AdminUserLabel, { uid: c.authorId })),
-                    c.authorId === YELOFACE_OFFICIAL_PAGE_ID && React.createElement("i", { className: "fa-solid fa-badge-check text-brand-500 text-[10px] ml-1" }), " ",
+                    React.createElement("span", { className: "font-semibold" + (c.officialAs === YELOFACE_OFFICIAL_PAGE_ID ? " text-brand-600" : "") }, c.officialAs === YELOFACE_OFFICIAL_PAGE_ID ? 'Yeloface' : React.createElement(AdminUserLabel, { uid: c.authorId })),
+                    c.officialAs === YELOFACE_OFFICIAL_PAGE_ID && React.createElement("i", { className: "fa-solid fa-badge-check text-brand-500 text-[10px] ml-1" }), " ",
                     React.createElement("span", { className: "text-slate-500 dark:text-slate-400" }, c.text)))));
 }
 /* ============================== SUPER ADMIN: ANNOUNCEMENTS ============================== */
