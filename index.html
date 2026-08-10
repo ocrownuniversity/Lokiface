@@ -9516,12 +9516,22 @@ function AdminYelofaceMessagesPanel({ adminUid, adminEmail }) {
     }, [ownerId]);
     const [search, setSearch] = useState('');
     const [activeRow, setActiveRow] = useState(null);
-    const visible = (rows || []).filter(r => !r.deletedAt && r.status !== 'pending').sort((a, b) => {
+    // Include pending rows too — a user's first message to a Page they aren't already mutually
+    // followed by lands as a "request" (see ensureChat's recipientStatus), so filtering those
+    // out here made first-time messages to Yeloface invisible even though they'd arrived fine.
+    const visible = (rows || []).filter(r => !r.deletedAt).sort((a, b) => {
         var _a, _b;
         const at = ((_a = a.lastMessageAt) === null || _a === void 0 ? void 0 : _a.toMillis) ? a.lastMessageAt.toMillis() : 0;
         const bt = ((_b = b.lastMessageAt) === null || _b === void 0 ? void 0 : _b.toMillis) ? b.lastMessageAt.toMillis() : 0;
         return bt - at;
     });
+    const openRow = (r) => {
+        setActiveRow(r);
+        // Opening it here counts as the Page "accepting" the conversation — there's no separate
+        // accept step surfaced in this admin view, unlike the consumer Requests tab.
+        if (r.status === 'pending')
+            db.collection('chatMembers').doc(r.id).update({ status: 'accepted' }).catch(() => { });
+    };
     if (yelofacePage === undefined || rows === null)
         return React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026");
     if (yelofacePage === null)
@@ -9533,7 +9543,7 @@ function AdminYelofaceMessagesPanel({ adminUid, adminEmail }) {
             React.createElement("div", null,
                 React.createElement("input", { value: search, onChange: e => setSearch(e.target.value), placeholder: "Search\u2026", className: "w-full mb-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }),
                 visible.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 py-6 text-center" }, "No messages yet."),
-                React.createElement("div", { className: "space-y-1.5 max-h-[70vh] overflow-y-auto" }, visible.map(r => React.createElement(AdminYelofaceMessageRow, { key: r.id, row: r, search: search, active: (activeRow === null || activeRow === void 0 ? void 0 : activeRow.id) === r.id, onOpen: () => setActiveRow(r) })))),
+                React.createElement("div", { className: "space-y-1.5 max-h-[70vh] overflow-y-auto" }, visible.map(r => React.createElement(AdminYelofaceMessageRow, { key: r.id, row: r, search: search, active: (activeRow === null || activeRow === void 0 ? void 0 : activeRow.id) === r.id, onOpen: () => openRow(r) })))),
             activeRow ? React.createElement(AdminYelofaceChatThread, { key: activeRow.id, ownerId: ownerId, otherUid: activeRow.otherUid, chatId: activeRow.chatId, adminUid: adminUid, adminEmail: adminEmail }) :
                 React.createElement("div", { className: "hidden md:flex items-center justify-center text-sm text-slate-400 border border-dashed border-slate-200 dark:border-ink-700 rounded-xl" }, "Select a conversation")));
 }
@@ -9550,7 +9560,9 @@ function AdminYelofaceMessageRow({ row, search, active, onOpen }) {
     return React.createElement("button", { onClick: onOpen, className: "w-full flex items-center gap-2.5 text-left rounded-xl p-2 " + (active ? "bg-brand-50 dark:bg-brand-900/20" : "bg-white dark:bg-ink-800 hover:bg-slate-50 dark:hover:bg-ink-700") + " border border-slate-100 dark:border-ink-700" },
         React.createElement(Avatar, { user: user, size: 9 }),
         React.createElement("div", { className: "flex-1 min-w-0" },
-            React.createElement("p", { className: "text-sm truncate " + (unread ? "font-bold" : "font-semibold") }, user.displayName),
+            React.createElement("p", { className: "text-sm truncate flex items-center gap-1.5 " + (unread ? "font-bold" : "font-semibold") },
+                user.displayName,
+                row.status === 'pending' && React.createElement("span", { className: "text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700" }, "REQUEST")),
             React.createElement("p", { className: "text-xs truncate " + (unread ? "text-[#050505] dark:text-white" : "text-slate-400") }, preview)),
         React.createElement("div", { className: "flex flex-col items-end gap-1 shrink-0" },
             React.createElement("span", { className: "text-[10px] text-slate-400" }, timeAgo(row.lastMessageAt)),
