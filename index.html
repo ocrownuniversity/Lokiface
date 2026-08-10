@@ -1929,6 +1929,19 @@ async function ensureYelofaceOfficialPage(adminUid) {
     await db.collection('pageUsernames').doc('yeloface').set({ pageId: YELOFACE_OFFICIAL_PAGE_ID }).catch(() => { });
     await db.collection('pageNames').doc(normalizePageNameKey('Yeloface')).set({ pageId: YELOFACE_OFFICIAL_PAGE_ID }).catch(() => { });
 }
+// A parallel "users/{YELOFACE_OFFICIAL_PAGE_ID}" doc (same id, different collection — no
+// collision) so that comments, which always resolve their author from the users collection
+// (see CommentThread), can be authored as "Yeloface" instead of the acting admin's personal
+// account. Used by the Super Admin panel's per-post comment box.
+async function ensureYelofaceSystemUser(adminUid) {
+    const ref = db.collection('users').doc(YELOFACE_OFFICIAL_PAGE_ID);
+    const snap = await ref.get();
+    if (snap.exists) return;
+    await ref.set({
+        displayName: 'Yeloface', username: 'yeloface', photoURL: null, verified: true,
+        isOfficial: true, createdAt: FieldValue.serverTimestamp()
+    });
+}
 async function createFanPage(profileId, fields) {
     // Accounts are capped at 3 Pages. Checked here (not just in the UI) so the limit holds
     // regardless of which screen calls this.
@@ -6169,13 +6182,18 @@ function CommentThread({ comment, allComments, depth, go, postComment }) {
     const indent = Math.min(depth, 3) * 28;
     if (!author)
         return null;
+    // Comments authored by the official "Yeloface" identity (posted from the Super Admin
+    // panel — see ensureYelofaceSystemUser) get a branded bubble + verified badge so they
+    // read distinctly from ordinary user comments, same idea as verified Pages elsewhere.
+    const isOfficial = comment.authorId === YELOFACE_OFFICIAL_PAGE_ID;
     return (React.createElement("div", { style: { marginLeft: indent } },
         React.createElement("div", { className: "flex items-start gap-2" },
             React.createElement(Avatar, { user: author, size: 7, onClick: () => go({ name: 'profile', uid: comment.authorId }) }),
             React.createElement("div", { className: "flex-1 min-w-0" },
-                React.createElement("div", { className: "bg-slate-50 dark:bg-ink-700 rounded-2xl px-3 py-2 inline-block max-w-full" },
+                React.createElement("div", { className: (isOfficial ? "bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800" : "bg-slate-50 dark:bg-ink-700") + " rounded-2xl px-3 py-2 inline-block max-w-full" },
                     React.createElement("p", { className: "text-xs font-semibold" },
-                        React.createElement("span", { className: "cursor-pointer", onClick: () => go({ name: 'profile', uid: comment.authorId }) }, author.displayName),
+                        React.createElement("span", { className: "cursor-pointer" + (isOfficial ? " text-brand-600" : ""), onClick: () => go({ name: 'profile', uid: comment.authorId }) }, author.displayName),
+                        isOfficial && React.createElement("i", { className: "fa-solid fa-badge-check text-brand-500 text-[11px] ml-1" }),
                         " ",
                         React.createElement("span", { className: "text-slate-400 font-normal ml-1" }, timeAgo(comment.createdAt))),
                     React.createElement(TaggedLine, { users: comment.taggedUsers, go: go }),
@@ -8386,6 +8404,7 @@ function SuperAdminApp({ theme, setTheme }) {
         { key: 'marketplace', label: 'Marketplace' + (pendingListingCount ? ' (' + pendingListingCount + ')' : ''), icon: 'fa-store' },
         { key: 'reports', label: 'Reports', icon: 'fa-flag' },
         { key: 'postAsYeloface', label: 'Post as Yeloface', icon: 'fa-pen-nib' },
+        { key: 'yelofaceMessages', label: 'Yeloface Messages', icon: 'fa-message' },
         { key: 'announcements', label: 'Announcements', icon: 'fa-bullhorn' },
         { key: 'settings', label: 'Site Settings', icon: 'fa-gear' },
         { key: 'auditlog', label: 'Audit Log', icon: 'fa-clock-rotate-left' },
@@ -8736,6 +8755,9 @@ function SuperAdminPanel({ tab, adminUid, adminEmail }) {
     }
     if (tab === 'postAsYeloface') {
         return React.createElement(AdminPostAsYelofaceForm, { adminUid: adminUid, adminEmail: adminEmail });
+    }
+    if (tab === 'yelofaceMessages') {
+        return React.createElement(AdminYelofaceMessagesPanel, { adminUid: adminUid, adminEmail: adminEmail });
     }
     if (tab === 'announcements') {
         return React.createElement(AdminAnnouncementForm, { adminUid: adminUid, adminEmail: adminEmail });
@@ -9324,8 +9346,12 @@ function AdminPostRow({ post, adminUid, adminEmail }) {
         if (!text || !adminUid) return;
         setCommentBusy(true);
         try {
+            // Commented as the official "Yeloface" identity (not the admin's personal account)
+            // so it reads the same as any other official Page comment site-wide — see
+            // ensureYelofaceSystemUser and CommentThread's isOfficial styling.
+            await ensureYelofaceSystemUser(adminUid);
             const commentRef = await db.collection('posts').doc(post.id).collection('comments').add({
-                authorId: adminUid, text, bold: false, taggedUsers: [], image: null,
+                authorId: YELOFACE_OFFICIAL_PAGE_ID, text, bold: false, taggedUsers: [], image: null,
                 parentId: null, replyToDisplayName: null, createdAt: FieldValue.serverTimestamp()
             });
             db.collection('posts').doc(post.id).update({ commentsCount: FieldValue.increment(1) }).catch(() => { });
@@ -9365,7 +9391,8 @@ function AdminPostRow({ post, adminUid, adminEmail }) {
         commentsOpen && React.createElement("div", { className: "mt-2 space-y-1.5 max-h-56 overflow-y-auto border-t border-slate-100 dark:border-ink-700 pt-2" },
             comments.length === 0 ? React.createElement("p", { className: "text-[11px] text-slate-400" }, "No comments yet.") :
                 comments.map(c => React.createElement("div", { key: c.id, className: "text-xs" },
-                    React.createElement("span", { className: "font-semibold" }, React.createElement(AdminUserLabel, { uid: c.authorId })), " ",
+                    React.createElement("span", { className: "font-semibold" + (c.authorId === YELOFACE_OFFICIAL_PAGE_ID ? " text-brand-600" : "") }, React.createElement(AdminUserLabel, { uid: c.authorId })),
+                    c.authorId === YELOFACE_OFFICIAL_PAGE_ID && React.createElement("i", { className: "fa-solid fa-badge-check text-brand-500 text-[10px] ml-1" }), " ",
                     React.createElement("span", { className: "text-slate-500 dark:text-slate-400" }, c.text)))));
 }
 /* ============================== SUPER ADMIN: ANNOUNCEMENTS ============================== */
@@ -9463,6 +9490,131 @@ function AdminPostAsYelofaceForm({ adminUid, adminEmail }) {
             React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", className: "hidden", onChange: pickFile }),
             React.createElement("button", { type: "button", onClick: () => fileRef.current.click(), className: "flex items-center gap-2 text-xs font-semibold text-slate-500 mb-4" }, React.createElement("i", { className: "fa-regular fa-image" }), "Add photo"),
             React.createElement("button", { disabled: busy, type: "submit", className: "px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white text-sm font-semibold" }, busy ? 'Posting\u2026' : 'Post to timeline')));
+}
+/* ============================== SUPER ADMIN: YELOFACE MESSAGES ============================== */
+// The consumer app's "Message" button on the Yeloface Page (see PageProfileScreen) just opens
+// a normal 1-1 chat with the Page's ownerId — Pages don't have a separate inbox of their own,
+// they piggyback on the owner's personal chats collection. This panel surfaces those specific
+// conversations (chatMembers where uid == the Yeloface page's ownerId) here in the admin panel,
+// and lets an admin read + reply to them as the Yeloface identity, without needing to sign into
+// that owner's personal account and dig through their regular Messages tab.
+function AdminYelofaceMessagesPanel({ adminUid, adminEmail }) {
+    const toast = useToast();
+    const [yelofacePage, setYelofacePage] = useState(undefined);
+    useEffect(() => {
+        const unsub = db.collection('fanPages').doc(YELOFACE_OFFICIAL_PAGE_ID)
+            .onSnapshot(s => setYelofacePage(s.exists ? Object.assign({ id: s.id }, s.data()) : null), () => setYelofacePage(null));
+        return unsub;
+    }, []);
+    const ownerId = yelofacePage && yelofacePage.ownerId;
+    const [rows, setRows] = useState(null);
+    useEffect(() => {
+        if (!ownerId) { setRows([]); return; }
+        const unsub = db.collection('chatMembers').where('uid', '==', ownerId)
+            .onSnapshot(snap => setRows(snap.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => setRows([]));
+        return unsub;
+    }, [ownerId]);
+    const [search, setSearch] = useState('');
+    const [activeRow, setActiveRow] = useState(null);
+    const visible = (rows || []).filter(r => !r.deletedAt && r.status !== 'pending').sort((a, b) => {
+        var _a, _b;
+        const at = ((_a = a.lastMessageAt) === null || _a === void 0 ? void 0 : _a.toMillis) ? a.lastMessageAt.toMillis() : 0;
+        const bt = ((_b = b.lastMessageAt) === null || _b === void 0 ? void 0 : _b.toMillis) ? b.lastMessageAt.toMillis() : 0;
+        return bt - at;
+    });
+    if (yelofacePage === undefined || rows === null)
+        return React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026");
+    if (yelofacePage === null)
+        return React.createElement("p", { className: "text-sm text-slate-400" }, "The Yeloface Page hasn't been created yet \u2014 post something from \"Post as Yeloface\" first, then messages sent to it will show up here.");
+    return React.createElement("div", null,
+        React.createElement("h2", { className: "font-display text-lg font-bold mb-1" }, "Yeloface Messages"),
+        React.createElement("p", { className: "text-xs text-slate-400 mb-4" }, "Conversations users started by tapping \"Message\" on the Yeloface Page."),
+        React.createElement("div", { className: "grid md:grid-cols-[300px_1fr] gap-4" },
+            React.createElement("div", null,
+                React.createElement("input", { value: search, onChange: e => setSearch(e.target.value), placeholder: "Search\u2026", className: "w-full mb-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }),
+                visible.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 py-6 text-center" }, "No messages yet."),
+                React.createElement("div", { className: "space-y-1.5 max-h-[70vh] overflow-y-auto" }, visible.map(r => React.createElement(AdminYelofaceMessageRow, { key: r.id, row: r, search: search, active: (activeRow === null || activeRow === void 0 ? void 0 : activeRow.id) === r.id, onOpen: () => setActiveRow(r) })))),
+            activeRow ? React.createElement(AdminYelofaceChatThread, { key: activeRow.id, ownerId: ownerId, otherUid: activeRow.otherUid, chatId: activeRow.chatId, adminUid: adminUid, adminEmail: adminEmail }) :
+                React.createElement("div", { className: "hidden md:flex items-center justify-center text-sm text-slate-400 border border-dashed border-slate-200 dark:border-ink-700 rounded-xl" }, "Select a conversation")));
+}
+function AdminYelofaceMessageRow({ row, search, active, onOpen }) {
+    var _a, _b, _c;
+    const [user, setUser] = useState(null);
+    useEffect(() => { const unsub = db.collection('users').doc(row.otherUid).onSnapshot(s => setUser(s.exists ? Object.assign({ id: s.id }, s.data()) : null)); return unsub; }, [row.otherUid]);
+    if (!user)
+        return null;
+    if (search && !(((_a = user.displayName) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(search.toLowerCase())) || ((_b = user.username) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes(search.toLowerCase()))))
+        return null;
+    const preview = row.lastMessage ? (row.lastMessage.type === 'text' ? row.lastMessage.text : '[' + row.lastMessage.type + ']') : 'Say hello \uD83D\uDC4B';
+    const unread = row.unreadCount > 0;
+    return React.createElement("button", { onClick: onOpen, className: "w-full flex items-center gap-2.5 text-left rounded-xl p-2 " + (active ? "bg-brand-50 dark:bg-brand-900/20" : "bg-white dark:bg-ink-800 hover:bg-slate-50 dark:hover:bg-ink-700") + " border border-slate-100 dark:border-ink-700" },
+        React.createElement(Avatar, { user: user, size: 9 }),
+        React.createElement("div", { className: "flex-1 min-w-0" },
+            React.createElement("p", { className: "text-sm truncate " + (unread ? "font-bold" : "font-semibold") }, user.displayName),
+            React.createElement("p", { className: "text-xs truncate " + (unread ? "text-[#050505] dark:text-white" : "text-slate-400") }, preview)),
+        React.createElement("div", { className: "flex flex-col items-end gap-1 shrink-0" },
+            React.createElement("span", { className: "text-[10px] text-slate-400" }, timeAgo(row.lastMessageAt)),
+            unread && React.createElement("span", { className: "bg-brand-600 w-2 h-2 rounded-full" })));
+}
+function AdminYelofaceChatThread({ ownerId, otherUid, chatId, adminUid, adminEmail }) {
+    const toast = useToast();
+    const [user, setUser] = useState(null);
+    const [messages, setMessages] = useState(null);
+    const [text, setText] = useState('');
+    const [sending, setSending] = useState(false);
+    const bottomRef = useRef();
+    useEffect(() => { const unsub = db.collection('users').doc(otherUid).onSnapshot(s => setUser(s.exists ? Object.assign({ id: s.id }, s.data()) : null)); return unsub; }, [otherUid]);
+    useEffect(() => {
+        const unsub = db.collection('chats').doc(chatId).collection('messages').orderBy('createdAt', 'asc').limit(200)
+            .onSnapshot(snap => setMessages(snap.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => setMessages([]));
+        return unsub;
+    }, [chatId]);
+    useEffect(() => { var _a; (_a = bottomRef.current) === null || _a === void 0 ? void 0 : _a.scrollIntoView({ behavior: 'smooth' }); }, [messages === null || messages === void 0 ? void 0 : messages.length]);
+    // Mirrors ChatScreen's read-receipt effect (see the consumer chat window) but marks things
+    // read as the Page owner (ownerId) rather than the signed-in admin, since it's the owner's
+    // conversation the admin is viewing on the Page's behalf.
+    useEffect(() => {
+        if (!messages || messages.length === 0) return;
+        const unread = messages.filter(m => m.senderId !== ownerId && !(m.readBy || []).includes(ownerId));
+        if (unread.length > 0) {
+            const batch = db.batch();
+            unread.forEach(m => batch.update(db.collection('chats').doc(chatId).collection('messages').doc(m.id), { readBy: FieldValue.arrayUnion(ownerId), deliveredTo: FieldValue.arrayUnion(ownerId) }));
+            batch.commit().catch(() => { });
+        }
+        db.collection('chatMembers').doc(chatId + '_' + ownerId).set({ unreadCount: 0 }, { merge: true }).catch(() => { });
+    }, [messages, chatId, ownerId]);
+    const send = async (e) => {
+        e.preventDefault();
+        const t = text.trim();
+        if (!t || sending) return;
+        setSending(true);
+        try {
+            await sendChatMessage(ownerId, chatId, otherUid, { type: 'text', text: t });
+            logAdminAction(adminUid, adminEmail, 'reply_yeloface_message', 'chat', chatId, t.slice(0, 60));
+            setText('');
+        }
+        catch (e) { toast(friendlyError(e), 'error'); }
+        finally { setSending(false); }
+    };
+    return React.createElement("div", { className: "flex flex-col bg-white dark:bg-ink-800 rounded-xl border border-slate-100 dark:border-ink-700 h-[70vh]" },
+        React.createElement("div", { className: "flex items-center gap-2.5 px-4 py-3 border-b border-slate-100 dark:border-ink-700 shrink-0" },
+            user && React.createElement(Avatar, { user: user, size: 8 }),
+            React.createElement("p", { className: "text-sm font-bold" }, user ? user.displayName : otherUid)),
+        React.createElement("div", { className: "flex-1 overflow-y-auto px-4 py-3 space-y-2" },
+            messages === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
+            messages !== null && messages.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-10" }, "No messages yet."),
+            (messages || []).map(m => {
+                const mine = m.senderId === ownerId;
+                return React.createElement("div", { key: m.id, className: "flex " + (mine ? "justify-end" : "justify-start") },
+                    React.createElement("div", { className: "max-w-[75%] rounded-2xl px-3 py-2 text-sm " + (mine ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") },
+                        m.type === 'text' || !m.type ? m.text : React.createElement("span", { className: "italic opacity-75" }, "[" + m.type + "]"),
+                        React.createElement("p", { className: "text-[10px] opacity-70 mt-0.5" }, timeAgo(m.createdAt))));
+            }),
+            React.createElement("div", { ref: bottomRef })),
+        React.createElement("form", { onSubmit: send, className: "flex items-center gap-2 px-3 py-2.5 border-t border-slate-100 dark:border-ink-700 shrink-0" },
+            React.createElement("input", { value: text, onChange: e => setText(e.target.value), placeholder: "Reply as Yeloface\u2026", className: "flex-1 px-3 py-2 rounded-full border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }),
+            React.createElement("button", { disabled: sending || !text.trim(), type: "submit", className: "w-9 h-9 rounded-full bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white flex items-center justify-center shrink-0" },
+                React.createElement("i", { className: "fa-solid fa-paper-plane text-sm" }))));
 }
 function AdminAnnouncementForm({ adminUid, adminEmail }) {
     const [title, setTitle] = useState('');
