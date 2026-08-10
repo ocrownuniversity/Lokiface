@@ -8582,7 +8582,7 @@ function SuperAdminPanel({ tab, adminUid, adminEmail }) {
         return React.createElement("div", null,
             React.createElement("div", { className: "flex items-center justify-between mb-3 gap-3" },
                 React.createElement("h2", { className: "font-display text-lg font-bold" }, "Users"),
-                React.createElement("button", { onClick: () => exportToCsv('users.csv', users.map(u => ({ id: u.id, email: u.email || '', username: u.username || '', displayName: u.displayName || '', verified: !!u.verified, suspended: !!u.suspended, banned: !!u.banned, followers: u.followersCount || 0, posts: u.postsCount || 0 }))), className: "text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-ink-700" }, React.createElement("i", { className: "fa-solid fa-file-arrow-down mr-1.5" }), "Export CSV")),
+                React.createElement("button", { onClick: () => exportToCsv('users.csv', users.map(u => ({ id: u.id, email: u.email || '', username: u.username || '', displayName: u.displayName || '', verified: !!u.verified, suspended: !!u.suspended, banned: !!u.banned, followers: u.followersCount || 0, posts: u.postsCount || 0, walletBalance: u.walletBalance || 0 }))), className: "text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-ink-700" }, React.createElement("i", { className: "fa-solid fa-file-arrow-down mr-1.5" }), "Export CSV")),
             React.createElement("input", { value: search, onChange: e => setSearch(e.target.value), placeholder: "Search by username, name, or email\u2026", className: "w-full mb-3 px-4 py-2 rounded-xl border border-slate-200 dark:border-ink-700 bg-white dark:bg-ink-800 text-sm" }),
             React.createElement("div", { className: "space-y-2" }, filtered.map(u => React.createElement(AdminUserRow, { key: u.id, u: u, adminUid: adminUid, adminEmail: adminEmail, onToggleSuspend: () => toggleSuspend(u) }))));
     }
@@ -8863,6 +8863,17 @@ function AdminUserRow({ u, adminUid, adminEmail, onToggleSuspend }) {
     const toast = useToast();
     const [busy, setBusy] = useState(false);
     const [open, setOpen] = useState(false);
+    const [walletOpen, setWalletOpen] = useState(false);
+    // Only starts listening to this user's wallet transactions once the admin actually asks to
+    // see the breakdown — with potentially hundreds of rows in this list, always-on listeners
+    // for every user's wallet would be wasteful.
+    const walletTxns = useWalletTransactions(walletOpen ? u.id : null);
+    const walletBreakdown = useMemo(() => {
+        if (!walletTxns) return null;
+        const sums = {};
+        walletTxns.forEach(t => { const key = t.type || 'other'; sums[key] = (sums[key] || 0) + (t.amount || 0); });
+        return Object.entries(sums).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    }, [walletTxns]);
     const run = async (fn, action) => {
         setBusy(true);
         try {
@@ -8884,12 +8895,35 @@ function AdminUserRow({ u, adminUid, adminEmail, onToggleSuspend }) {
                         u.suspended && React.createElement("span", { className: "text-amber-500 text-xs ml-1" }, "(suspended)"),
                         u.banned && React.createElement("span", { className: "text-red-500 text-xs ml-1" }, "(banned)")),
                     React.createElement("p", { className: "text-xs text-slate-400 truncate" }, "@", u.username, " \u00B7 ", u.email))),
-            React.createElement("button", { onClick: () => setOpen(v => !v), className: "text-slate-300 shrink-0" }, React.createElement("i", { className: "fa-solid " + (open ? 'fa-chevron-up' : 'fa-chevron-down') }))),
+            React.createElement("div", { className: "text-right shrink-0 ml-2" },
+                React.createElement("p", { className: "text-[10px] text-slate-400" }, "Wallet"),
+                React.createElement("p", { className: "text-sm font-bold text-brand-600" }, formatNaira(u.walletBalance || 0))),
+            React.createElement("button", { onClick: () => setOpen(v => !v), className: "text-slate-300 shrink-0 ml-2" }, React.createElement("i", { className: "fa-solid " + (open ? 'fa-chevron-up' : 'fa-chevron-down') }))),
         open && React.createElement("div", { className: "mt-3 pt-3 border-t border-slate-100 dark:border-ink-700" },
             React.createElement("div", { className: "grid grid-cols-3 gap-2 text-center mb-3 text-xs text-slate-400" },
                 React.createElement("div", null, React.createElement("p", { className: "text-sm font-bold text-slate-700 dark:text-slate-200" }, u.postsCount || 0), "Posts"),
                 React.createElement("div", null, React.createElement("p", { className: "text-sm font-bold text-slate-700 dark:text-slate-200" }, u.followersCount || 0), "Followers"),
                 React.createElement("div", null, React.createElement("p", { className: "text-sm font-bold text-slate-700 dark:text-slate-200" }, u.followingCount || 0), "Following")),
+            React.createElement("div", { className: "flex items-center justify-between bg-slate-50 dark:bg-ink-700/40 rounded-lg px-3 py-2 mb-3" },
+                React.createElement("div", null,
+                    React.createElement("p", { className: "text-[11px] text-slate-400" }, "Wallet balance"),
+                    React.createElement("p", { className: "text-base font-bold" }, formatNaira(u.walletBalance || 0))),
+                React.createElement("button", { onClick: () => setWalletOpen(v => !v), className: "text-[11px] font-semibold text-brand-600" }, walletOpen ? 'Hide breakdown' : 'View breakdown')),
+            walletOpen && React.createElement("div", { className: "mb-3" },
+                walletTxns === null && React.createElement("p", { className: "text-[11px] text-slate-400 text-center py-2" }, "Loading\u2026"),
+                walletTxns !== null && walletTxns.length === 0 && React.createElement("p", { className: "text-[11px] text-slate-400 text-center py-2" }, "No wallet transactions."),
+                walletBreakdown && walletBreakdown.length > 0 && (React.createElement("div", { className: "space-y-1 mb-2" },
+                    React.createElement("p", { className: "text-[10px] font-bold text-slate-400 uppercase tracking-wide" }, "By category"),
+                    walletBreakdown.map(([type, sum]) => React.createElement("div", { key: type, className: "flex items-center justify-between text-xs bg-slate-50 dark:bg-ink-700/30 rounded px-2 py-1.5" },
+                        React.createElement("span", { className: "truncate mr-2" }, humanizeWalletType(type)),
+                        React.createElement("span", { className: "font-bold shrink-0 " + (sum >= 0 ? "text-emerald-600" : "text-red-500") }, (sum >= 0 ? '+' : '') + formatNaira(sum)))))),
+                walletTxns && walletTxns.length > 0 && (React.createElement("div", { className: "space-y-1" },
+                    React.createElement("p", { className: "text-[10px] font-bold text-slate-400 uppercase tracking-wide" }, "Recent transactions"),
+                    walletTxns.slice(0, 25).map(t => React.createElement("div", { key: t.id, className: "flex items-center justify-between text-[11px] bg-slate-50 dark:bg-ink-700/30 rounded px-2 py-1.5" },
+                        React.createElement("div", { className: "min-w-0 mr-2" },
+                            React.createElement("p", { className: "truncate" }, t.description || humanizeWalletType(t.type)),
+                            React.createElement("p", { className: "text-slate-400" }, timeAgo(t.createdAt))),
+                        React.createElement("span", { className: "font-bold shrink-0 " + (t.amount >= 0 ? "text-emerald-600" : "text-red-500") }, (t.amount >= 0 ? '+' : '') + formatNaira(t.amount))))))),
             React.createElement("div", { className: "flex flex-wrap gap-1.5" },
                 React.createElement("button", { disabled: busy, onClick: () => run(() => adminVerifyUser(u), 'toggle_verify_user'), className: "text-[11px] font-semibold px-2 py-1 rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-900/20" }, u.verified ? 'Unverify' : 'Verify'),
                 React.createElement("button", { disabled: busy, onClick: onToggleSuspend, className: "text-[11px] font-semibold px-2 py-1 rounded-lg " + (u.suspended ? "bg-emerald-500 text-white" : "bg-amber-500 text-white") }, u.suspended ? 'Reactivate' : 'Suspend'),
@@ -14480,6 +14514,10 @@ const WALLET_TXN_LABELS = {
     fund_paystack: 'Wallet funding (Paystack)', fund_manual: 'Wallet funding (bank transfer)',
     ad_spend: 'Ad campaign budget', ad_refund: 'Ad budget refund'
 };
+function humanizeWalletType(type) {
+    if (WALLET_TXN_LABELS[type]) return WALLET_TXN_LABELS[type];
+    return (type || 'other').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
 function FundWalletSheet({ cfg, onClose }) {
     const { profile, firebaseUser } = useAuth();
     const toast = useToast();
