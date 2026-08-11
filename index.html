@@ -6765,12 +6765,13 @@ const NOTIF_TEXT = { like: 'reacted to your post', comment: 'commented on your p
     page_name_change_submitted: 'Your Page name change request was submitted for review', page_name_change_approved: 'Your Page name change was approved',
     page_name_change_rejected: 'Your Page name change request was rejected',
     referral_reward: 'You earned a referral reward', referral_withdrawal_submitted: 'Your referral withdrawal request was submitted',
-    referral_withdrawal_approved: 'Your referral withdrawal was approved and sent to your Zmonie account', referral_withdrawal_rejected: 'Your referral withdrawal request was rejected' };
+    referral_withdrawal_approved: 'Your referral withdrawal was approved and sent to your Zmonie account', referral_withdrawal_rejected: 'Your referral withdrawal request was rejected',
+    wallet_credit: 'Your wallet was credited by an admin' };
 const SYSTEM_NOTIF_TYPES = ['announcement', 'listing_approved', 'listing_removed', 'ad_approved', 'ad_declined', 'group_request_approved', 'group_request_rejected',
     'kyc_approved', 'kyc_rejected', 'followers_milestone', 'monetization_eligible', 'monetization_approved', 'monetization_rejected', 'monetization_suspended',
     'earnings_updated', 'withdrawal_approved', 'withdrawal_rejected', 'withdrawal_paid',
     'page_name_change_submitted', 'page_name_change_approved', 'page_name_change_rejected',
-    'referral_reward', 'referral_withdrawal_submitted', 'referral_withdrawal_approved', 'referral_withdrawal_rejected'];
+    'referral_reward', 'referral_withdrawal_submitted', 'referral_withdrawal_approved', 'referral_withdrawal_rejected', 'wallet_credit'];
 const PAGE_NAME_CHANGE_NOTIF_TYPES = ['page_name_change_submitted', 'page_name_change_approved', 'page_name_change_rejected'];
 const MONETIZATION_NOTIF_TYPES = ['kyc_approved', 'kyc_rejected', 'followers_milestone', 'monetization_eligible', 'monetization_approved', 'monetization_rejected', 'monetization_suspended', 'earnings_updated'];
 const WITHDRAWAL_NOTIF_TYPES = ['withdrawal_approved', 'withdrawal_rejected', 'withdrawal_paid'];
@@ -6826,10 +6827,12 @@ function NotifRow({ n, go }) {
             return go({ name: 'pageForm', id: n.pageId });
         if (REFERRAL_NOTIF_TYPES.includes(n.type))
             return go({ name: 'referrals' });
+        if (n.type === 'wallet_credit')
+            return go({ name: 'wallet' });
         go({ name: 'profile', uid: n.fromUserId });
     };
     return (React.createElement("div", { onClick: openNotif, className: "flex items-center gap-3 bg-white dark:bg-ink-800 rounded-xl p-3 border border-slate-100 dark:border-ink-700 cursor-pointer" },
-        isSystem ? React.createElement("div", { className: "w-9 h-9 rounded-full bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0" }, React.createElement("i", { className: "fa-solid " + (n.type === 'announcement' ? 'fa-bullhorn' : n.groupId ? 'fa-people-group' : PAGE_NAME_CHANGE_NOTIF_TYPES.includes(n.type) ? 'fa-signature' : (MONETIZATION_NOTIF_TYPES.includes(n.type) || WITHDRAWAL_NOTIF_TYPES.includes(n.type) || REFERRAL_NOTIF_TYPES.includes(n.type)) ? 'fa-sack-dollar' : 'fa-store') })) : React.createElement(Avatar, { user: from, size: 9 }),
+        isSystem ? React.createElement("div", { className: "w-9 h-9 rounded-full bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0" }, React.createElement("i", { className: "fa-solid " + (n.type === 'announcement' ? 'fa-bullhorn' : n.groupId ? 'fa-people-group' : PAGE_NAME_CHANGE_NOTIF_TYPES.includes(n.type) ? 'fa-signature' : (n.type === 'wallet_credit' || MONETIZATION_NOTIF_TYPES.includes(n.type) || WITHDRAWAL_NOTIF_TYPES.includes(n.type) || REFERRAL_NOTIF_TYPES.includes(n.type)) ? 'fa-sack-dollar' : 'fa-store') })) : React.createElement(Avatar, { user: from, size: 9 }),
         React.createElement("p", { className: "text-sm" },
             n.type === 'announcement' ? React.createElement("span", { className: "font-semibold" }, n.title) : null,
             n.type === 'announcement' && n.title ? " " : null,
@@ -6838,7 +6841,7 @@ function NotifRow({ n, go }) {
                 !isSystem && " ",
                 NOTIF_TEXT[n.type] || 'interacted with you'
             ],
-            (n.type === 'earnings_updated' || WITHDRAWAL_NOTIF_TYPES.includes(n.type) || REFERRAL_NOTIF_TYPES.includes(n.type)) && typeof n.amount === 'number' ? (' (\u20A6' + Math.abs(n.amount).toLocaleString() + ')') : '',
+            (n.type === 'earnings_updated' || n.type === 'wallet_credit' || WITHDRAWAL_NOTIF_TYPES.includes(n.type) || REFERRAL_NOTIF_TYPES.includes(n.type)) && typeof n.amount === 'number' ? (' (\u20A6' + Math.abs(n.amount).toLocaleString() + ')') : '',
             " ",
             React.createElement("span", { className: "text-slate-400" },
                 "\u00B7 ",
@@ -8912,6 +8915,10 @@ function AdminUserRow({ u, adminUid, adminEmail, onToggleSuspend }) {
     const [busy, setBusy] = useState(false);
     const [open, setOpen] = useState(false);
     const [walletOpen, setWalletOpen] = useState(false);
+    const [creditOpen, setCreditOpen] = useState(false);
+    const [creditAmount, setCreditAmount] = useState('');
+    const [creditNote, setCreditNote] = useState('');
+    const [creditBusy, setCreditBusy] = useState(false);
     // Only starts listening to this user's wallet transactions once the admin actually asks to
     // see the breakdown — with potentially hundreds of rows in this list, always-on listeners
     // for every user's wallet would be wasteful.
@@ -8931,6 +8938,16 @@ function AdminUserRow({ u, adminUid, adminEmail, onToggleSuspend }) {
         }
         catch (e) { toast(friendlyError(e), 'error'); }
         finally { setBusy(false); }
+    };
+    const submitCredit = async () => {
+        setCreditBusy(true);
+        try {
+            await adminCreditUserWallet(u, creditAmount, creditNote.trim(), adminUid, adminEmail);
+            toast('Wallet credited', 'success');
+            setCreditAmount(''); setCreditNote(''); setCreditOpen(false);
+        }
+        catch (e) { toast(friendlyError(e), 'error'); }
+        finally { setCreditBusy(false); }
     };
     return React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-xl p-3 border border-slate-100 dark:border-ink-700" },
         React.createElement("div", { className: "flex items-center justify-between" },
@@ -8956,7 +8973,16 @@ function AdminUserRow({ u, adminUid, adminEmail, onToggleSuspend }) {
                 React.createElement("div", null,
                     React.createElement("p", { className: "text-[11px] text-slate-400" }, "Wallet balance"),
                     React.createElement("p", { className: "text-base font-bold" }, formatNaira(u.walletBalance || 0))),
-                React.createElement("button", { onClick: () => setWalletOpen(v => !v), className: "text-[11px] font-semibold text-brand-600" }, walletOpen ? 'Hide breakdown' : 'View breakdown')),
+                React.createElement("div", { className: "flex items-center gap-2 shrink-0" },
+                    React.createElement("button", { onClick: () => setCreditOpen(v => !v), className: "text-[11px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1.5 rounded-lg" }, React.createElement("i", { className: "fa-solid fa-plus mr-1" }), "Credit"),
+                    React.createElement("button", { onClick: () => setWalletOpen(v => !v), className: "text-[11px] font-semibold text-brand-600" }, walletOpen ? 'Hide breakdown' : 'View breakdown'))),
+            creditOpen && React.createElement("div", { className: "bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 mb-3" },
+                React.createElement("p", { className: "text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mb-2" }, "Credit ", u.displayName || u.username, "\u2019s wallet directly \u2014 no funding needed on their end."),
+                React.createElement("input", { type: "number", min: "1", step: "0.01", value: creditAmount, onChange: e => setCreditAmount(e.target.value), placeholder: "Amount (\u20A6)", className: "w-full mb-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-white dark:bg-ink-800 text-sm" }),
+                React.createElement("input", { value: creditNote, onChange: e => setCreditNote(e.target.value), placeholder: "Note (optional \u2014 shown to the user)", className: "w-full mb-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-white dark:bg-ink-800 text-sm" }),
+                React.createElement("div", { className: "flex gap-2" },
+                    React.createElement("button", { disabled: creditBusy || !creditAmount, onClick: submitCredit, className: "flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg py-1.5 text-xs font-semibold" }, creditBusy ? 'Crediting\u2026' : 'Confirm credit'),
+                    React.createElement("button", { onClick: () => { setCreditOpen(false); setCreditAmount(''); setCreditNote(''); }, className: "px-3 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-ink-700" }, "Cancel"))),
             walletOpen && React.createElement("div", { className: "mb-3" },
                 walletTxns === null && React.createElement("p", { className: "text-[11px] text-slate-400 text-center py-2" }, "Loading\u2026"),
                 walletTxns !== null && walletTxns.length === 0 && React.createElement("p", { className: "text-[11px] text-slate-400 text-center py-2" }, "No wallet transactions."),
@@ -14505,6 +14531,17 @@ async function adminApproveWalletManualFunding(row, adminUid, adminEmail) {
 async function adminRejectWalletManualFunding(row, reason, adminUid, adminEmail) {
     await db.collection('walletManualFundings').doc(row.id).update({ status: 'rejected', rejectionReason: reason || '', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: adminUid, reviewedByEmail: adminEmail || null });
 }
+// Lets a super admin add money straight to a user's wallet with no funding step on the user's
+// side at all — e.g. goodwill credit, competition prize, refund outside the normal flows. Uses
+// the same creditWallet() transaction as every other wallet credit in the app, so the balance
+// update and the walletTransactions audit row are always written together atomically.
+async function adminCreditUserWallet(u, amount, note, adminUid, adminEmail) {
+    const amt = Number(amount);
+    if (!amt || amt <= 0) throw new Error('Enter a valid amount greater than \u20A60.');
+    await creditWallet(u.id, amt, 'admin_credit', { description: note ? note : 'Wallet credited by admin', creditedBy: adminEmail || adminUid });
+    logAdminAction(adminUid, adminEmail, 'credit_wallet', 'user', u.id, `${u.username || u.email || u.id} \u2014 \u20A6${amt.toLocaleString()}${note ? ' \u2014 ' + note : ''}`);
+    notifyUser(u.id, 'wallet_credit', { amount: amt, description: note || 'Wallet credited by admin' });
+}
 
 /* ============================== ADVERTISING SYSTEM ==============================
  * No Cloud Functions: budget deduction, refunds, impression/click accounting, and campaign
@@ -14773,7 +14810,7 @@ function WalletScreen({ go }) {
 }
 const WALLET_TXN_LABELS = {
     fund_paystack: 'Wallet funding (Paystack)', fund_manual: 'Wallet funding (bank transfer)',
-    ad_spend: 'Ad campaign budget', ad_refund: 'Ad budget refund'
+    ad_spend: 'Ad campaign budget', ad_refund: 'Ad budget refund', admin_credit: 'Credited by admin'
 };
 function humanizeWalletType(type) {
     if (WALLET_TXN_LABELS[type]) return WALLET_TXN_LABELS[type];
