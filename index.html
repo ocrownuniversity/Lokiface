@@ -7220,6 +7220,20 @@ function ProfileDetailsSection({ user, me, isMe, onEdit }) {
             user.instagramHandle ? React.createElement("a", { href: "https://instagram.com/" + user.instagramHandle, target: "_blank", rel: "noopener noreferrer", className: "text-sm flex items-center gap-3 text-brand-600 dark:text-brand-400" }, React.createElement("i", { className: "fa-brands fa-instagram w-4 text-center" }), "@" + user.instagramHandle) :
                 React.createElement("p", { className: "text-xs text-slate-400" }, "Add a social link.")));
 }
+// One tile in a profile's friends grid — mirrors PeopleYouMayKnowCard's mutual-count pattern
+// (its own useMutualFriendsCount call per tile, since hooks can't be called inside .map()
+// directly). Mutual count is relative to the viewer (isMe: false), Facebook-style; omitted
+// entirely on your own profile since "mutual with yourself" is meaningless.
+function ProfileFriendTile({ fu, isMe, myFriendIds, go }) {
+    // Always call the hook unconditionally (Rules of Hooks) — myFriendIds is already an empty
+    // array on your own profile (see ProfileScreen), so mutualCount naturally comes out 0 there
+    // and the line below just doesn't render, no separate branch needed.
+    const mutualCount = useMutualFriendsCount(myFriendIds, fu.id);
+    return React.createElement("div", { onClick: () => go({ name: 'profile', uid: fu.id }), className: "cursor-pointer text-center" },
+        React.createElement(Avatar, { user: fu, size: 14 }),
+        React.createElement("p", { className: "text-xs mt-1 truncate" }, fu.displayName || fu.username),
+        !isMe && mutualCount > 0 && React.createElement("p", { className: "text-[11px] text-slate-400 truncate" }, mutualCount, " mutual"));
+}
 function ProfileScreen({ uid, go }) {
     const { profile: me } = useAuth();
     const toast = useToast();
@@ -7299,6 +7313,12 @@ function ProfileScreen({ uid, go }) {
     const friendships = useFriendships(uid);
     const friendsCount = (friendships || []).filter(f => f.status === 'accepted').length;
     const friendUids = (friendships || []).filter(f => f.status === 'accepted').map(f => otherUidOfFriendship(f, uid)).slice(0, showAllFriends ? 60 : 9);
+    // Mutual-friend counts shown per row below are relative to the person actually viewing the
+    // page (me), same as Facebook — "you and X have N mutual friends" — not relative to the
+    // profile owner. Skipped entirely when viewing your own profile since it'd always be 100%.
+    const myFriendships = useFriendships(uid === me.id ? null : me.id);
+    const myFriendIds = useMemo(() => (myFriendships || [])
+        .filter(f => f.status === 'accepted').map(f => otherUidOfFriendship(f, me.id)), [myFriendships, me.id]);
     const [friendUsers, setFriendUsers] = useState([]);
     useEffect(() => {
         if (friendUids.length === 0) {
@@ -7434,9 +7454,7 @@ function ProfileScreen({ uid, go }) {
                         React.createElement("div", { className: "flex items-center gap-2" },
                             React.createElement("p", { className: "text-xs text-slate-400" }, friendsCount + (friendsCount === 1 ? ' friend' : ' friends')),
                             !showAllFriends && friendsCount > 9 && React.createElement("button", { onClick: () => setShowAllFriends(true), className: "text-xs font-semibold text-brand-600 dark:text-brand-400" }, "See all"))),
-                    React.createElement("div", { className: "grid grid-cols-3 gap-2" }, friendUsers.map(fu => (React.createElement("div", { key: fu.id, onClick: () => go({ name: 'profile', uid: fu.id }), className: "cursor-pointer text-center" },
-                        React.createElement(Avatar, { user: fu, size: 14 }),
-                        React.createElement("p", { className: "text-xs mt-1 truncate" }, fu.displayName || fu.username))))))),
+                    React.createElement("div", { className: "grid grid-cols-3 gap-2" }, friendUsers.map(fu => (React.createElement(ProfileFriendTile, { key: fu.id, fu: fu, isMe: isMe, myFriendIds: myFriendIds, go: go })))))),
             React.createElement("div", { className: "flex border-t border-slate-100 dark:border-ink-700" }, [['posts', 'Posts'], ['reels', 'Reels'], ['photos', 'Photos'], ['listings', 'Listings' + (sellerListings.length ? ' (' + sellerListings.length + ')' : '')]].map(([k, l]) => (React.createElement("button", { key: k, onClick: () => setTab(k), className: "flex-1 py-3 text-sm font-semibold border-b-2 " + (tab === k ? "border-brand-600 text-brand-600" : "border-transparent text-slate-400") }, l))))),
         tab === 'listings' ? (sellerListings.length === 0 ? React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "No active listings.") : React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-3" }, sellerListings.map(l => React.createElement(ProductCard, { key: l.id, listing: l, go: go })))) :
         tab === 'reels' ? React.createElement(ReelsGrid, { authorId: uid, isMe: isMe, go: go }) :
