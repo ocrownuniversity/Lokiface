@@ -1674,6 +1674,18 @@ const REEL_PRIVACY_OPTIONS = [
     { key: 'friends', label: 'Friends Only', icon: 'fa-user-check', desc: 'Only accepted friends can watch' },
     { key: 'private', label: 'Private', icon: 'fa-lock', desc: 'Only you can watch' },
 ];
+// Where the burned-in caption pill (overlayText) sits on the video — TikTok-style on-screen
+// text, distinct from the regular caption shown in the info panel below the video. Two class
+// maps because the full-screen Reels player has its own bottom control bar/gradient to clear
+// (fixed pixel offset), while the smaller feed-embedded card and the upload preview don't and
+// scale better with percentages.
+const REEL_OVERLAY_POSITIONS = [
+    { key: 'top', label: 'Top' },
+    { key: 'middle', label: 'Middle' },
+    { key: 'bottom', label: 'Bottom' },
+];
+const REEL_OVERLAY_CLS_FULLSCREEN = { top: 'top-24', middle: 'top-1/2 -translate-y-1/2', bottom: 'bottom-[190px]' };
+const REEL_OVERLAY_CLS_INLINE = { top: 'top-[8%]', middle: 'top-1/2 -translate-y-1/2', bottom: 'bottom-[8%]' };
 function captureVideoFrame(videoFile) {
     return new Promise((resolve) => {
         const video = document.createElement('video');
@@ -1728,7 +1740,7 @@ async function uploadReelMedia(authorId, reelId, videoFile, thumbBlob, onProgres
     onProgress && onProgress(100);
     return { videoURL, thumbURL };
 }
-async function createReel({ authorId, authorType, pageId, caption, privacy, videoFile }, onProgress) {
+async function createReel({ authorId, authorType, pageId, caption, privacy, videoFile, overlayText, overlayPosition }, onProgress) {
     const reelRef = db.collection('reels').doc();
     let thumbBlob = await captureVideoFrame(videoFile);
     const meta = await readVideoMeta(videoFile);
@@ -1736,6 +1748,10 @@ async function createReel({ authorId, authorType, pageId, caption, privacy, vide
     await reelRef.set({
         authorId, authorType: authorType || 'user', pageId: pageId || null,
         caption: (caption || '').trim(), hashtags: extractHashtags(caption),
+        // Burned-in, on-video caption text (TikTok-style pill overlay) — separate from the
+        // regular `caption` shown in the info panel below the video. overlayPosition is one of
+        // 'top' | 'middle' | 'bottom', see REEL_OVERLAY_POSITIONS and ReelCard's rendering.
+        overlayText: (overlayText || '').trim(), overlayPosition: overlayPosition || 'bottom',
         privacy: privacy || 'public', videoURL, thumbURL,
         duration: meta.duration, width: meta.width, height: meta.height,
         likesCount: 0, commentsCount: 0, sharesCount: 0, savesCount: 0, viewsCount: 0,
@@ -1756,6 +1772,7 @@ async function updateReel(reelId, fields) {
         patch.hashtags = extractHashtags(patch.caption);
         patch.caption = patch.caption.trim();
     }
+    if (typeof patch.overlayText === 'string') patch.overlayText = patch.overlayText.trim();
     await db.collection('reels').doc(reelId).update(patch);
 }
 async function deleteReel(reel) {
@@ -6331,6 +6348,8 @@ function TimelineReelCard({ reel, go }) {
             React.createElement("p", { className: "text-base whitespace-pre-wrap mb-2 leading-relaxed" }, captionParts.map((part, i) => part.startsWith('#') ? React.createElement("span", { key: i, className: "text-brand-600 dark:text-brand-400 font-medium" }, part) : part))),
         React.createElement("div", { className: "relative bg-black w-full flex items-center justify-center overflow-hidden mb-2", style: { maxHeight: '520px', aspectRatio: (reel.width && reel.height) ? (reel.width + ' / ' + reel.height) : '9 / 16' } },
             React.createElement("video", { ref: videoRef, src: reel.videoURL, poster: reel.thumbURL || undefined, loop: true, muted: muted, playsInline: true, onClick: togglePlay, className: "w-full h-full object-contain cursor-pointer" }),
+            reel.overlayText && React.createElement("div", { className: "absolute inset-x-0 flex justify-center px-5 pointer-events-none " + (REEL_OVERLAY_CLS_INLINE[reel.overlayPosition] || REEL_OVERLAY_CLS_INLINE.bottom) },
+                React.createElement("span", { className: "bg-black/70 text-white text-sm font-semibold px-3 py-1.5 rounded-lg text-center leading-snug max-w-full shadow-lg" }, reel.overlayText)),
             !playing && React.createElement("button", { onClick: togglePlay, className: "absolute inset-0 flex items-center justify-center" },
                 React.createElement("span", { className: "w-14 h-14 rounded-full bg-black/50 text-white flex items-center justify-center text-xl" }, React.createElement("i", { className: "fa-solid fa-play ml-0.5" }))),
             playing && React.createElement("button", { onClick: toggleMute, className: "absolute top-2.5 right-2.5 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center" },
@@ -6723,6 +6742,18 @@ function SearchScreen({ go, route }) {
         React.createElement(FriendActionButton, { meId: profile.id, otherId: u.id, compact: true }),
         React.createElement("button", { onClick: () => messageUser(u), disabled: messaging === u.id, className: "bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full w-9 h-9 flex items-center justify-center text-sm shrink-0 disabled:opacity-50" },
             React.createElement("i", { className: "fa-regular fa-paper-plane" }))));
+    const BigPersonRow = ({ u }) => (React.createElement("div", { key: u.id, className: "flex items-center gap-3 bg-white dark:bg-ink-800 rounded-xl p-3 border border-slate-100 dark:border-ink-700" },
+        React.createElement("div", { className: "relative cursor-pointer shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-slate-100 dark:bg-ink-700", onClick: () => go({ name: 'profile', uid: u.id }) },
+            React.createElement("img", { src: u.photoURL || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(u.displayName || u.username || '?')}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`, className: "w-full h-full object-cover" }),
+            isUserOnline(u) && React.createElement("span", { className: "absolute bottom-1 right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-ink-800" })),
+        React.createElement("div", { className: "flex-1 min-w-0" },
+            React.createElement("div", { className: "cursor-pointer", onClick: () => go({ name: 'profile', uid: u.id }) },
+                React.createElement("p", { className: "font-semibold text-sm truncate" }, u.displayName || u.username),
+                React.createElement("p", { className: "text-xs text-slate-400 truncate mb-2" }, "@", u.username)),
+            React.createElement("div", { className: "flex items-center gap-2" },
+                React.createElement(FriendActionButton, { meId: profile.id, otherId: u.id, compact: true }),
+                React.createElement("button", { onClick: () => messageUser(u), disabled: messaging === u.id, className: "bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full w-9 h-9 flex items-center justify-center text-sm shrink-0 disabled:opacity-50" },
+                    React.createElement("i", { className: "fa-regular fa-paper-plane" }))))));
     const TABS = [['suggested', 'Suggestions'], ['requests', 'Requests' + (incomingRequests.length ? ' (' + incomingRequests.length + ')' : '')], ['friends', 'Friends']];
     return (React.createElement("div", null,
         React.createElement("div", { className: "relative mb-4" },
@@ -6744,15 +6775,15 @@ function SearchScreen({ go, route }) {
             ptab === 'suggested' && (React.createElement("div", null,
                 allUsers === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
                 allUsers !== null && suggestions.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-10" }, "No other users on Yeloface yet. Invite someone!"),
-                React.createElement("div", { className: "space-y-2" }, suggestions.map(u => React.createElement(PersonRow, { key: u.id, u: u }))))),
+                React.createElement("div", { className: "space-y-2" }, suggestions.map(u => React.createElement(BigPersonRow, { key: u.id, u: u }))))),
             ptab === 'requests' && (React.createElement("div", null,
                 friendships === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
                 friendships !== null && incomingRequests.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-10" }, "No pending friend requests."),
-                React.createElement("div", { className: "space-y-2" }, incomingRequests.map(u => React.createElement(PersonRow, { key: u.id, u: u }))))),
+                React.createElement("div", { className: "space-y-2" }, incomingRequests.map(u => React.createElement(BigPersonRow, { key: u.id, u: u }))))),
             ptab === 'friends' && (React.createElement("div", null,
                 friendships === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
                 friendships !== null && friendUsers.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-10" }, "No friends yet \u2014 send some requests from Suggestions."),
-                React.createElement("div", { className: "space-y-2" }, friendUsers.map(u => React.createElement(PersonRow, { key: u.id, u: u })))))))));
+                React.createElement("div", { className: "space-y-2" }, friendUsers.map(u => React.createElement(BigPersonRow, { key: u.id, u: u })))))))));
 }
 /* ============================== NOTIFICATIONS ============================== */
 const NOTIF_TEXT = { like: 'reacted to your post', comment: 'commented on your post', reply: 'replied to your comment', follow: 'started following you', share: 'shared your post', message: 'sent you a message', tag: 'tagged you', friend_request: 'sent you a friend request', friend_accept: 'accepted your friend request', listing_offer: 'made an offer on your listing', offer_accepted: 'accepted your offer', offer_declined: 'declined your offer', listing_sold: 'marked a listing you saved as sold', listing_approved: 'Your listing was approved and is now live', listing_removed: 'Your listing was removed by an admin', ad_approved: 'Your ad promotion was approved and your listing is now sponsored', ad_declined: 'Your ad promotion request was declined', ad_campaign_pending: 'submitted a new ad campaign for review', listing_created: 'published a new marketplace listing', new_listing: 'listed a new product on Marketplace', listing_promotion_pending: 'requested to promote a marketplace listing', timeline_post: 'wrote something on your timeline', page_follow: 'started following your Page', reel_like: 'liked your reel', reel_comment: 'commented on your reel', reel_reply: 'replied to a comment on your reel', reel_share: 'shared your reel', group_join_request: 'requested to join your group', group_request_approved: 'Your request to join the group was approved', group_request_rejected: 'Your request to join the group was declined', group_invite: 'invited you to join a group', group_made_admin: 'made you an admin of the group', group_made_moderator: 'made you a moderator of the group', group_role_changed: 'updated your role in the group', group_announcement: 'posted a new announcement', group_event: 'created a new event in a group', dating_invite: 'invited you to join Yeloface Dating', friend_birthday: '\uD83C\uDF82 is celebrating a birthday today \u2014 wish them well!',
@@ -11260,6 +11291,8 @@ function ReelCard({ reel, active, go, meId, muted, onToggleMute, onOpenComments,
         React.createElement("button", { onClick: onToggleMute, className: "absolute top-16 right-3 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center" }, React.createElement("i", { className: "fa-solid " + (muted ? "fa-volume-xmark" : "fa-volume-high") + " text-sm" })),
         duration > 0 && React.createElement("button", { onClick: (e) => { e.stopPropagation(); skip(10); }, title: "Forward 10 seconds", className: "absolute top-28 right-3 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-rotate-right text-sm" })),
         reel.pinned && React.createElement("span", { className: "absolute top-3 left-3 bg-black/50 text-white text-[11px] font-semibold px-2 py-1 rounded-full" }, React.createElement("i", { className: "fa-solid fa-thumbtack mr-1" }), "Pinned"),
+        reel.overlayText && React.createElement("div", { className: "absolute inset-x-0 flex justify-center px-6 pointer-events-none z-10 " + (REEL_OVERLAY_CLS_FULLSCREEN[reel.overlayPosition] || REEL_OVERLAY_CLS_FULLSCREEN.bottom) },
+            React.createElement("span", { className: "bg-black/70 text-white text-base font-semibold px-3.5 py-2 rounded-xl text-center leading-snug max-w-full shadow-lg" }, reel.overlayText)),
         duration > 0 && React.createElement("div", { onClick: e => e.stopPropagation(), className: "absolute left-0 right-0 bottom-[92px] px-4 flex items-center gap-2.5 text-white z-10" },
             React.createElement("button", { onClick: () => skip(-10), title: "Back 10 seconds", className: "w-8 h-8 rounded-full bg-black/40 flex items-center justify-center shrink-0" },
                 React.createElement("i", { className: "fa-solid fa-rotate-left text-xs" })),
@@ -11423,6 +11456,8 @@ function ReelUploadScreen({ go, route }) {
     const [videoFile, setVideoFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [caption, setCaption] = useState('');
+    const [overlayText, setOverlayText] = useState('');
+    const [overlayPosition, setOverlayPosition] = useState('bottom');
     const [privacy, setPrivacy] = useState('public');
     const [busy, setBusy] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -11433,6 +11468,7 @@ function ReelUploadScreen({ go, route }) {
             if (s.exists) {
                 const r = Object.assign({ id: s.id }, s.data());
                 setExisting(r); setCaption(r.caption || ''); setPrivacy(r.privacy || 'public');
+                setOverlayText(r.overlayText || ''); setOverlayPosition(r.overlayPosition || 'bottom');
             } else setExisting(null);
         });
     }, [editId]);
@@ -11448,12 +11484,12 @@ function ReelUploadScreen({ go, route }) {
         setProgress(0);
         try {
             if (editId) {
-                await updateReel(editId, { caption, privacy });
+                await updateReel(editId, { caption, privacy, overlayText, overlayPosition });
                 toast('Reel updated', 'success');
                 go({ name: 'reels', reelId: editId, scope: pageId ? ('page:' + pageId) : ('user:' + me.id) });
             } else {
                 if (!videoFile) { toast('Choose a video first', 'error'); setBusy(false); return; }
-                const id = await createReel({ authorId: pageId ? pageId : me.id, authorType: pageId ? 'page' : 'user', pageId: pageId || null, caption, privacy, videoFile }, setProgress);
+                const id = await createReel({ authorId: pageId ? pageId : me.id, authorType: pageId ? 'page' : 'user', pageId: pageId || null, caption, privacy, videoFile, overlayText, overlayPosition }, setProgress);
                 toast('Reel published!', 'success');
                 go({ name: 'reels', reelId: id, scope: pageId ? ('page:' + pageId) : ('user:' + me.id) });
             }
@@ -11470,8 +11506,17 @@ function ReelUploadScreen({ go, route }) {
                 React.createElement("i", { className: "fa-solid fa-clapperboard text-3xl" }), React.createElement("p", { className: "text-sm font-semibold" }, "Select a video"), React.createElement("p", { className: "text-xs" }, "MP4/WebM, up to 250MB")) :
                 React.createElement("div", { className: "relative w-full max-w-[260px] mx-auto aspect-[9/16] rounded-2xl overflow-hidden bg-black" },
                     React.createElement("video", { src: previewUrl, className: "w-full h-full object-contain", controls: true }),
+                    overlayText.trim() && React.createElement("div", { className: "absolute inset-x-0 flex justify-center px-4 pointer-events-none " + (REEL_OVERLAY_CLS_INLINE[overlayPosition] || REEL_OVERLAY_CLS_INLINE.bottom) },
+                        React.createElement("span", { className: "bg-black/70 text-white text-sm font-semibold px-3 py-1.5 rounded-lg text-center leading-snug max-w-full" }, overlayText)),
                     React.createElement("button", { onClick: () => { setVideoFile(null); setPreviewUrl(null); }, className: "absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center" }, React.createElement("i", { className: "fa-solid fa-xmark" }))),
             React.createElement("input", { ref: fileRef, type: "file", accept: "video/*", hidden: true, onChange: e => pickFile(e.target.files[0]) })),
+        editId && existing && React.createElement("div", { className: "relative w-full max-w-[260px] mx-auto aspect-[9/16] rounded-2xl overflow-hidden bg-black mb-4" },
+            React.createElement("video", { src: existing.videoURL, poster: existing.thumbURL || undefined, className: "w-full h-full object-contain", controls: true }),
+            overlayText.trim() && React.createElement("div", { className: "absolute inset-x-0 flex justify-center px-4 pointer-events-none " + (REEL_OVERLAY_CLS_INLINE[overlayPosition] || REEL_OVERLAY_CLS_INLINE.bottom) },
+                React.createElement("span", { className: "bg-black/70 text-white text-sm font-semibold px-3 py-1.5 rounded-lg text-center leading-snug max-w-full" }, overlayText))),
+        React.createElement("label", { className: "text-xs font-semibold text-slate-500 mb-1 block" }, "Text on video ", React.createElement("span", { className: "font-normal text-slate-400" }, "(optional \u2014 shown burned onto the video itself, like a TikTok caption)")),
+        React.createElement("input", { value: overlayText, onChange: e => setOverlayText(e.target.value.slice(0, 100)), placeholder: "e.g. Teni gave the girl money", className: "w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-ink-700 text-sm mb-2" }),
+        overlayText.trim() && React.createElement("div", { className: "flex gap-2 mb-4" }, REEL_OVERLAY_POSITIONS.map(o => React.createElement("button", { key: o.key, onClick: () => setOverlayPosition(o.key), className: "flex-1 text-xs font-semibold py-1.5 rounded-lg border " + (overlayPosition === o.key ? "border-brand-600 bg-brand-50 dark:bg-brand-900/20 text-brand-600" : "border-slate-200 dark:border-ink-700 text-slate-500") }, o.label))),
         React.createElement("textarea", { value: caption, onChange: e => setCaption(e.target.value), rows: 3, placeholder: "Write a caption\u2026 use #hashtags to help people find it", className: "w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-ink-700 text-sm resize-none mb-2" }),
         hashtags.length > 0 && React.createElement("div", { className: "flex flex-wrap gap-1.5 mb-4" }, hashtags.map(h => React.createElement("span", { key: h, className: "text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded-full" }, "#", h))),
         React.createElement("p", { className: "text-xs font-semibold text-slate-500 mb-2" }, "Who can watch this reel?"),
@@ -12799,7 +12844,7 @@ function cmToFeetInches(cm) { const totalIn = Math.round(cm / 2.54); const ft = 
 /* ---- config (fee + Paystack public key), admin-editable ---- */
 const DATING_CFG_DEFAULTS = {
     feeNaira: 1000, paystackPublicKey: '', chatFeeNaira: 500, chatUnlockDays: 7,
-    bankName: '', bankAccountNumber: '', bankAccountName: ''
+    bankName: '', bankAccountNumber: '', bankAccountName: '', kycRequired: true
 };
 function useDatingConfig() {
     const [cfg, setCfg] = useState(DATING_CFG_DEFAULTS);
@@ -13109,12 +13154,18 @@ function computeDatingCompatibility(me, p) {
 function useDatingAllMembers(me) {
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(true);
+    const cfg = useDatingConfig();
     useEffect(() => {
         if (!me) return;
         let cancelled = false;
         setLoading(true);
-        db.collection('datingProfiles').where('profileComplete', '==', true)
-            .where('kycStatus', '==', 'verified').where('active', '==', true).limit(500).get()
+        // When the admin has KYC verification switched off (settings/dating.kycRequired), the
+        // dating flow never sets anyone's kycStatus to 'verified' in the first place — so
+        // filtering on it here would leave the discovery deck permanently empty. Only require
+        // it in the query when the setting is actually on.
+        let q = db.collection('datingProfiles').where('profileComplete', '==', true);
+        if (cfg.kycRequired) q = q.where('kycStatus', '==', 'verified');
+        q.where('active', '==', true).limit(500).get()
             .then(snap => {
                 if (cancelled) return;
                 const members = snap.docs.map(d => Object.assign({ id: d.id }, d.data()))
@@ -13124,12 +13175,13 @@ function useDatingAllMembers(me) {
             })
             .catch(() => { if (!cancelled) { setList([]); setLoading(false); } });
         return () => { cancelled = true; };
-    }, [me && me.id]);
+    }, [me && me.id, cfg.kycRequired]);
     return { list, loading };
 }
 function useDatingCandidates(me, filters, refreshKey) {
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(true);
+    const cfg = useDatingConfig();
     useEffect(() => {
         if (!me) return;
         let cancelled = false;
@@ -13142,8 +13194,11 @@ function useDatingCandidates(me, filters, refreshKey) {
             const seen = new Set([me.id, ...(me.blockedUids || [])]);
             likesSnap.docs.forEach(d => seen.add(d.data().to));
             passesSnap.docs.forEach(d => seen.add(d.data().to));
-            const snap = await db.collection('datingProfiles').where('profileComplete', '==', true)
-                .where('kycStatus', '==', 'verified').where('active', '==', true).limit(150).get().catch(() => ({ docs: [] }));
+            // Same reasoning as useDatingAllMembers above — only require kycStatus === 'verified'
+            // when the admin has that setting turned on.
+            let q = db.collection('datingProfiles').where('profileComplete', '==', true);
+            if (cfg.kycRequired) q = q.where('kycStatus', '==', 'verified');
+            const snap = await q.where('active', '==', true).limit(150).get().catch(() => ({ docs: [] }));
             let candidates = snap.docs.map(d => Object.assign({ id: d.id }, d.data()))
                 .filter(p => !seen.has(p.id) && !(p.blockedUids || []).includes(me.id));
             if (filters) {
@@ -13160,7 +13215,7 @@ function useDatingCandidates(me, filters, refreshKey) {
             if (!cancelled) { setList(candidates); setLoading(false); }
         })();
         return () => { cancelled = true; };
-    }, [me && me.id, JSON.stringify(filters), refreshKey]);
+    }, [me && me.id, JSON.stringify(filters), refreshKey, cfg.kycRequired]);
     return { list, loading };
 }
 async function likeDatingProfile(meId, targetId) {
@@ -13270,7 +13325,10 @@ function DatingGate({ go }) {
             React.createElement("p", { className: "text-sm mt-1" }, "Contact support if you believe this is a mistake."));
     }
     if (!dp.gender) return React.createElement(DatingGenderStep, { dp: dp });
-    if (dp.kycStatus !== 'verified') return React.createElement(DatingKycStep, { dp: dp });
+    // Admin-toggleable — Super Admin panel → Dating → Settings → "Require KYC verification".
+    // Defaults to on (see DATING_CFG_DEFAULTS). When switched off, users skip straight to
+    // profile setup; anyone already verified stays verified either way.
+    if (cfg.kycRequired && dp.kycStatus !== 'verified') return React.createElement(DatingKycStep, { dp: dp });
     if (!dp.profileComplete) return React.createElement(DatingProfileSetupStep, { dp: dp });
     if (!dp.active) {
         return React.createElement("div", { className: "text-center py-16 text-slate-400" },
@@ -14334,6 +14392,12 @@ function DatingAdminPanel({ adminUid, adminEmail }) {
                     React.createElement("button", { onClick: () => rejectManual(row), className: "flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-1.5 text-xs font-semibold" }, "Reject"))))),
 
         subtab === 'settings' && (cfgForm ? React.createElement("div", { className: "max-w-sm space-y-3" },
+            React.createElement("div", { className: "flex items-center justify-between bg-slate-50 dark:bg-ink-700/40 rounded-lg px-3 py-2.5" },
+                React.createElement("div", { className: "pr-3" },
+                    React.createElement("p", { className: "text-sm font-semibold" }, "Require KYC verification"),
+                    React.createElement("p", { className: "text-[11px] text-slate-400" }, "When on, members must upload an ID + selfie and get approved before they can access Dating. When off, new members skip straight to profile setup \u2014 anyone already verified stays verified.")),
+                React.createElement("button", { onClick: () => setCfgForm(f => Object.assign({}, f, { kycRequired: !f.kycRequired })), className: "w-11 h-6 rounded-full relative transition shrink-0 " + (cfgForm.kycRequired ? "bg-brand-600" : "bg-slate-200 dark:bg-ink-600") },
+                    React.createElement("span", { className: "absolute top-0.5 w-5 h-5 bg-white rounded-full transition " + (cfgForm.kycRequired ? "left-[22px]" : "left-0.5") }))),
             React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Male call-unlock fee (\u20A6)"),
                 React.createElement("input", { type: "number", min: 0, value: cfgForm.feeNaira, onChange: e => setCfgForm(f => Object.assign({}, f, { feeNaira: Number(e.target.value) || 0 })), className: "w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm" })),
             React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Male chat subscription fee, per match (\u20A6)"),
