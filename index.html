@@ -6815,6 +6815,18 @@ function NotificationsScreen({ go }) {
             .onSnapshot(snap => setItems(snap.docs.map(d => (Object.assign({ id: d.id }, d.data())))));
         return unsub;
     }, [profile.id]);
+    useEffect(() => {
+        // Opening this screen is what "reading" your notifications means, so clear the unread
+        // badge here — the badge itself (useUnreadNotifications) is a live count of read===false
+        // docs, and nothing was ever writing read:true back to Firestore, so it stayed stuck at
+        // whatever it was (capped visually at "9+") even after you'd looked at everything.
+        if (!items || !items.length) return;
+        const unread = items.filter(n => n.read === false);
+        if (!unread.length) return;
+        const batch = db.batch();
+        unread.forEach(n => batch.update(db.collection('notifications').doc(profile.id).collection('items').doc(n.id), { read: true }));
+        batch.commit().catch(() => { });
+    }, [items, profile.id]);
     return (React.createElement("div", null,
         React.createElement("h2", { className: "font-display text-lg font-bold mb-4" }, "Notifications"),
         items === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
