@@ -135,6 +135,9 @@
   @keyframes msgIn { from { opacity:0; transform: translateY(6px) scale(.98); } to { opacity:1; transform:none; } }
   .msg-in { animation: msgIn .18s ease-out; }
   @keyframes waveBar { 0%,100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
+  /* Dating PIN entry: brief shake when the wrong PIN is entered */
+  @keyframes shake { 10%,90% { transform: translateX(-1px); } 20%,80% { transform: translateX(2px); } 30%,50%,70% { transform: translateX(-4px); } 40%,60% { transform: translateX(4px); } }
+  .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
 </style>
 </head>
 <body class="bg-slate-50 dark:bg-ink-900 text-slate-900 dark:text-slate-100 transition-colors">
@@ -13644,6 +13647,45 @@ async function setDatingActive(uid, active) {
     await db.collection('datingProfiles').doc(uid).update({ active });
 }
 
+/* ============================== DATING PIN ==============================
+ * Every Dating member sets a short numeric PIN that gates entry to the Dating
+ * tab (separate from their main Yeloface login). The PIN itself is never
+ * stored — only a SHA-256 hash of it, on datingProfiles/{uid}.pinHash — and
+ * unlocking is remembered for the current browser tab only (sessionStorage),
+ * so it's asked for again next time the tab/app is opened. Members can change
+ * their PIN at any time from Dating → My profile → Security. ---- */
+const DATING_PIN_LENGTH = 4;
+async function hashDatingPin(pin) {
+    const enc = new TextEncoder().encode('yeloface-dating:' + pin);
+    const digest = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function setDatingPin(uid, pin) {
+    const pinHash = await hashDatingPin(pin);
+    await db.collection('datingProfiles').doc(uid).set({ pinHash, pinSetAt: FieldValue.serverTimestamp() }, { merge: true });
+}
+async function verifyDatingPin(dp, pin) {
+    if (!dp || !dp.pinHash) return false;
+    const pinHash = await hashDatingPin(pin);
+    return pinHash === dp.pinHash;
+}
+function datingPinUnlockKey(uid) { return 'yeloface_dating_pin_unlocked_' + uid; }
+function isDatingPinUnlocked(uid) {
+    try { return sessionStorage.getItem(datingPinUnlockKey(uid)) === '1'; } catch (e) { return false; }
+}
+function markDatingPinUnlocked(uid) {
+    try { sessionStorage.setItem(datingPinUnlockKey(uid), '1'); } catch (e) { /* private mode etc. — fine, will just re-prompt */ }
+}
+function clearDatingPinUnlock(uid) {
+    try { sessionStorage.removeItem(datingPinUnlockKey(uid)); } catch (e) { }
+}
+function useDatingPinUnlocked(uid) {
+    const [unlocked, setUnlocked] = useState(() => isDatingPinUnlocked(uid));
+    const unlock = useCallback(() => { markDatingPinUnlocked(uid); setUnlocked(true); }, [uid]);
+    const lock = useCallback(() => { clearDatingPinUnlock(uid); setUnlocked(false); }, [uid]);
+    return [unlocked, unlock, lock];
+}
+
 /* ---- profile completion % (self-facing only — not shown to other users) ---- */
 function datingProfileCompletion(dp) {
     if (!dp) return 0;
@@ -13900,6 +13942,7 @@ function DatingGate({ go }) {
     const { profile } = useAuth();
     const dp = useDatingProfile(profile.id);
     const cfg = useDatingConfig();
+    const [pinUnlocked, unlockPin] = useDatingPinUnlocked(profile.id);
     useEffect(() => { if (dp === null) ensureDatingDoc(profile.id); }, [dp, profile.id]);
     if (dp === undefined || dp === null) {
         return React.createElement("div", { className: "py-16 flex justify-center" }, React.createElement("div", { className: "w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" }));
@@ -13910,6 +13953,10 @@ function DatingGate({ go }) {
             React.createElement("p", { className: "font-semibold text-slate-600 dark:text-slate-300" }, "Your Dating account has been banned."),
             React.createElement("p", { className: "text-sm mt-1" }, "Contact support if you believe this is a mistake."));
     }
+    /* Every Dating member needs a PIN to enter the Dating tab: first-time members create one,
+       returning members (each new tab/session) re-enter it before anything else loads. */
+    if (!dp.pinHash) return React.createElement(DatingPinSetupStep, { profile: profile, onDone: unlockPin });
+    if (!pinUnlocked) return React.createElement(DatingPinEntryStep, { dp: dp, onUnlock: unlockPin });
     if (!dp.gender) return React.createElement(DatingGenderStep, { dp: dp });
     if (cfg.kycRequired !== false && dp.kycStatus !== 'verified') return React.createElement(DatingKycStep, { dp: dp });
     if (!dp.profileComplete) return React.createElement(DatingProfileSetupStep, { dp: dp });
@@ -13920,6 +13967,134 @@ function DatingGate({ go }) {
             React.createElement("button", { onClick: () => setDatingActive(profile.id, true), className: "mt-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl px-5 py-2.5 text-sm font-semibold" }, "Reactivate my profile"));
     }
     return React.createElement(DatingHomeScreen, { dp: dp, go: go });
+}
+
+/* Small numeric keypad shared by PIN setup / entry / change screens. `value` is the digit
+   string typed so far; calls onChange with the updated string (capped at DATING_PIN_LENGTH). */
+function DatingPinPad({ value, onChange, disabled }) {
+    const press = (d) => { if (disabled) return; if (value.length >= DATING_PIN_LENGTH) return; onChange(value + d); };
+    const backspace = () => { if (disabled) return; onChange(value.slice(0, -1)); };
+    return React.createElement("div", { className: "max-w-[220px] mx-auto" },
+        React.createElement("div", { className: "flex items-center justify-center gap-3 mb-6" },
+            Array.from({ length: DATING_PIN_LENGTH }).map((_, i) => React.createElement("span", { key: i, className: "w-3.5 h-3.5 rounded-full border-2 border-brand-500 " + (i < value.length ? "bg-brand-500" : "bg-transparent") }))),
+        React.createElement("div", { className: "grid grid-cols-3 gap-3" },
+            ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => React.createElement("button", { key: d, type: "button", disabled: disabled, onClick: () => press(d), className: "h-14 rounded-2xl bg-white dark:bg-ink-800 border border-slate-200 dark:border-ink-700 text-lg font-semibold hover:border-brand-500 disabled:opacity-50" }, d)),
+            React.createElement("div", null),
+            React.createElement("button", { type: "button", disabled: disabled, onClick: () => press('0'), className: "h-14 rounded-2xl bg-white dark:bg-ink-800 border border-slate-200 dark:border-ink-700 text-lg font-semibold hover:border-brand-500 disabled:opacity-50" }, "0"),
+            React.createElement("button", { type: "button", disabled: disabled, onClick: backspace, className: "h-14 rounded-2xl flex items-center justify-center text-slate-400 disabled:opacity-50" }, React.createElement("i", { className: "fa-solid fa-delete-left" }))));
+}
+
+/* First-time flow: every Dating member is required to create a PIN before they can do
+   anything else in Dating (before even picking a gender). Ask twice to guard against typos. */
+function DatingPinSetupStep({ profile, onDone }) {
+    const toast = useToast();
+    const [stage, setStage] = useState('create'); // 'create' -> 'confirm'
+    const [pin, setPin] = useState('');
+    const [confirmPin, setConfirmPin] = useState('');
+    const [busy, setBusy] = useState(false);
+    useEffect(() => {
+        if (stage === 'create' && pin.length === DATING_PIN_LENGTH) { setStage('confirm'); }
+    }, [pin, stage]);
+    useEffect(() => {
+        if (stage !== 'confirm' || confirmPin.length !== DATING_PIN_LENGTH) return;
+        (async () => {
+            if (confirmPin !== pin) {
+                toast("PINs didn't match — try again", 'error');
+                setPin(''); setConfirmPin(''); setStage('create');
+                return;
+            }
+            setBusy(true);
+            try {
+                await setDatingPin(profile.id, pin);
+                toast('Dating PIN created', 'success');
+                onDone();
+            } catch (e) { toast(friendlyError(e), 'error'); setBusy(false); setPin(''); setConfirmPin(''); setStage('create'); }
+        })();
+    }, [confirmPin, stage]);
+    return React.createElement("div", { className: "max-w-sm mx-auto text-center py-10" },
+        React.createElement("i", { className: "fa-solid fa-lock text-4xl text-rose-500 mb-4" }),
+        React.createElement("h2", { className: "font-display text-xl font-bold mb-2" }, stage === 'create' ? 'Create your Dating PIN' : 'Confirm your Dating PIN'),
+        React.createElement("p", { className: "text-sm text-slate-500 dark:text-slate-400 mb-6" },
+            stage === 'create' ? "Choose a " + DATING_PIN_LENGTH + "-digit PIN. You'll enter it each time you open Dating, and can change it any time from your Dating profile." : "Enter it once more to confirm."),
+        React.createElement(DatingPinPad, { value: stage === 'create' ? pin : confirmPin, onChange: stage === 'create' ? setPin : setConfirmPin, disabled: busy }));
+}
+
+/* Returning members: PIN is required again for each new tab/session before Dating loads. */
+function DatingPinEntryStep({ dp, onUnlock }) {
+    const toast = useToast();
+    const [pin, setPin] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [shake, setShake] = useState(false);
+    useEffect(() => {
+        if (pin.length !== DATING_PIN_LENGTH || busy) return;
+        (async () => {
+            setBusy(true);
+            try {
+                const ok = await verifyDatingPin(dp, pin);
+                if (ok) { onUnlock(); return; }
+                toast('Incorrect PIN', 'error');
+                setShake(true);
+                setTimeout(() => setShake(false), 400);
+                setPin('');
+            } catch (e) { toast(friendlyError(e), 'error'); setPin(''); }
+            finally { setBusy(false); }
+        })();
+    }, [pin]);
+    return React.createElement("div", { className: "max-w-sm mx-auto text-center py-10" },
+        React.createElement("i", { className: "fa-solid fa-lock text-4xl text-rose-500 mb-4" }),
+        React.createElement("h2", { className: "font-display text-xl font-bold mb-2" }, "Enter your Dating PIN"),
+        React.createElement("p", { className: "text-sm text-slate-500 dark:text-slate-400 mb-6" }, "For your privacy, Dating is locked behind its own PIN."),
+        React.createElement("div", { className: shake ? "animate-shake" : "" }, React.createElement(DatingPinPad, { value: pin, onChange: setPin, disabled: busy })));
+}
+
+/* Reachable from Dating → My profile → Security. Requires the current PIN before accepting a
+   new one, then asks for the new PIN twice. Members can do this at any time. */
+function DatingChangePinSheet({ dp, onClose }) {
+    const { profile } = useAuth();
+    const toast = useToast();
+    const [step, setStep] = useState('current'); // 'current' -> 'new' -> 'confirm'
+    const [current, setCurrent] = useState('');
+    const [next, setNext] = useState('');
+    const [confirmNext, setConfirmNext] = useState('');
+    const [busy, setBusy] = useState(false);
+    useEffect(() => {
+        if (step !== 'current' || current.length !== DATING_PIN_LENGTH || busy) return;
+        (async () => {
+            setBusy(true);
+            try {
+                const ok = await verifyDatingPin(dp, current);
+                if (!ok) { toast('Incorrect current PIN', 'error'); setCurrent(''); return; }
+                setStep('new');
+            } finally { setBusy(false); }
+        })();
+    }, [current, step]);
+    useEffect(() => {
+        if (step !== 'new' || next.length !== DATING_PIN_LENGTH) return;
+        setStep('confirm');
+    }, [next, step]);
+    useEffect(() => {
+        if (step !== 'confirm' || confirmNext.length !== DATING_PIN_LENGTH || busy) return;
+        (async () => {
+            if (confirmNext !== next) {
+                toast("PINs didn't match — try again", 'error');
+                setNext(''); setConfirmNext(''); setStep('new');
+                return;
+            }
+            setBusy(true);
+            try {
+                await setDatingPin(profile.id, next);
+                toast('Dating PIN updated', 'success');
+                onClose();
+            } catch (e) { toast(friendlyError(e), 'error'); setBusy(false); setNext(''); setConfirmNext(''); setStep('new'); }
+        })();
+    }, [confirmNext, step]);
+    const titles = { current: 'Enter your current PIN', new: 'Choose a new PIN', confirm: 'Confirm your new PIN' };
+    const value = step === 'current' ? current : step === 'new' ? next : confirmNext;
+    const onChange = step === 'current' ? setCurrent : step === 'new' ? setNext : setConfirmNext;
+    return React.createElement(BottomSheet, { title: "Change Dating PIN", onClose: onClose },
+        React.createElement("div", { className: "text-center py-4" },
+            React.createElement("p", { className: "text-sm font-semibold mb-6" }, titles[step]),
+            React.createElement(DatingPinPad, { value: value, onChange: onChange, disabled: busy })));
 }
 
 function DatingGenderStep({ dp }) {
@@ -14611,6 +14786,7 @@ function DatingMeTab({ dp }) {
     const [editing, setEditing] = useState(false);
     const [blockedProfiles, setBlockedProfiles] = useState([]);
     const [sendingVerify, setSendingVerify] = useState(false);
+    const [changingPin, setChangingPin] = useState(false);
     useEffect(() => {
         (async () => {
             const ids = dp.blockedUids || [];
@@ -14667,6 +14843,15 @@ function DatingMeTab({ dp }) {
                 React.createElement("span", { className: "text-sm font-semibold" }, "Email"),
                 emailVerified ? React.createElement("span", { className: "text-xs font-semibold text-emerald-600" }, React.createElement("i", { className: "fa-solid fa-circle-check mr-1" }), "Verified") :
                     React.createElement("button", { disabled: sendingVerify, onClick: resendVerification, className: "text-xs font-semibold text-brand-600 disabled:opacity-50" }, sendingVerify ? 'Sending\u2026' : 'Verify now'))),
+
+        React.createElement("p", { className: "text-xs font-bold text-slate-400 uppercase tracking-wide mt-6 mb-2" }, "Security"),
+        React.createElement("div", { className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl divide-y divide-slate-100 dark:divide-ink-700" },
+            React.createElement("div", { className: "flex items-center justify-between p-3" },
+                React.createElement("div", null,
+                    React.createElement("span", { className: "text-sm font-semibold" }, "Dating PIN"),
+                    React.createElement("p", { className: "text-[11px] text-slate-400 mt-0.5" }, "Required each time you open Dating")),
+                React.createElement("button", { onClick: () => setChangingPin(true), className: "text-xs font-semibold text-brand-600" }, "Change PIN"))),
+        changingPin && React.createElement(DatingChangePinSheet, { dp: dp, onClose: () => setChangingPin(false) }),
 
         React.createElement("p", { className: "text-xs font-bold text-slate-400 uppercase tracking-wide mt-6 mb-2" }, "Privacy"),
         React.createElement("div", { className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl divide-y divide-slate-100 dark:divide-ink-700" },
