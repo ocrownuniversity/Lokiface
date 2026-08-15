@@ -14564,16 +14564,25 @@ function useDatingCandidates(me, filters, refreshKey) {
     return { list, loading };
 }
 async function likeDatingProfile(meId, targetId) {
-    await db.collection('datingLikes').doc(meId + '_' + targetId).set({ from: meId, to: targetId, createdAt: FieldValue.serverTimestamp() });
+    const likeRef = db.collection('datingLikes').doc(meId + '_' + targetId);
+    const already = await likeRef.get();
+    if (!already.exists) {
+        await likeRef.set({ from: meId, to: targetId, createdAt: FieldValue.serverTimestamp() });
+    }
     const reciprocal = await db.collection('datingLikes').doc(targetId + '_' + meId).get();
     if (reciprocal.exists) {
         const id = datingMatchId(meId, targetId);
-        await db.collection('datingMatches').doc(id).set({ id, users: [meId, targetId], createdAt: FieldValue.serverTimestamp(), lastMessage: null, lastMessageAt: FieldValue.serverTimestamp() }, { merge: true });
-        await db.collection('notifications').doc(meId).collection('items').add({ type: 'dating_match', fromUserId: targetId, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
-        await db.collection('notifications').doc(targetId).collection('items').add({ type: 'dating_match', fromUserId: meId, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
+        const existingMatch = await db.collection('datingMatches').doc(id).get();
+        if (!existingMatch.exists) {
+            await db.collection('datingMatches').doc(id).set({ id, users: [meId, targetId], createdAt: FieldValue.serverTimestamp(), lastMessage: null, lastMessageAt: FieldValue.serverTimestamp() });
+            await db.collection('notifications').doc(meId).collection('items').add({ type: 'dating_match', fromUserId: targetId, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
+            await db.collection('notifications').doc(targetId).collection('items').add({ type: 'dating_match', fromUserId: meId, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
+        }
         return 'matched';
     }
-    await db.collection('notifications').doc(targetId).collection('items').add({ type: 'dating_like', fromUserId: meId, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
+    if (!already.exists) {
+        await db.collection('notifications').doc(targetId).collection('items').add({ type: 'dating_like', fromUserId: meId, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
+    }
     return 'liked';
 }
 async function passDatingProfile(meId, targetId) {
