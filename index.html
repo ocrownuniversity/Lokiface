@@ -14699,6 +14699,32 @@ async function verifyDatingPin(dp, pin) {
     const hash = await hashDatingPin(pin);
     return hash === dp.pinHash;
 }
+/* ---- Forgot PIN: member requests a reset, an admin reviews it in the Dating admin panel and
+   approves it. Approving clears the member's pinHash, which naturally routes them back to the
+   "Set a Dating PIN" step next time DatingGate re-evaluates (no email/link infra needed — the
+   member is already signed into the app, so getting them straight to the PIN-setup screen is
+   the same outcome as a reset link, just without needing an email backend). ---- */
+function useMyDatingPinReset(uid) {
+    const [req, setReq] = useState(undefined);
+    useEffect(() => {
+        if (!uid) { setReq(null); return; }
+        const unsub = db.collection('datingPinResets').doc(uid).onSnapshot(s => setReq(s.exists ? Object.assign({ id: s.id }, s.data()) : null), () => setReq(null));
+        return unsub;
+    }, [uid]);
+    return req;
+}
+async function requestDatingPinReset(uid) {
+    await db.collection('datingPinResets').doc(uid).set({ uid, status: 'pending', requestedAt: FieldValue.serverTimestamp(), resolvedAt: FieldValue.delete(), resolvedBy: FieldValue.delete() });
+}
+async function adminApproveDatingPinReset(uid, adminUid, adminEmail) {
+    await db.collection('datingProfiles').doc(uid).update({ pinHash: FieldValue.delete(), pinSetAt: FieldValue.delete() });
+    await db.collection('datingPinResets').doc(uid).set({ status: 'approved', resolvedAt: FieldValue.serverTimestamp(), resolvedBy: adminEmail }, { merge: true });
+    logAdminAction(adminUid, adminEmail, 'approve_dating_pin_reset', 'datingProfile', uid, '');
+}
+async function adminRejectDatingPinReset(uid, adminUid, adminEmail) {
+    await db.collection('datingPinResets').doc(uid).set({ status: 'rejected', resolvedAt: FieldValue.serverTimestamp(), resolvedBy: adminEmail }, { merge: true });
+    logAdminAction(adminUid, adminEmail, 'reject_dating_pin_reset', 'datingProfile', uid, '');
+}
 function DatingPinInput({ value, onChange, autoFocus }) {
     return React.createElement("input", {
         autoFocus: autoFocus, type: "password", inputMode: "numeric", pattern: "[0-9]*", maxLength: 6,
@@ -14735,10 +14761,13 @@ function DatingPinSetupStep({ dp }) {
             React.createElement("button", { type: "submit", disabled: busy || pin.length < 4, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-bold text-sm" }, busy ? 'Saving\u2026' : 'Set PIN')));
 }
 function DatingPinEntryStep({ dp }) {
+    const { profile } = useAuth();
     const toast = useToast();
     const lock = useDatingPinLock();
+    const resetReq = useMyDatingPinReset(profile.id);
     const [pin, setPin] = useState('');
     const [busy, setBusy] = useState(false);
+    const [resetBusy, setResetBusy] = useState(false);
     const submit = async (e) => {
         e.preventDefault();
         setBusy(true);
@@ -14749,6 +14778,13 @@ function DatingPinEntryStep({ dp }) {
         } catch (e2) { toast(friendlyError(e2), 'error'); }
         finally { setBusy(false); }
     };
+    const requestReset = async () => {
+        setResetBusy(true);
+        try { await requestDatingPinReset(profile.id); toast('Reset requested \u2014 an admin will review it shortly.', 'success'); }
+        catch (e2) { toast(friendlyError(e2), 'error'); }
+        finally { setResetBusy(false); }
+    };
+    const pending = resetReq && resetReq.status === 'pending';
     return React.createElement("div", { className: "max-w-xs mx-auto text-center py-12" },
         React.createElement("div", { className: "w-14 h-14 rounded-full bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center mx-auto mb-4" }, React.createElement("i", { className: "fa-solid fa-lock text-2xl text-brand-500" })),
         React.createElement("h2", { className: "font-display font-bold text-lg mb-1" }, "Enter your Dating PIN"),
@@ -14756,7 +14792,9 @@ function DatingPinEntryStep({ dp }) {
         React.createElement("form", { onSubmit: submit, className: "space-y-3" },
             React.createElement(DatingPinInput, { value: pin, onChange: setPin, autoFocus: true }),
             React.createElement("button", { type: "submit", disabled: busy || pin.length < 4, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-bold text-sm" }, busy ? 'Checking\u2026' : 'Unlock')),
-        React.createElement("p", { className: "text-xs text-slate-400 mt-5" }, "Forgot your PIN? Contact support to have it reset."));
+        pending ?
+            React.createElement("p", { className: "text-xs text-amber-600 dark:text-amber-400 mt-5 font-semibold" }, React.createElement("i", { className: "fa-solid fa-clock mr-1" }), "Reset requested \u2014 waiting for an admin to approve it.") :
+            React.createElement("button", { onClick: requestReset, disabled: resetBusy, className: "text-xs text-slate-400 hover:text-brand-600 underline mt-5 disabled:opacity-50" }, resetBusy ? 'Requesting\u2026' : (resetReq && resetReq.status === 'rejected' ? 'Forgot your PIN? Request again' : 'Forgot your PIN? Request a reset')));
 }
 function DatingChangePinModal({ dp, onClose }) {
     const { profile } = useAuth();
@@ -15766,10 +15804,12 @@ function DatingAdminPanel({ adminUid, adminEmail }) {
     const [payments, setPayments] = useState([]);
     const [manualFilter, setManualFilter] = useState('pending');
     const [cfgForm, setCfgForm] = useState(null);
+    const [pinResetFilter, setPinResetFilter] = useState('pending');
+    const [pinResets, setPinResets] = useState([]);
     const cfg = useDatingConfig();
     const toast = useToast();
     const manualPayments = useDatingManualPayments(subtab === 'manual' ? manualFilter : undefined);
-    const SUB = [['overview', 'Overview'], ['kyc', 'KYC review'], ['users', 'Users'], ['payments', 'Payments'], ['manual', 'Manual payments'], ['settings', 'Fee & Paystack']];
+    const SUB = [['overview', 'Overview'], ['kyc', 'KYC review'], ['pinresets', 'PIN resets'], ['users', 'Users'], ['payments', 'Payments'], ['manual', 'Manual payments'], ['settings', 'Fee & Paystack']];
     useEffect(() => {
         if (subtab !== 'overview') return;
         (async () => {
@@ -15796,6 +15836,11 @@ function DatingAdminPanel({ adminUid, adminEmail }) {
         return unsub;
     }, [subtab]);
     useEffect(() => {
+        if (subtab !== 'pinresets') return;
+        const unsub = db.collection('datingPinResets').limit(300).onSnapshot(snap => setPinResets(snap.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => setPinResets([]));
+        return unsub;
+    }, [subtab]);
+    useEffect(() => {
         if (subtab !== 'payments') return;
         const unsub = db.collection('datingPayments').orderBy('paidAt', 'desc').limit(300).onSnapshot(snap => setPayments(snap.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => setPayments([]));
         return unsub;
@@ -15809,6 +15854,9 @@ function DatingAdminPanel({ adminUid, adminEmail }) {
     const saveCfg = async () => { try { await saveDatingConfig(cfgForm); toast('Dating settings saved', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
     const approveManual = async (row) => { try { await adminApproveDatingManualPayment(row, cfg.chatUnlockDays, adminUid, adminEmail); toast('Approved \u2014 access unlocked for the member', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
     const rejectManual = async (row) => { const reason = prompt('Reason for rejection (shown to the user):'); if (reason === null) return; try { await adminRejectDatingManualPayment(row, reason, adminUid, adminEmail); toast('Rejected', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
+    const approvePinReset = async (r) => { try { await adminApproveDatingPinReset(r.uid, adminUid, adminEmail); toast('PIN reset approved \u2014 the member can now set a new PIN', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
+    const rejectPinReset = async (r) => { try { await adminRejectDatingPinReset(r.uid, adminUid, adminEmail); toast('Reset request declined', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
+    const filteredPinResets = pinResets.filter(r => pinResetFilter === 'all' || r.status === pinResetFilter);
     const filteredKyc = kycApps.filter(k => kycFilter === 'all' || k.status === kycFilter);
     const filteredUsers = profiles.filter(p => !userSearch || (p.displayName || '').toLowerCase().includes(userSearch.toLowerCase()) || p.id.includes(userSearch));
 
@@ -15838,6 +15886,18 @@ function DatingAdminPanel({ adminUid, adminEmail }) {
                 k.status === 'pending' && React.createElement("div", { className: "flex gap-2" },
                     React.createElement("button", { onClick: () => approve(k), className: "flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-1.5 text-xs font-semibold" }, "Approve"),
                     React.createElement("button", { onClick: () => reject(k), className: "flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-1.5 text-xs font-semibold" }, "Reject"))))),
+
+        subtab === 'pinresets' && React.createElement("div", null,
+            React.createElement("div", { className: "flex gap-2 mb-3" }, ['pending', 'approved', 'rejected', 'all'].map(f => React.createElement("button", { key: f, onClick: () => setPinResetFilter(f), className: "px-3 py-1 rounded-full text-xs font-semibold " + (pinResetFilter === f ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, f))),
+            filteredPinResets.length === 0 && React.createElement("p", { className: "text-sm text-slate-400" }, "No PIN reset requests in this filter."),
+            filteredPinResets.map(r => React.createElement("div", { key: r.id, className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-3 mb-2" },
+                React.createElement("div", { className: "flex items-center justify-between mb-2" },
+                    React.createElement("p", { className: "font-semibold text-sm" }, r.uid),
+                    React.createElement("span", { className: "text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-ink-700" }, r.status)),
+                React.createElement("p", { className: "text-xs text-slate-400 mb-2" }, "Requested ", r.requestedAt && r.requestedAt.toDate ? r.requestedAt.toDate().toLocaleString() : '\u2014'),
+                r.status === 'pending' && React.createElement("div", { className: "flex gap-2" },
+                    React.createElement("button", { onClick: () => approvePinReset(r), className: "flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-1.5 text-xs font-semibold" }, "Approve \u2014 let them set a new PIN"),
+                    React.createElement("button", { onClick: () => rejectPinReset(r), className: "flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-1.5 text-xs font-semibold" }, "Decline"))))),
 
         subtab === 'users' && React.createElement("div", null,
             React.createElement("input", { value: userSearch, onChange: e => setUserSearch(e.target.value), placeholder: "Search by name or uid\u2026", className: "w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm mb-3" }),
