@@ -7638,6 +7638,7 @@ const NOTIF_TEXT = { like: 'reacted to your post', comment: 'commented on your p
     referral_reward: 'You earned a referral reward', referral_withdrawal_submitted: 'Your referral withdrawal request was submitted',
     referral_withdrawal_approved: 'Your referral withdrawal was approved and sent to your Zmonie account', referral_withdrawal_rejected: 'Your referral withdrawal request was rejected',
     wallet_credit: 'Your wallet was credited by an admin',
+    wallet_withdrawal_submitted: 'Your wallet withdrawal request was submitted', wallet_withdrawal_approved: 'Your wallet withdrawal was approved and sent to your Zmonie account', wallet_withdrawal_rejected: 'Your wallet withdrawal request was rejected',
     job_approved: 'Your job post was approved and is now live', job_rejected: 'Your job post was rejected by an admin',
     job_closed_by_admin: 'Your job post was closed by an admin', new_job_application: 'applied for your job post',
     application_status_applied: 'Your application status was updated', application_status_under_review: 'Your application is now under review',
@@ -7649,11 +7650,12 @@ const SYSTEM_NOTIF_TYPES = ['announcement', 'listing_approved', 'listing_removed
     'earnings_updated', 'withdrawal_approved', 'withdrawal_rejected', 'withdrawal_paid',
     'page_name_change_submitted', 'page_name_change_approved', 'page_name_change_rejected',
     'referral_reward', 'referral_withdrawal_submitted', 'referral_withdrawal_approved', 'referral_withdrawal_rejected', 'wallet_credit',
+    'wallet_withdrawal_submitted', 'wallet_withdrawal_approved', 'wallet_withdrawal_rejected',
     'job_approved', 'job_rejected', 'job_closed_by_admin', 'application_status_applied', 'application_status_under_review',
     'application_status_shortlisted', 'application_status_interview', 'application_status_accepted', 'application_status_rejected', 'employer_verified'];
 const PAGE_NAME_CHANGE_NOTIF_TYPES = ['page_name_change_submitted', 'page_name_change_approved', 'page_name_change_rejected'];
 const MONETIZATION_NOTIF_TYPES = ['kyc_approved', 'kyc_rejected', 'followers_milestone', 'monetization_eligible', 'monetization_approved', 'monetization_rejected', 'monetization_suspended', 'earnings_updated'];
-const WITHDRAWAL_NOTIF_TYPES = ['withdrawal_approved', 'withdrawal_rejected', 'withdrawal_paid'];
+const WITHDRAWAL_NOTIF_TYPES = ['withdrawal_approved', 'withdrawal_rejected', 'withdrawal_paid', 'wallet_withdrawal_submitted', 'wallet_withdrawal_approved', 'wallet_withdrawal_rejected'];
 const REFERRAL_NOTIF_TYPES = ['referral_reward', 'referral_withdrawal_submitted', 'referral_withdrawal_approved', 'referral_withdrawal_rejected'];
 function NotificationsScreen({ go }) {
     const { profile } = useAuth();
@@ -14662,11 +14664,26 @@ function DatingCardPhoto({ url, name, matchScore }) {
  * persist across a real app restart or be toggled by editing browser storage.
  * The PIN itself is never stored in plaintext — only a SHA-256 hash (datingProfiles.pinHash).
  */
-window.__datingLock = window.__datingLock || { unlocked: false };
+window.__datingLock = window.__datingLock || { unlocked: false, listeners: new Set() };
 function useDatingPinLock() {
     const [unlocked, setUnlockedState] = useState(window.__datingLock.unlocked);
-    const unlock = () => { window.__datingLock.unlocked = true; setUnlockedState(true); };
-    const lock = () => { window.__datingLock.unlocked = false; setUnlockedState(false); };
+    // Every screen that calls useDatingPinLock() (DatingGate, DatingPinEntryStep,
+    // DatingPinSetupStep, ...) previously got its own isolated useState copy, all backed by
+    // the same window.__datingLock.unlocked flag but with no way to notify each other when it
+    // changed. So unlocking inside DatingPinEntryStep updated that component's own state (and
+    // the shared flag) but never told DatingGate — the component that actually decides which
+    // screen to show — to re-render, so the Unlock button appeared to "do nothing". Subscribing
+    // every instance to a shared listener set fixes that: whichever instance calls unlock()/
+    // lock() notifies all of them, so DatingGate immediately reflects the new state.
+    useEffect(() => {
+        const sync = () => setUnlockedState(window.__datingLock.unlocked);
+        window.__datingLock.listeners.add(sync);
+        sync();
+        return () => window.__datingLock.listeners.delete(sync);
+    }, []);
+    const notify = () => window.__datingLock.listeners.forEach(fn => fn());
+    const unlock = () => { window.__datingLock.unlocked = true; notify(); };
+    const lock = () => { window.__datingLock.unlocked = false; notify(); };
     return { unlocked, unlock, lock };
 }
 async function hashDatingPin(pin) {
@@ -15835,7 +15852,7 @@ function DatingAdminPanel({ adminUid, adminEmail }) {
                         p.active ? React.createElement("button", { onClick: () => adminSuspendDatingProfile(p.id, adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-ink-700" }, "Suspend") :
                             React.createElement("button", { onClick: () => adminReactivateDatingProfile(p.id, adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-100 text-emerald-700" }, "Reactivate"),
                         React.createElement("button", { onClick: () => { if (confirm('Ban this Dating account?')) adminBanDatingProfile(p.id, adminUid, adminEmail); }, className: "text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-red-100 text-red-600" }, "Ban"))),
-                p.phone && React.createElement("div", { className: "flex gap-1.5 mt-2 pt-2 border-t border-slate-100 dark:border-ink-700 flex-wrap" },
+                React.createElement("div", { className: "flex gap-1.5 mt-2 pt-2 border-t border-slate-100 dark:border-ink-700 flex-wrap" },
                     React.createElement("button", { onClick: () => adminSetDatingVerification(p.id, 'phoneVerified', !p.phoneVerified, adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1 rounded-lg " + (p.phoneVerified ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 dark:bg-ink-700") }, p.phoneVerified ? '\u2713 Phone verified' : 'Mark phone verified'),
                     React.createElement("button", { onClick: () => adminSetDatingVerification(p.id, 'emailVerified', !p.emailVerified, adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1 rounded-lg " + (p.emailVerified ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 dark:bg-ink-700") }, p.emailVerified ? '\u2713 Email verified' : 'Mark email verified'),
                     React.createElement("button", { onClick: () => adminManualKycVerify(p.id, p.kycStatus !== 'verified', adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1 rounded-lg " + (p.kycStatus === 'verified' ? "bg-emerald-100 text-emerald-700" : "bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400") }, p.kycStatus === 'verified' ? '\u2713 ID verified' : 'Manually verify ID')))))),
@@ -16004,7 +16021,10 @@ function JobsAdminPanel({ adminUid, adminEmail }) {
  */
 const WALLET_CFG_DEFAULTS = {
     paystackPublicKey: '', bankName: '', bankAccountNumber: '', bankAccountName: '',
-    costPerImpressionNaira: 2
+    costPerImpressionNaira: 2,
+    // Withdrawals — this is where referral rewards (and any other future wallet-credit source)
+    // get cashed out from now on, instead of a separate per-feature withdrawal system.
+    withdrawalsEnabled: true, minWithdrawal: 500
 };
 function useWalletConfig() {
     const [cfg, setCfg] = useState(WALLET_CFG_DEFAULTS);
@@ -16053,6 +16073,75 @@ async function debitWallet(uid, amount, type, extra) {
         tx.update(ref, { walletBalance: bal - amount });
     });
     await db.collection('walletTransactions').add(Object.assign({ uid, type, amount: -amount, createdAt: FieldValue.serverTimestamp() }, extra || {}));
+}
+/* ---- Wallet withdrawals ----
+ * Cash-out point for the whole wallet, whatever the money's source (referral rewards, ad
+ * refunds, manual credits, etc.) — one withdrawal system instead of a separate one per feature.
+ * Same Zmonie-payout pattern already used by referrals: request → escrow-hold the amount out of
+ * the balance immediately → admin reviews → approved (paid manually on Zmonie) or rejected
+ * (amount refunded back to the wallet).
+ * walletWithdrawals/{autoId}  { uid, userEmail, username, amount, zmonieAccountNumber,
+ *                                zmonieAccountName, status:'pending'|'approved'|'rejected',
+ *                                rejectionReason, requestedAt, reviewedAt, reviewedBy, reviewedByEmail }
+ */
+function useMyWalletWithdrawals(uid) {
+    const [rows, setRows] = useState(null);
+    useEffect(() => {
+        if (!uid) { setRows([]); return; }
+        const unsub = db.collection('walletWithdrawals').where('uid', '==', uid).limit(200).onSnapshot(snap => {
+            const list = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+            list.sort((a, b) => millisOf(b.requestedAt) - millisOf(a.requestedAt));
+            setRows(list);
+        }, () => setRows([]));
+        return unsub;
+    }, [uid]);
+    return rows;
+}
+async function requestWalletWithdrawal(profile, amountNaira, zmonieDetails, cfg) {
+    const amt = Number(amountNaira) || 0;
+    const minAmt = cfg.minWithdrawal || 500;
+    const zmonieAccountNumber = (zmonieDetails && zmonieDetails.zmonieAccountNumber || '').trim();
+    const zmonieAccountName = (zmonieDetails && zmonieDetails.zmonieAccountName || '').trim();
+    if (cfg.withdrawalsEnabled === false) throw new Error('Withdrawals are currently disabled.');
+    if (amt < minAmt) throw new Error(`Minimum withdrawal is ${formatNaira(minAmt)}.`);
+    if (!zmonieAccountNumber) throw new Error('Enter your Zmonie account number.');
+    if (!zmonieAccountName) throw new Error('Enter the account name on your Zmonie account.');
+    if (amt > (profile.walletBalance || 0)) throw new Error('Amount exceeds your available wallet balance.');
+    const ref = db.collection('walletWithdrawals').doc();
+    await ref.set({
+        uid: profile.id, userEmail: profile.email || '', username: profile.username || '',
+        amount: amt, zmonieAccountNumber, zmonieAccountName, status: 'pending',
+        requestedAt: FieldValue.serverTimestamp(), reviewedAt: null, reviewedBy: null, reviewedByEmail: null, rejectionReason: null
+    });
+    // Escrow: hold the amount out of the available balance the moment it's requested, refunded
+    // automatically if the request is rejected.
+    await debitWallet(profile.id, amt, 'withdrawal_request', { withdrawalId: ref.id });
+    notifyUser(profile.id, 'wallet_withdrawal_submitted', { amount: amt });
+    return ref.id;
+}
+async function adminApproveWalletWithdrawal(w, adminUid, adminEmail) {
+    await db.collection('walletWithdrawals').doc(w.id).update({ status: 'approved', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: adminUid, reviewedByEmail: adminEmail || null });
+    notifyUser(w.uid, 'wallet_withdrawal_approved', { amount: w.amount });
+}
+async function adminRejectWalletWithdrawal(w, reason, adminUid, adminEmail) {
+    await db.collection('walletWithdrawals').doc(w.id).update({ status: 'rejected', rejectionReason: reason || '', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: adminUid, reviewedByEmail: adminEmail || null });
+    await creditWallet(w.uid, w.amount, 'withdrawal_refund', { withdrawalId: w.id }); // refund the escrow hold
+    notifyUser(w.uid, 'wallet_withdrawal_rejected', { amount: w.amount, reason: reason || '' });
+}
+// One-time, user-initiated move for anyone who already had a balance sitting in the old,
+// separate referral-only wallet before this update — nothing is auto-migrated silently.
+async function moveReferralBalanceToWallet(profile) {
+    const amt = profile.referralBalance || 0;
+    if (amt <= 0) return;
+    await db.runTransaction(async (tx) => {
+        const ref = db.collection('users').doc(profile.id);
+        const snap = await tx.get(ref);
+        const data = snap.data() || {};
+        const refBal = data.referralBalance || 0;
+        if (refBal <= 0) return;
+        tx.update(ref, { referralBalance: 0, walletBalance: (data.walletBalance || 0) + refBal });
+    });
+    await db.collection('walletTransactions').add({ uid: profile.id, type: 'referral_balance_migrated', amount: amt, createdAt: FieldValue.serverTimestamp() });
 }
 async function recordWalletPaystackFunding(uid, amountNaira, reference) {
     // Idempotency guard: if this reference was already credited (e.g. the success callback
@@ -16434,7 +16523,19 @@ function WalletScreen({ go }) {
     const toast = useToast();
     const cfg = useWalletConfig();
     const txns = useWalletTransactions(profile.id);
+    const withdrawals = useMyWalletWithdrawals(profile.id);
     const [fundOpen, setFundOpen] = useState(false);
+    const [withdrawOpen, setWithdrawOpen] = useState(false);
+    const [historyTab, setHistoryTab] = useState('transactions');
+    const [generatingReceiptId, setGeneratingReceiptId] = useState(null);
+    const shareWithdrawalReceipt = async (w) => {
+        setGeneratingReceiptId(w.id);
+        try {
+            const file = await generateWithdrawalReceiptImage(w, profile, { subtitle: 'Wallet withdrawal', footer: 'Verified payout \u2014 join Yeloface and start earning too' });
+            go({ name: 'createPost', initialFile: file, initialText: '\u2705 Just withdrew ' + formatNaira(w.amount) + ' from my Yeloface wallet! This platform really pays.' });
+        } catch (e) { toast('Could not generate receipt \u2014 try again.', 'error'); }
+        finally { setGeneratingReceiptId(null); }
+    };
     return React.createElement("div", null,
         React.createElement("div", { className: "flex items-center gap-2 mb-4" },
             React.createElement("button", { onClick: () => go({ name: 'menu' }), className: "text-slate-400" }, React.createElement("i", { className: "fa-solid fa-arrow-left text-lg" })),
@@ -16442,23 +16543,77 @@ function WalletScreen({ go }) {
         React.createElement("div", { className: "bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-5 text-white mb-4" },
             React.createElement("p", { className: "text-xs text-white/80 mb-1" }, "Wallet balance"),
             React.createElement("p", { className: "text-3xl font-extrabold mb-4" }, formatNaira(profile.walletBalance || 0)),
-            React.createElement("button", { onClick: () => setFundOpen(true), className: "bg-white text-brand-700 text-sm font-bold px-4 py-2 rounded-xl" }, React.createElement("i", { className: "fa-solid fa-plus mr-1.5" }), "Fund wallet")),
+            React.createElement("div", { className: "flex gap-2" },
+                React.createElement("button", { onClick: () => setFundOpen(true), className: "flex-1 bg-white text-brand-700 text-sm font-bold px-4 py-2 rounded-xl" }, React.createElement("i", { className: "fa-solid fa-plus mr-1.5" }), "Fund wallet"),
+                cfg.withdrawalsEnabled !== false && React.createElement("button", { onClick: () => setWithdrawOpen(true), className: "flex-1 bg-white/15 text-white border border-white/30 text-sm font-bold px-4 py-2 rounded-xl" }, React.createElement("i", { className: "fa-solid fa-arrow-up-from-bracket mr-1.5" }), "Withdraw"))),
         React.createElement("button", { onClick: () => go({ name: 'adCentre' }), className: "w-full flex items-center justify-between bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-4 mb-4" },
             React.createElement("span", { className: "flex items-center gap-3 font-semibold text-sm" }, React.createElement("i", { className: "fa-solid fa-bullhorn text-brand-600" }), "Ad Centre \u2014 create & manage ads"),
             React.createElement("i", { className: "fa-solid fa-chevron-right text-slate-400" })),
-        React.createElement("h2", { className: "font-bold text-sm mb-2" }, "Transaction history"),
-        txns === null && React.createElement("div", { className: "py-10 flex justify-center" }, React.createElement("div", { className: "w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" })),
-        txns !== null && txns.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-8" }, "No transactions yet."),
-        React.createElement("div", { className: "space-y-1.5" }, (txns || []).map(t => React.createElement("div", { key: t.id, className: "flex items-center justify-between bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-lg px-3 py-2.5" },
-            React.createElement("div", { className: "min-w-0" },
-                React.createElement("p", { className: "text-sm font-semibold truncate" }, t.description || WALLET_TXN_LABELS[t.type] || t.type),
-                React.createElement("p", { className: "text-[11px] text-slate-400" }, timeAgo(t.createdAt))),
-            React.createElement("span", { className: "text-sm font-bold shrink-0 " + (t.amount >= 0 ? "text-emerald-600" : "text-red-500") }, (t.amount >= 0 ? '+' : '') + formatNaira(t.amount))))),
-        fundOpen && React.createElement(FundWalletSheet, { cfg: cfg, onClose: () => setFundOpen(false) }));
+        React.createElement("div", { className: "flex gap-2 mb-3" }, [['transactions', 'Transaction history'], ['withdrawals', 'Withdrawal history']].map(([k, l]) => React.createElement("button", { key: k, onClick: () => setHistoryTab(k), className: "px-3 py-1.5 rounded-full text-xs font-semibold " + (historyTab === k ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, l))),
+        historyTab === 'transactions' && React.createElement("div", { className: "space-y-1.5" },
+            txns === null && React.createElement("div", { className: "py-10 flex justify-center" }, React.createElement("div", { className: "w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" })),
+            txns !== null && txns.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-8" }, "No transactions yet."),
+            (txns || []).map(t => React.createElement("div", { key: t.id, className: "flex items-center justify-between bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-lg px-3 py-2.5" },
+                React.createElement("div", { className: "min-w-0" },
+                    React.createElement("p", { className: "text-sm font-semibold truncate" }, t.description || humanizeWalletType(t.type)),
+                    React.createElement("p", { className: "text-[11px] text-slate-400" }, timeAgo(t.createdAt))),
+                React.createElement("span", { className: "text-sm font-bold shrink-0 " + (t.amount >= 0 ? "text-emerald-600" : "text-red-500") }, (t.amount >= 0 ? '+' : '') + formatNaira(t.amount))))),
+        historyTab === 'withdrawals' && React.createElement("div", { className: "space-y-1.5" },
+            withdrawals === null && React.createElement("div", { className: "py-10 flex justify-center" }, React.createElement("div", { className: "w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" })),
+            withdrawals !== null && withdrawals.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-8" }, "No withdrawal requests yet."),
+            (withdrawals || []).map(w => React.createElement("div", { key: w.id, className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-lg px-3 py-2.5" },
+                React.createElement("div", { className: "flex items-center justify-between mb-1" },
+                    React.createElement("p", { className: "text-sm font-bold" }, formatNaira(w.amount)),
+                    React.createElement("span", { className: "text-[11px] font-semibold px-2 py-0.5 rounded-full " + (w.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : w.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700') }, w.status)),
+                React.createElement("p", { className: "text-[11px] text-slate-400" }, "Zmonie: ", w.zmonieAccountNumber, " \u00B7 ", w.zmonieAccountName, " \u00B7 ", timeAgo(w.requestedAt)),
+                w.rejectionReason && React.createElement("p", { className: "text-[11px] text-red-500 mt-1" }, "Reason: ", w.rejectionReason),
+                w.status === 'approved' && React.createElement("button", { onClick: () => shareWithdrawalReceipt(w), disabled: generatingReceiptId === w.id, className: "mt-2 w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg py-2 text-xs font-semibold" },
+                    generatingReceiptId === w.id
+                        ? React.createElement(React.Fragment, null, React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), "Preparing receipt\u2026")
+                        : React.createElement(React.Fragment, null, React.createElement("i", { className: "fa-solid fa-receipt" }), "Share withdrawal receipt to timeline"))))),
+        fundOpen && React.createElement(FundWalletSheet, { cfg: cfg, onClose: () => setFundOpen(false) }),
+        withdrawOpen && React.createElement(WithdrawWalletSheet, { profile: profile, cfg: cfg, onClose: () => setWithdrawOpen(false) }));
+}
+function WithdrawWalletSheet({ profile, cfg, onClose }) {
+    const toast = useToast();
+    const [amount, setAmount] = useState('');
+    const [zmonieAccountNumber, setZmonieAccountNumber] = useState('');
+    const [zmonieAccountName, setZmonieAccountName] = useState('');
+    const [confirmed, setConfirmed] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const balance = profile.walletBalance || 0;
+    const submit = async () => {
+        if (!confirmed) { toast('Please confirm you have a registered Zmonie account.', 'error'); return; }
+        setBusy(true);
+        try {
+            await requestWalletWithdrawal(profile, amount, { zmonieAccountNumber, zmonieAccountName }, cfg);
+            toast('Withdrawal request submitted \u2014 an admin will review it shortly.', 'success');
+            onClose();
+        } catch (e) { toast(friendlyError(e), 'error'); } finally { setBusy(false); }
+    };
+    return React.createElement("div", { className: "fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center", onClick: onClose },
+        React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm max-h-[90vh] overflow-y-auto p-5", onClick: e => e.stopPropagation() },
+            React.createElement("h3", { className: "font-display font-bold text-lg mb-1" }, "Withdraw from wallet"),
+            React.createElement("p", { className: "text-xs text-slate-400 mb-4" }, "Available: ", formatNaira(balance)),
+            React.createElement("div", { className: "bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 mb-4 text-xs text-amber-700 dark:text-amber-400" },
+                "You need a Zmonie account before you can withdraw. Enter the account number and account name on your Zmonie account below so we can send your payment there. Don't have one yet? Register first.",
+                React.createElement("a", { href: "https://zmonie.com", target: "_blank", rel: "noopener noreferrer", className: "block mt-2 text-center bg-amber-600 hover:bg-amber-700 text-white rounded-lg py-2 text-xs font-semibold" }, "Register on Zmonie")),
+            React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Amount (\u20A6)"),
+            React.createElement("input", { type: "number", min: cfg.minWithdrawal || 500, value: amount, onChange: e => setAmount(e.target.value), placeholder: "Min " + formatNaira(cfg.minWithdrawal || 500), className: "w-full mt-1 mb-4 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm" }),
+            React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Your Zmonie account number"),
+            React.createElement("input", { value: zmonieAccountNumber, onChange: e => setZmonieAccountNumber(e.target.value.trim()), placeholder: "e.g. 0803xxxxxxx", className: "w-full mt-1 mb-4 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm font-mono" }),
+            React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Your Zmonie account name"),
+            React.createElement("input", { value: zmonieAccountName, onChange: e => setZmonieAccountName(e.target.value), placeholder: "Name on your Zmonie account", className: "w-full mt-1 mb-4 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm" }),
+            React.createElement("label", { className: "flex items-start gap-2 text-xs text-slate-500 mb-4 select-none" },
+                React.createElement("input", { type: "checkbox", checked: confirmed, onChange: e => setConfirmed(e.target.checked), className: "mt-0.5 shrink-0" }),
+                React.createElement("span", null, "I confirm I have a registered Zmonie account and the details above are correct.")),
+            React.createElement("button", { disabled: busy, onClick: submit, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-semibold text-sm" }, busy ? 'Submitting\u2026' : 'Submit withdrawal request')));
 }
 const WALLET_TXN_LABELS = {
     fund_paystack: 'Wallet funding (Paystack)', fund_manual: 'Wallet funding (bank transfer)',
-    ad_spend: 'Ad campaign budget', ad_refund: 'Ad budget refund', admin_credit: 'Credited by admin'
+    ad_spend: 'Ad campaign budget', ad_refund: 'Ad budget refund', admin_credit: 'Credited by admin',
+    referral_reward: 'Referral reward', referral_balance_migrated: 'Moved from old referral balance',
+    withdrawal_request: 'Withdrawal requested', withdrawal_refund: 'Withdrawal refunded'
 };
 function humanizeWalletType(type) {
     if (WALLET_TXN_LABELS[type]) return WALLET_TXN_LABELS[type];
@@ -16822,6 +16977,17 @@ function AdminWalletPanel({ adminUid, adminEmail }) {
     // flagPaystackForReview().
     const [pfFilter, setPfFilter] = useState('pending');
     const pending = useWalletPaystackPending(pfFilter);
+    const [wdFilter, setWdFilter] = useState('pending');
+    const [withdrawals, setWithdrawals] = useState([]);
+    useEffect(() => {
+        if (subtab !== 'withdrawals') return;
+        const unsub = db.collection('walletWithdrawals').orderBy('requestedAt', 'desc').limit(500).onSnapshot(snap => {
+            let list = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+            if (wdFilter !== 'all') list = list.filter(r => r.status === wdFilter);
+            setWithdrawals(list);
+        }, () => setWithdrawals([]));
+        return unsub;
+    }, [subtab, wdFilter]);
     const cfg = useWalletConfig();
     const [cfgForm, setCfgForm] = useState(null);
     useEffect(() => { if (subtab === 'settings') setCfgForm(cfg); }, [subtab]);
@@ -16829,10 +16995,46 @@ function AdminWalletPanel({ adminUid, adminEmail }) {
     const reject = async (row) => { const reason = prompt('Reason for rejection:'); if (reason === null) return; try { await adminRejectWalletManualFunding(row, reason, adminUid, adminEmail); toast('Rejected', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
     const approvePf = async (row) => { try { await adminApprovePaystackPending(row, adminUid, adminEmail); toast('Confirmed \u2014 wallet credited', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
     const rejectPf = async (row) => { const reason = prompt('Reason (e.g. "no matching payment in Paystack dashboard"):'); if (reason === null) return; try { await adminRejectPaystackPending(row, reason, adminUid, adminEmail); toast('Rejected', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
+    const approveWd = async (w) => { try { await adminApproveWalletWithdrawal(w, adminUid, adminEmail); toast('Approved \u2014 mark it paid on Zmonie manually', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
+    const rejectWd = async (w) => { const reason = prompt('Reason for rejection:'); if (reason === null) return; try { await adminRejectWalletWithdrawal(w, reason, adminUid, adminEmail); toast('Rejected \u2014 balance refunded', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
     const saveCfg = async () => { try { await saveWalletConfig(cfgForm); toast('Wallet settings saved', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } };
     return React.createElement("div", null,
         React.createElement("h2", { className: "font-display text-lg font-bold mb-3 flex items-center gap-2" }, React.createElement("i", { className: "fa-solid fa-wallet text-brand-600" }), "Wallet"),
-        React.createElement("div", { className: "flex gap-2 mb-4 flex-wrap" }, [['manual', 'Manual fundings'], ['paystack', 'Paystack to verify' + (pending.filter(r => r.status === 'pending').length && pfFilter === 'pending' ? ' (' + pending.length + ')' : '')], ['settings', 'Settings']].map(([k, l]) => React.createElement("button", { key: k, onClick: () => setSubtab(k), className: "px-3 py-1.5 rounded-full text-xs font-semibold " + (subtab === k ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, l))),
+        React.createElement("div", { className: "flex gap-2 mb-4 flex-wrap" }, [['manual', 'Manual fundings'], ['paystack', 'Paystack to verify' + (pending.filter(r => r.status === 'pending').length && pfFilter === 'pending' ? ' (' + pending.length + ')' : '')], ['withdrawals', 'Withdrawals' + (withdrawals.filter(w => w.status === 'pending').length && wdFilter === 'pending' ? ' (' + withdrawals.length + ')' : '')], ['settings', 'Settings']].map(([k, l]) => React.createElement("button", { key: k, onClick: () => setSubtab(k), className: "px-3 py-1.5 rounded-full text-xs font-semibold " + (subtab === k ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, l))),
+        subtab === 'withdrawals' && React.createElement("div", null,
+            React.createElement("div", { className: "flex items-center justify-between mb-3 gap-3 flex-wrap" },
+                React.createElement("div", { className: "flex gap-2" }, ['pending', 'approved', 'rejected', 'all'].map(f => React.createElement("button", { key: f, onClick: () => setWdFilter(f), className: "px-3 py-1 rounded-full text-xs font-semibold " + (wdFilter === f ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, f))),
+                React.createElement("button", { onClick: () => exportToCsv('wallet-withdrawals.csv', withdrawals.map(w => ({ id: w.id, uid: w.uid, username: w.username || '', email: w.userEmail || '', amount: w.amount, status: w.status, zmonieAccountNumber: w.zmonieAccountNumber || '', zmonieAccountName: w.zmonieAccountName || '', requestedAt: formatPostDate(w.requestedAt) }))), className: "text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-ink-700" }, React.createElement("i", { className: "fa-solid fa-file-arrow-down mr-1.5" }), "Export CSV")),
+            withdrawals.length === 0 && React.createElement("p", { className: "text-sm text-slate-400" }, "No withdrawal requests in this filter."),
+            withdrawals.map(w => React.createElement("div", { key: w.id, className: "bg-white dark:bg-ink-800 border " + (w.status === 'pending' ? "border-amber-200 dark:border-amber-800/50" : "border-slate-100 dark:border-ink-700") + " rounded-xl p-4 mb-2" },
+                React.createElement("div", { className: "flex items-center justify-between mb-2" },
+                    React.createElement("p", { className: "font-extrabold text-lg" }, formatNaira(w.amount)),
+                    React.createElement("span", { className: "text-xs font-semibold px-2 py-0.5 rounded-full " + (w.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : w.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700') }, w.status)),
+                React.createElement("div", { className: "grid grid-cols-2 gap-x-3 gap-y-2 mb-2" },
+                    React.createElement("div", null,
+                        React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-wide text-slate-400" }, "Requested by"),
+                        React.createElement("p", { className: "text-sm font-semibold truncate" }, w.username ? '@' + w.username : (w.userEmail || w.uid)),
+                        w.username && w.userEmail && React.createElement("p", { className: "text-[11px] text-slate-400 truncate" }, w.userEmail)),
+                    React.createElement("div", null,
+                        React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-wide text-slate-400" }, "Requested"),
+                        React.createElement("p", { className: "text-sm" }, timeAgo(w.requestedAt))),
+                    React.createElement("div", null,
+                        React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-wide text-slate-400" }, "Zmonie account number"),
+                        React.createElement("div", { className: "flex items-center gap-1.5" },
+                            React.createElement("p", { className: "text-sm font-mono font-semibold" }, w.zmonieAccountNumber || '\u2014'),
+                            w.zmonieAccountNumber && React.createElement("button", { onClick: () => { navigator.clipboard.writeText(w.zmonieAccountNumber).then(() => toast('Account number copied', 'success')).catch(() => { }); }, title: "Copy account number", className: "text-slate-400 hover:text-brand-600" }, React.createElement("i", { className: "fa-regular fa-copy text-xs" })))),
+                    React.createElement("div", null,
+                        React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-wide text-slate-400" }, "Zmonie account name"),
+                        React.createElement("p", { className: "text-sm font-semibold" }, w.zmonieAccountName || '\u2014'))),
+                w.reviewedByEmail && React.createElement("p", { className: "text-[11px] text-slate-400 mb-1" }, (w.status === 'approved' ? 'Approved' : 'Reviewed') + ' by ' + w.reviewedByEmail + (w.reviewedAt ? ' \u00B7 ' + timeAgo(w.reviewedAt) : '')),
+                w.rejectionReason && React.createElement("p", { className: "text-xs text-red-500 mb-2" }, "Rejection reason: ", w.rejectionReason),
+                w.status === 'pending' && React.createElement("div", { className: "flex gap-2 mt-2" },
+                    React.createElement("button", { onClick: () => approveWd(w), className: "flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2 text-xs font-semibold" }, "Approve"),
+                    React.createElement("button", { onClick: () => rejectWd(w), className: "flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-2 text-xs font-semibold" }, "Reject")))),
+            React.createElement("div", { className: "mt-3 pt-3 border-t border-slate-100 dark:border-ink-700 flex items-center justify-between" },
+                React.createElement("span", { className: "text-xs font-semibold" }, "Withdrawals enabled"),
+                React.createElement("button", { onClick: () => saveWalletConfig(Object.assign({}, cfg, { withdrawalsEnabled: cfg.withdrawalsEnabled === false })), className: "w-11 h-6 rounded-full relative transition shrink-0 " + (cfg.withdrawalsEnabled !== false ? "bg-brand-600" : "bg-slate-200 dark:bg-ink-600") },
+                    React.createElement("span", { className: "absolute top-0.5 w-5 h-5 bg-white rounded-full transition " + (cfg.withdrawalsEnabled !== false ? "left-[22px]" : "left-0.5") })))),
         subtab === 'paystack' && React.createElement("div", null,
             React.createElement("p", { className: "text-xs text-slate-400 mb-3" }, "Card payments credit instantly. Transfer/USSD/mobile-money payments land here first \u2014 check the reference against your Paystack dashboard before approving."),
             React.createElement("div", { className: "flex gap-2 mb-3" }, ['pending', 'approved', 'rejected', 'all'].map(f => React.createElement("button", { key: f, onClick: () => setPfFilter(f), className: "px-3 py-1 rounded-full text-xs font-semibold " + (pfFilter === f ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, f))),
@@ -16867,6 +17069,10 @@ function AdminWalletPanel({ adminUid, adminEmail }) {
             React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Cost per ad impression (\u20A6)"),
                 React.createElement("input", { type: "number", min: 0, step: "0.1", value: cfgForm.costPerImpressionNaira, onChange: e => setCfgForm(f => Object.assign({}, f, { costPerImpressionNaira: Number(e.target.value) || 0 })), className: "w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm" }),
                 React.createElement("p", { className: "text-[11px] text-slate-400 mt-1" }, "How much of a campaign's budget is deducted each time it's shown to someone in the feed.")),
+            React.createElement("div", { className: "pt-2 border-t border-slate-100 dark:border-ink-700" },
+                React.createElement("p", { className: "text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 mt-3" }, "Withdrawals")),
+            React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Minimum withdrawal (\u20A6)"),
+                React.createElement("input", { type: "number", min: 0, value: cfgForm.minWithdrawal, onChange: e => setCfgForm(f => Object.assign({}, f, { minWithdrawal: Number(e.target.value) || 0 })), className: "w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm" })),
             React.createElement("div", { className: "pt-2 border-t border-slate-100 dark:border-ink-700" },
                 React.createElement("p", { className: "text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 mt-3" }, "Manual bank transfer")),
             React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Bank name"),
@@ -16923,7 +17129,9 @@ function maskAccountNumber(num) {
     const s = String(num || '');
     return s.length <= 4 ? s : '\u2022\u2022\u2022\u2022\u2022\u2022' + s.slice(-4);
 }
-async function generateWithdrawalReceiptImage(w, profile) {
+async function generateWithdrawalReceiptImage(w, profile, opts) {
+    const subtitle = (opts && opts.subtitle) || 'Referral earnings payout';
+    const footer = (opts && opts.footer) || 'Verified payout \u2014 join Yeloface and earn from your referrals too';
     const W = 900, H = 1150;
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
@@ -16948,7 +17156,7 @@ async function generateWithdrawalReceiptImage(w, profile) {
     ctx.fillText('Withdrawal Successful', W / 2, 275);
     ctx.font = '400 18px Inter, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.fillText('Referral earnings payout', W / 2, 308);
+    ctx.fillText(subtitle, W / 2, 308);
     // White card
     const cardX = 60, cardY = 300, cardW = W - 120, cardH = 760;
     ctx.fillStyle = '#ffffff';
@@ -16988,7 +17196,7 @@ async function generateWithdrawalReceiptImage(w, profile) {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#cbd5e1';
     ctx.font = '500 17px Inter, sans-serif';
-    ctx.fillText('Verified payout \u2014 join Yeloface and earn from your referrals too', W / 2, H - 40);
+    ctx.fillText(footer, W / 2, H - 40);
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
     return new File([blob], 'yeloface-withdrawal-receipt.png', { type: 'image/png' });
 }
@@ -17082,6 +17290,9 @@ async function attachReferralIfAny(newUid) {
 // Called once the referred user finishes onboarding (sets a username) — the point this app
 // considers registration "successfully completed". Transaction-guarded on the referrals/{uid}
 // doc's status so a reward can never be paid out twice for the same referred account.
+// Reward goes straight into the referrer's main walletBalance (not a separate referral-only
+// balance) — referralEarnings is kept purely as a lifetime stat for the Referrals screen and
+// admin dashboard, it's no longer spendable/withdrawable on its own.
 async function completeReferralIfEligible(uid) {
     const refDoc = db.collection('referrals').doc(uid);
     let referrerId = null, amount = 0, skippedReason = null;
@@ -17096,7 +17307,7 @@ async function completeReferralIfEligible(uid) {
             if (!referrerSnap.exists) { tx.update(refDoc, { status: 'invalid' }); skippedReason = 'Referrer user ' + data.referrerId + ' no longer exists — marked invalid.'; return; }
             referrerId = data.referrerId;
             amount = data.rewardAmount || 0;
-            tx.update(referrerRef, { referralBalance: FieldValue.increment(amount), referralEarnings: FieldValue.increment(amount) });
+            tx.update(referrerRef, { walletBalance: FieldValue.increment(amount), referralEarnings: FieldValue.increment(amount) });
             tx.update(refDoc, { status: 'completed', completedAt: FieldValue.serverTimestamp() });
             tx.update(db.collection('users').doc(uid), { referralRewarded: true });
         });
@@ -17105,13 +17316,14 @@ async function completeReferralIfEligible(uid) {
         // it's the REFERRED user's session writing to the REFERRER's user document (a cross-user
         // write). "Test mode" rules (allow read, write: if true) permit this; locked-down rules
         // that only allow `request.auth.uid == userId` on /users/{userId} will silently block it
-        // unless you add an explicit carve-out for the referralBalance/referralEarnings fields.
+        // unless you add an explicit carve-out for the walletBalance/referralEarnings fields.
         showReferralDebug('completeReferralIfEligible FAILED for uid=' + uid + '  code=' + (e && e.code) + '  message=' + (e && e.message), true);
         return;
     }
     if (skippedReason) { showReferralDebug(skippedReason); return; }
     if (referrerId) {
         showReferralDebug('OK: credited \u20A6' + amount + ' to referrer ' + referrerId + ' for referred user ' + uid);
+        db.collection('walletTransactions').add({ uid: referrerId, type: 'referral_reward', amount, referredId: uid, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
         notifyUser(referrerId, 'referral_reward', { amount, referredId: uid });
     }
 }
@@ -17182,7 +17394,6 @@ function ReferralScreen({ go }) {
     const referrals = useMyReferrals(profile.id);
     const withdrawals = useMyReferralWithdrawals(profile.id);
     const [codeStatus, retryReferralCode] = useReferralCode(profile);
-    const [withdrawOpen, setWithdrawOpen] = useState(false);
     const [historyTab, setHistoryTab] = useState('referrals');
     const total = referrals ? referrals.length : 0;
     const successful = referrals ? referrals.filter(r => r.status === 'completed').length : 0;
@@ -17231,12 +17442,18 @@ function ReferralScreen({ go }) {
             React.createElement("h1", { className: "font-display text-lg font-bold" }, "Referrals")),
         !cfg.enabled && React.createElement("p", { className: "text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2 mb-3" }, "The referral program is currently paused."),
         React.createElement("div", { className: "bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-5 text-white mb-4" },
-            React.createElement("p", { className: "text-xs text-white/80 mb-1" }, "Available referral balance"),
-            React.createElement("p", { className: "text-3xl font-extrabold mb-4" }, formatNaira(profile.referralBalance || 0)),
-            React.createElement("div", { className: "grid grid-cols-2 gap-3 text-xs mb-4" },
-                React.createElement("div", null, React.createElement("p", { className: "text-white/70" }, "Total earned"), React.createElement("p", { className: "font-bold text-sm" }, formatNaira(profile.referralEarnings || 0))),
-                React.createElement("div", null, React.createElement("p", { className: "text-white/70" }, "Total withdrawn"), React.createElement("p", { className: "font-bold text-sm" }, formatNaira(profile.referralWithdrawn || 0)))),
-            React.createElement("button", { onClick: () => setWithdrawOpen(true), className: "bg-white text-brand-700 text-sm font-bold px-4 py-2 rounded-xl" }, React.createElement("i", { className: "fa-solid fa-arrow-up-from-bracket mr-1.5" }), "Withdraw")),
+            React.createElement("p", { className: "text-xs text-white/80 mb-1" }, "Lifetime referral earnings"),
+            React.createElement("p", { className: "text-3xl font-extrabold mb-4" }, formatNaira(profile.referralEarnings || 0)),
+            React.createElement("p", { className: "text-xs text-white/80 mb-4" }, "Referral rewards are added straight to your Wallet balance \u2014 withdraw from there whenever you like."),
+            React.createElement("button", { onClick: () => go({ name: 'wallet' }), className: "bg-white text-brand-700 text-sm font-bold px-4 py-2 rounded-xl" }, React.createElement("i", { className: "fa-solid fa-wallet mr-1.5" }), "Go to Wallet")),
+        (profile.referralBalance || 0) > 0 && React.createElement("div", { className: "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3.5 mb-4 flex items-center justify-between gap-3" },
+            React.createElement("div", null,
+                React.createElement("p", { className: "text-sm font-semibold text-amber-700 dark:text-amber-400" }, formatNaira(profile.referralBalance), " left over from before"),
+                React.createElement("p", { className: "text-[11px] text-amber-600 dark:text-amber-500" }, "Move it into your Wallet to withdraw it.")),
+            React.createElement("button", {
+                onClick: async () => { try { await moveReferralBalanceToWallet(profile); toast('Moved to your Wallet!', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } },
+                className: "shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-2 rounded-lg"
+            }, "Move to Wallet")),
         React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-4" },
             [['Total', total], ['Successful', successful], ['Pending', pending]].map(([l, v]) => React.createElement("div", { key: l, className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl py-3 text-center" },
                 React.createElement("p", { className: "text-lg font-extrabold" }, v), React.createElement("p", { className: "text-[11px] text-slate-400" }, l)))),
@@ -17282,8 +17499,7 @@ function ReferralScreen({ go }) {
                 w.status === 'approved' && React.createElement("button", { onClick: () => shareWithdrawalReceipt(w), disabled: generatingReceiptId === w.id, className: "mt-2 w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg py-2 text-xs font-semibold" },
                     generatingReceiptId === w.id
                         ? React.createElement(React.Fragment, null, React.createElement("i", { className: "fa-solid fa-circle-notch fa-spin" }), "Preparing receipt\u2026")
-                        : React.createElement(React.Fragment, null, React.createElement("i", { className: "fa-solid fa-receipt" }), "Share withdrawal receipt to timeline"))))),
-        withdrawOpen && React.createElement(WithdrawReferralSheet, { profile: profile, cfg: cfg, onClose: () => setWithdrawOpen(false) }));
+                        : React.createElement(React.Fragment, null, React.createElement("i", { className: "fa-solid fa-receipt" }), "Share withdrawal receipt to timeline"))))));
 }
 function WithdrawReferralSheet({ profile, cfg, onClose }) {
     const toast = useToast();
@@ -17370,6 +17586,7 @@ function AdminReferralsPanel({ adminUid, adminEmail }) {
             [['Total referrals', totalReferrals], ['Successful', successfulReferrals], ['Pending', totalReferrals - successfulReferrals], ['Total paid out', formatNaira(totalPaidOut)], ['Pending withdrawal requests', withdrawals.filter(w => w.status === 'pending').length]].map(([l, v]) => React.createElement("div", { key: l, className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-4" },
                 React.createElement("p", { className: "text-xl font-extrabold" }, v), React.createElement("p", { className: "text-xs text-slate-400" }, l)))),
         subtab === 'withdrawals' && React.createElement("div", null,
+            React.createElement("p", { className: "text-xs text-slate-400 bg-slate-50 dark:bg-ink-800 rounded-lg p-2.5 mb-3" }, "New referral rewards now go straight into each user's Wallet balance and are withdrawn from Wallet \u2192 Withdrawals, not here. This tab only shows requests submitted before that change."),
             React.createElement("div", { className: "flex items-center justify-between mb-3 gap-3 flex-wrap" },
                 React.createElement("div", { className: "flex gap-2" }, ['pending', 'approved', 'rejected', 'all'].map(f => React.createElement("button", { key: f, onClick: () => setWithdrawalFilter(f), className: "px-3 py-1 rounded-full text-xs font-semibold " + (withdrawalFilter === f ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700") }, f))),
                 React.createElement("button", { onClick: () => exportToCsv('referral-withdrawals.csv', withdrawals.map(w => ({ id: w.id, uid: w.uid, username: w.username || '', email: w.userEmail || '', amount: w.amount, status: w.status, zmonieAccountNumber: w.zmonieAccountNumber || '', zmonieAccountName: w.zmonieAccountName || '', requestedAt: formatPostDate(w.requestedAt) }))), className: "text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-ink-700" }, React.createElement("i", { className: "fa-solid fa-file-arrow-down mr-1.5" }), "Export CSV")),
