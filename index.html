@@ -14714,7 +14714,7 @@ function useMyDatingPinReset(uid) {
     return req;
 }
 async function requestDatingPinReset(uid) {
-    await db.collection('datingPinResets').doc(uid).set({ uid, status: 'pending', requestedAt: FieldValue.serverTimestamp(), resolvedAt: FieldValue.delete(), resolvedBy: FieldValue.delete() });
+    await db.collection('datingPinResets').doc(uid).set({ uid, status: 'pending', requestedAt: FieldValue.serverTimestamp() });
 }
 async function adminApproveDatingPinReset(uid, adminUid, adminEmail) {
     await db.collection('datingProfiles').doc(uid).update({ pinHash: FieldValue.delete(), pinSetAt: FieldValue.delete() });
