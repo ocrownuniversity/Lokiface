@@ -135,9 +135,6 @@
   @keyframes msgIn { from { opacity:0; transform: translateY(6px) scale(.98); } to { opacity:1; transform:none; } }
   .msg-in { animation: msgIn .18s ease-out; }
   @keyframes waveBar { 0%,100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
-  /* Dating PIN entry: brief shake when the wrong PIN is entered */
-  @keyframes shake { 10%,90% { transform: translateX(-1px); } 20%,80% { transform: translateX(2px); } 30%,50%,70% { transform: translateX(-4px); } 40%,60% { transform: translateX(4px); } }
-  .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
 </style>
 </head>
 <body class="bg-slate-50 dark:bg-ink-900 text-slate-900 dark:text-slate-100 transition-colors">
@@ -1500,6 +1497,11 @@ const DEFAULT_SITE_SETTINGS = {
     // already in progress when this is flipped off are left alone (existing viewers can keep
     // watching / the host can still end it normally) — this only blocks *starting new* ones.
     goLiveEnabled: true,
+    // Kill-switch for the whole Jobs & Recruitment platform — when off, the Jobs entry point
+    // disappears from the Menu and every Jobs route redirects back with a friendly notice.
+    // Flip back on from admin Settings and everything (jobs, applications, saved jobs) is
+    // exactly as it was — this never deletes data, it only hides the feature.
+    jobsEnabled: true,
     // Page-owner engagement payout rates — all in USD, applied per every 100 *valid* events
     // (see creditEngagementEarning below). The defaults are the USD equivalent of ₦1,000 per
     // 100 video streams / ₦20 per 100 likes / ₦50 per 100 comments at roughly ₦1,550 = $1.
@@ -2326,11 +2328,310 @@ async function deleteFanPagePermanently(page) {
 }
 async function adminVerifyPage(p) { await db.collection('fanPages').doc(p.id).update({ verified: !p.verified }); }
 async function adminSuspendPage(p) { await db.collection('fanPages').doc(p.id).update({ suspended: !p.suspended }); }
+/* ============================== JOBS & RECRUITMENT ==============================
+ * A completely free jobs/recruitment platform bolted onto the existing social app. No payment
+ * fields, references, or gateways anywhere in here by design — monetization (if ever added) would
+ * be a separate feature layered on top later, not touched by this code.
+ *
+ * Firestore collections:
+ *  - jobs                 one doc per job post (see fields below)
+ *  - applications          doc id = `${jobId}_${applicantId}` (deterministic — the id itself is
+ *                           what prevents duplicate applications; a second apply() just fails the
+ *                           existence check before ever writing)
+ *  - savedJobs/{uid}/items/{jobId}   same shape as the existing bookmarks/{uid}/items pattern
+ *  - jobCategories          admin-managed list, one doc per category
+ *  - employerProfiles/{uid} company info, keyed by the posting user's own uid (reuses the existing
+ *                           auth/user system — an "employer" is just a regular user who has posted
+ *                           at least one job, not a separate account type)
+ *  - reports (existing generic collection, targetType 'job' | 'employer') — job reports intentionally
+ *                           reuse the app's existing generic report system (see reportContent) instead
+ *                           of a bespoke jobReports collection, so they show up in the same admin
+ *                           Reports tab everything else does. The Jobs admin panel additionally
+ *                           surfaces targetType:'job' reports in its own "Reports" sub-tab for
+ *                           convenience.
+ *
+ * Whole-feature kill switch: siteSettings.jobsEnabled (see JobsGate) — turning it off hides Jobs
+ * from the Menu and shows a friendly notice on every Jobs route, without touching any data.
+ */
+const JOB_CATEGORIES_FALLBACK = ['Accounting & Finance', 'Administration', 'Agriculture', 'Banking', 'Construction', 'Customer Service', 'Design & Creative', 'Education & Training', 'Engineering', 'Healthcare & Medical', 'Hospitality & Tourism', 'Human Resources', 'IT & Software', 'Legal', 'Logistics & Supply Chain', 'Manufacturing', 'Marketing & Sales', 'Media & Communications', 'NGO & Nonprofit', 'Oil & Gas', 'Real Estate', 'Retail', 'Security', 'Transportation & Driving', 'Other'];
+const JOB_EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Internship', 'Freelance'];
+const JOB_WORK_MODES = ['Remote', 'On-site', 'Hybrid'];
+const APPLICATION_STATUSES = ['applied', 'under_review', 'shortlisted', 'interview', 'accepted', 'rejected'];
+const APPLICATION_STATUS_LABELS = { applied: 'Applied', under_review: 'Under Review', shortlisted: 'Shortlisted', interview: 'Interview', accepted: 'Accepted', rejected: 'Rejected' };
+const APPLICATION_STATUS_COLORS = {
+    applied: 'bg-slate-100 text-slate-600 dark:bg-ink-700 dark:text-slate-300',
+    under_review: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    shortlisted: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
+    interview: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
+    accepted: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    rejected: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+};
+function formatSalaryRange(min, max, currency) {
+    const c = currency || '\u20A6';
+    const fmt = (n) => Number(n).toLocaleString();
+    if (min && max) return c + fmt(min) + ' \u2013 ' + c + fmt(max);
+    if (min) return 'From ' + c + fmt(min);
+    if (max) return 'Up to ' + c + fmt(max);
+    return 'Salary not disclosed';
+}
+async function uploadCompanyLogo(uid, file) {
+    const compressed = await compressImage(file, 512, 0.85);
+    const ref = storage.ref(`employerLogos/${uid}/logo_${Date.now()}.jpg`);
+    await ref.put(compressed, { contentType: 'image/jpeg' });
+    return ref.getDownloadURL();
+}
+// CVs/resumes are documents, not images — no compression, just a size/type guard before it
+// goes straight to Storage. 5MB comfortably covers a PDF/Word CV without inviting abuse.
+async function uploadResumeFile(uid, jobId, file) {
+    if (!file) return null;
+    const okTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!okTypes.includes(file.type) && !/\.(pdf|doc|docx)$/i.test(file.name || '')) {
+        throw new Error('Please upload your CV as a PDF or Word document.');
+    }
+    if (file.size > 5 * 1024 * 1024) throw new Error('CV/resume must be under 5MB.');
+    const ext = (file.name.match(/\.[0-9a-z]+$/i) || ['.pdf'])[0];
+    const ref = storage.ref(`resumes/${uid}/${jobId}_${Date.now()}${ext}`);
+    await ref.put(file, { contentType: file.type || 'application/octet-stream' });
+    return { url: await ref.getDownloadURL(), name: file.name };
+}
+// Keeps a lightweight employerProfiles/{uid} doc in sync with whatever company info was typed
+// into the most recent job post — this is how "companies" exist in this app without a separate
+// account system, satisfying the brief's "reuse existing auth/user system" rule.
+async function upsertEmployerProfile(uid, { companyName, companyLogo, website, about }) {
+    const ref = db.collection('employerProfiles').doc(uid);
+    const snap = await ref.get();
+    const patch = { companyName: companyName || '', updatedAt: FieldValue.serverTimestamp() };
+    if (companyLogo) patch.companyLogo = companyLogo;
+    if (website !== undefined) patch.website = website;
+    if (about !== undefined) patch.about = about;
+    if (!snap.exists) { patch.verified = false; patch.createdAt = FieldValue.serverTimestamp(); }
+    await ref.set(patch, { merge: true });
+}
+async function createJob(employerId, fields, logoFile) {
+    let companyLogo = fields.companyLogo || null;
+    if (logoFile) companyLogo = await uploadCompanyLogo(employerId, logoFile);
+    const payload = Object.assign({}, fields, {
+        employerId, companyLogo,
+        // New jobs start pending — an admin has to approve before it's publicly visible, per the
+        // brief's "Approve job posts / Reject job posts" admin capability. Employers can still see
+        // their own pending posts on their dashboard while waiting.
+        status: 'pending', hiddenByAdmin: false, applicationsCount: 0, viewsCount: 0,
+        createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
+    });
+    const doc = await db.collection('jobs').add(payload);
+    await upsertEmployerProfile(employerId, { companyName: fields.companyName, companyLogo, website: fields.companyWebsite });
+    return doc.id;
+}
+async function updateJob(jobId, employerId, fields, logoFile) {
+    let patch = Object.assign({}, fields, { updatedAt: FieldValue.serverTimestamp() });
+    if (logoFile) patch.companyLogo = await uploadCompanyLogo(employerId, logoFile);
+    // Editing a live job sends it back for re-approval — keeps admins from having approved content
+    // that got silently swapped out for something else after the fact.
+    if (fields.status === undefined) patch.status = 'pending';
+    await db.collection('jobs').doc(jobId).update(patch);
+    if (fields.companyName || patch.companyLogo) {
+        await upsertEmployerProfile(employerId, { companyName: fields.companyName, companyLogo: patch.companyLogo, website: fields.companyWebsite });
+    }
+}
+async function closeJob(jobId) { await db.collection('jobs').doc(jobId).update({ status: 'closed', updatedAt: FieldValue.serverTimestamp() }); }
+async function reopenJob(jobId) { await db.collection('jobs').doc(jobId).update({ status: 'pending', updatedAt: FieldValue.serverTimestamp() }); }
+async function deleteJob(jobId) {
+    await db.collection('jobs').doc(jobId).delete();
+    const appsSnap = await db.collection('applications').where('jobId', '==', jobId).get();
+    await Promise.all(appsSnap.docs.map(d => d.ref.delete()));
+}
+async function incrementJobViews(jobId) { db.collection('jobs').doc(jobId).update({ viewsCount: FieldValue.increment(1) }).catch(() => { }); }
+async function toggleSaveJob(uid, job, saved) {
+    const ref = db.collection('savedJobs').doc(uid).collection('items').doc(job.id);
+    if (saved) await ref.delete();
+    else await ref.set({ jobId: job.id, title: job.title, companyName: job.companyName, createdAt: FieldValue.serverTimestamp() });
+}
+async function applyToJob(job, applicant, fields, resumeFile) {
+    const appId = job.id + '_' + applicant.id;
+    const existing = await db.collection('applications').doc(appId).get();
+    if (existing.exists) throw new Error('You already applied to this job.');
+    let resume = { url: null, name: null };
+    if (resumeFile) resume = await uploadResumeFile(applicant.id, job.id, resumeFile);
+    await db.collection('applications').doc(appId).set({
+        jobId: job.id, employerId: job.employerId, applicantId: applicant.id,
+        jobTitle: job.title, companyName: job.companyName,
+        fullName: fields.fullName, email: fields.email, phone: fields.phone, location: fields.location,
+        resumeURL: resume.url, resumeName: resume.name, coverLetter: fields.coverLetter || '',
+        workExperience: fields.workExperience || '', education: fields.education || '', portfolioURL: fields.portfolioURL || '',
+        answers: fields.answers || {},
+        status: 'applied', createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
+    });
+    db.collection('jobs').doc(job.id).update({ applicationsCount: FieldValue.increment(1) }).catch(() => { });
+    db.collection('notifications').doc(job.employerId).collection('items').add({
+        type: 'new_job_application', fromUserId: applicant.id, jobId: job.id, title: job.title, read: false, createdAt: FieldValue.serverTimestamp()
+    }).catch(() => { });
+    return appId;
+}
+async function updateApplicationStatus(application, status) {
+    await db.collection('applications').doc(application.id).update({ status, updatedAt: FieldValue.serverTimestamp() });
+    db.collection('notifications').doc(application.applicantId).collection('items').add({
+        type: 'application_status_' + status, jobId: application.jobId, title: application.jobTitle, read: false, createdAt: FieldValue.serverTimestamp()
+    }).catch(() => { });
+}
+async function reportJob(job, reporterId, reason) {
+    await reportContent('job', job.id, job.employerId, reporterId, reason, { details: 'Job: ' + (job.title || '') + ' at ' + (job.companyName || '') });
+}
+async function reportEmployer(employerId, reporterId, reason) {
+    await reportContent('employer', employerId, employerId, reporterId, reason);
+}
+/* ---- Admin actions ---- */
+async function adminApproveJob(job) {
+    await db.collection('jobs').doc(job.id).update({ status: 'approved', updatedAt: FieldValue.serverTimestamp() });
+    db.collection('notifications').doc(job.employerId).collection('items').add({ type: 'job_approved', jobId: job.id, title: job.title, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
+}
+async function adminRejectJob(job, reason) {
+    await db.collection('jobs').doc(job.id).update({ status: 'rejected', rejectionReason: reason || '', updatedAt: FieldValue.serverTimestamp() });
+    db.collection('notifications').doc(job.employerId).collection('items').add({ type: 'job_rejected', jobId: job.id, title: job.title, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
+}
+async function adminCloseJob(job) {
+    await db.collection('jobs').doc(job.id).update({ status: 'closed', updatedAt: FieldValue.serverTimestamp() });
+    db.collection('notifications').doc(job.employerId).collection('items').add({ type: 'job_closed_by_admin', jobId: job.id, title: job.title, read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
+}
+async function adminDeleteJobPermanently(job) { await deleteJob(job.id); }
+async function adminVerifyEmployer(uid, verify) {
+    await db.collection('employerProfiles').doc(uid).set({ verified: !!verify }, { merge: true });
+    if (verify) db.collection('notifications').doc(uid).collection('items').add({ type: 'employer_verified', read: false, createdAt: FieldValue.serverTimestamp() }).catch(() => { });
+}
+async function adminAddJobCategory(name) {
+    const clean = (name || '').trim();
+    if (!clean) return;
+    await db.collection('jobCategories').add({ name: clean, createdAt: FieldValue.serverTimestamp() });
+}
+async function adminDeleteJobCategory(id) { await db.collection('jobCategories').doc(id).delete(); }
+/* ---- Hooks ---- */
+function useJobCategories() {
+    const [cats, setCats] = useState(null);
+    useEffect(() => {
+        const unsub = db.collection('jobCategories').orderBy('name').onSnapshot(
+            snap => setCats(snap.docs.map(d => (Object.assign({ id: d.id }, d.data())))),
+            () => setCats([]));
+        return unsub;
+    }, []);
+    // Falls back to a sensible built-in list until an admin has added any custom categories —
+    // keeps the feature usable on day one without requiring admin setup first.
+    return cats && cats.length ? cats.map(c => c.name) : JOB_CATEGORIES_FALLBACK;
+}
+// Live feed of every approved, non-hidden job — filtering/search happens client-side in the
+// screen itself so it stays a single simple query (same reasoning as the reels feed: chaining
+// .where + .orderBy across different fields needs composite indexes most Firebase projects don't
+// have set up, and would fail silently).
+function useApprovedJobs() {
+    const [jobs, setJobs] = useState(null);
+    useEffect(() => {
+        const unsub = db.collection('jobs').orderBy('createdAt', 'desc').limit(500)
+            .onSnapshot(snap => setJobs(snap.docs.map(d => (Object.assign({ id: d.id }, d.data())))
+                .filter(j => j.status === 'approved' && !j.hiddenByAdmin)), () => setJobs([]));
+        return unsub;
+    }, []);
+    return jobs;
+}
+function useJob(jobId) {
+    const [job, setJob] = useState(undefined);
+    useEffect(() => {
+        if (!jobId) { setJob(null); return; }
+        const unsub = db.collection('jobs').doc(jobId).onSnapshot(s => setJob(s.exists ? Object.assign({ id: s.id }, s.data()) : null), () => setJob(null));
+        return unsub;
+    }, [jobId]);
+    return job;
+}
+function useEmployerJobs(uid) {
+    const [jobs, setJobs] = useState(null);
+    useEffect(() => {
+        if (!uid) return;
+        // where(field)+orderBy(different field) needs a composite index most Firebase projects
+        // don't have — fetch by employerId alone and sort client-side instead (same pattern used
+        // for posts/listings/reels by author throughout this app).
+        const unsub = db.collection('jobs').where('employerId', '==', uid).limit(300)
+            .onSnapshot(snap => setJobs(snap.docs.map(d => (Object.assign({ id: d.id }, d.data()))).sort((a, b) => (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0))), () => setJobs([]));
+        return unsub;
+    }, [uid]);
+    return jobs;
+}
+function useJobApplicants(jobId) {
+    const [apps, setApps] = useState(null);
+    useEffect(() => {
+        if (!jobId) return;
+        const unsub = db.collection('applications').where('jobId', '==', jobId).limit(500)
+            .onSnapshot(snap => setApps(snap.docs.map(d => (Object.assign({ id: d.id }, d.data()))).sort((a, b) => (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0))), () => setApps([]));
+        return unsub;
+    }, [jobId]);
+    return apps;
+}
+function useMyApplications(uid) {
+    const [apps, setApps] = useState(null);
+    useEffect(() => {
+        if (!uid) return;
+        const unsub = db.collection('applications').where('applicantId', '==', uid).limit(300)
+            .onSnapshot(snap => setApps(snap.docs.map(d => (Object.assign({ id: d.id }, d.data()))).sort((a, b) => (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0))), () => setApps([]));
+        return unsub;
+    }, [uid]);
+    return apps;
+}
+function useMyApplicationForJob(jobId, uid) {
+    const [app, setApp] = useState(undefined);
+    useEffect(() => {
+        if (!jobId || !uid) { setApp(null); return; }
+        const unsub = db.collection('applications').doc(jobId + '_' + uid).onSnapshot(s => setApp(s.exists ? Object.assign({ id: s.id }, s.data()) : null), () => setApp(null));
+        return unsub;
+    }, [jobId, uid]);
+    return app;
+}
+function useSavedJobIds(uid) {
+    const [ids, setIds] = useState(null);
+    useEffect(() => {
+        if (!uid) return;
+        const unsub = db.collection('savedJobs').doc(uid).collection('items').onSnapshot(snap => setIds(new Set(snap.docs.map(d => d.id))), () => setIds(new Set()));
+        return unsub;
+    }, [uid]);
+    return ids;
+}
+function useSavedJobsList(uid) {
+    const [items, setItems] = useState(null);
+    useEffect(() => {
+        if (!uid) return;
+        const unsub = db.collection('savedJobs').doc(uid).collection('items').orderBy('createdAt', 'desc')
+            .onSnapshot(async (snap) => {
+            const ids = snap.docs.map(d => d.id);
+            if (!ids.length) { setItems([]); return; }
+            const jobs = [];
+            for (const id of ids) {
+                const s = await db.collection('jobs').doc(id).get();
+                if (s.exists) jobs.push(Object.assign({ id: s.id }, s.data()));
+            }
+            setItems(jobs);
+        }, () => setItems([]));
+        return unsub;
+    }, [uid]);
+    return items;
+}
+function useEmployerProfile(uid) {
+    const [profile, setProfile] = useState(undefined);
+    useEffect(() => {
+        if (!uid) { setProfile(null); return; }
+        const unsub = db.collection('employerProfiles').doc(uid).onSnapshot(s => setProfile(s.exists ? Object.assign({ id: s.id }, s.data()) : null), () => setProfile(null));
+        return unsub;
+    }, [uid]);
+    return profile;
+}
+function usePendingJobsCount() {
+    const [count, setCount] = useState(0);
+    useEffect(() => {
+        const unsub = db.collection('jobs').where('status', '==', 'pending').onSnapshot(snap => setCount(snap.size), () => setCount(0));
+        return unsub;
+    }, []);
+    return count;
+}
 /* ============================== PAGE NAME CHANGE APPROVAL SYSTEM ==============================
  * Page owners can never rename a Page instantly — every rename goes through a request that an
  * admin must approve. Two collections back this:
  *  - pageNames/{normalizedKey}            reservation doc, one per live Page name, keyed by a
  *                                          case/whitespace-insensitive normalization of the name
+
  *                                          (mirrors the pageUsernames pattern above) so names are
  *                                          guaranteed globally unique regardless of case/spacing.
  *  - pageNameChangeRequests/{requestId}   one doc per submitted request, carrying the current
@@ -4515,6 +4816,16 @@ function App() {
     // Admin access: same login as everyone else. If the signed-in UID matches
     // SUPER_ADMIN_UID, the effect below grants/keeps the admin flag automatically.
     const [saSession, setSaSession] = useState(sessionStorage.getItem(SUPER_ADMIN_SESSION_KEY) === '1');
+    // Dating PIN lock: leaving the Dating section (any route other than these three) clears the
+    // in-memory unlock flag, so coming back to Dating always asks for the PIN again — moving
+    // between Dating's own sub-screens (profile view, chat) does NOT re-lock, since that would
+    // be annoying and isn't "leaving the platform".
+    useEffect(() => {
+        const DATING_ROUTE_NAMES = ['dating', 'datingProfile', 'datingChat'];
+        if (!DATING_ROUTE_NAMES.includes(route.name) && window.__datingLock) {
+            window.__datingLock.unlocked = false;
+        }
+    }, [route.name]);
 
     /* -------- Browser history integration --------
        This app is a single HTML file that swaps "screens" by changing React state
@@ -5132,6 +5443,11 @@ function MainApp({ route, setRoute }) {
                 route.name === 'dating' && React.createElement(DatingGate, { go: go }),
                 route.name === 'datingProfile' && React.createElement(DatingProfileViewScreen, { uid: route.uid, go: go }),
                 route.name === 'datingChat' && React.createElement(DatingChatScreen, { matchId: route.matchId, go: go }),
+                route.name === 'jobs' && React.createElement(JobsHomeScreen, { go: go, route: route }),
+                route.name === 'job' && React.createElement(JobsGate, { go: go }, React.createElement(JobDetailScreen, { id: route.id, go: go })),
+                route.name === 'jobApply' && React.createElement(JobsGate, { go: go }, React.createElement(JobApplyScreen, { id: route.id, go: go })),
+                route.name === 'jobForm' && React.createElement(JobsGate, { go: go }, React.createElement(JobPostScreen, { id: route.id, go: go })),
+                route.name === 'jobApplicants' && React.createElement(JobsGate, { go: go }, React.createElement(JobApplicantsScreen, { jobId: route.jobId, go: go })),
                 route.name !== 'chat' && route.name !== 'datingChat' && route.name !== 'menu' && route.name !== 'dating' && React.createElement(Footer, { compact: true })))));
 }
 /* ============================== MENU SCREEN (hamburger "\u2261" menu) ============================== */
@@ -5144,6 +5460,7 @@ const MENU_TILES = [
     { key: 'groups', label: 'Groups', icon: 'fa-people-group', route: { name: 'groups' } },
     { key: 'friends', label: 'Friends', icon: 'fa-user-group', route: { name: 'search' } },
     { key: 'dating', label: 'Dating', icon: 'fa-heart', route: { name: 'dating' } },
+    { key: 'jobs', label: 'Jobs', icon: 'fa-briefcase', route: { name: 'jobs' } },
     { key: 'reels', label: 'Reels', icon: 'fa-clapperboard', route: { name: 'reels' } },
     { key: 'marketplace', label: 'Marketplace', icon: 'fa-store', route: { name: 'marketplace' } },
     { key: 'games', label: 'Games', icon: 'fa-gamepad', route: { name: 'games' } },
@@ -5165,7 +5482,7 @@ const MENU_TILE_COLORS = {
     saved: 'bg-purple-100 text-purple-600', memories: 'bg-blue-100 text-blue-600',
     birthdays: 'bg-red-100 text-red-500', events: 'bg-red-100 text-red-500',
     adCentre: 'bg-blue-100 text-blue-600', wallet: 'bg-emerald-100 text-emerald-600', feeds: 'bg-orange-100 text-orange-600',
-    referrals: 'bg-amber-100 text-amber-600',
+    referrals: 'bg-amber-100 text-amber-600', jobs: 'bg-cyan-100 text-cyan-600',
 };
 function MenuTile({ tile, onOpen }) {
     return React.createElement("button", { onClick: () => onOpen(tile), className: "flex items-center gap-3 bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-3 text-left active:scale-[0.98] transition" },
@@ -5187,6 +5504,8 @@ function MenuScreen({ go, theme, setTheme }) {
     const toast = useToast();
     const pages = usePages();
     const install = useInstallPrompt();
+    const siteSettings = useSiteSettings();
+    const visibleMenuTiles = useMemo(() => siteSettings.jobsEnabled === false ? MENU_TILES.filter(t => t.key !== 'jobs') : MENU_TILES, [siteSettings.jobsEnabled]);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
     const [switcherOpen, setSwitcherOpen] = useState(false);
@@ -5239,7 +5558,7 @@ function MenuScreen({ go, theme, setTheme }) {
             React.createElement("button", { onClick: inviteFriends, className: "w-full flex items-center gap-3 bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-3.5 text-left" },
                 React.createElement("i", { className: "fa-solid fa-heart text-red-500 text-lg" }),
                 React.createElement("span", { className: "font-semibold text-[15px]" }, "Invite friends")),
-            React.createElement("div", { className: "grid grid-cols-2 gap-3" }, MENU_TILES.map(t => React.createElement(MenuTile, { key: t.key, tile: t, onOpen: openTile }))),
+            React.createElement("div", { className: "grid grid-cols-2 gap-3" }, visibleMenuTiles.map(t => React.createElement(MenuTile, { key: t.key, tile: t, onOpen: openTile }))),
             React.createElement("div", { className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl overflow-hidden" },
                 React.createElement(MenuExpandRow, { icon: "fa-gear", label: "Settings & privacy", expanded: settingsOpen, onToggle: () => setSettingsOpen(v => !v) },
                     React.createElement("button", { onClick: () => setTheme(theme === 'dark' ? 'light' : 'dark'), className: "flex items-center gap-3 py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300" },
@@ -7405,10 +7724,18 @@ function NotifRow({ n, go }) {
             return go({ name: 'referrals' });
         if (n.type === 'wallet_credit')
             return go({ name: 'wallet' });
+        if (n.type === 'new_job_application' && n.jobId)
+            return go({ name: 'jobApplicants', jobId: n.jobId });
+        if ((n.type === 'job_approved' || n.type === 'job_rejected' || n.type === 'job_closed_by_admin') && n.jobId)
+            return go({ name: 'job', id: n.jobId });
+        if (n.type && n.type.startsWith('application_status_') && n.jobId)
+            return go({ name: 'job', id: n.jobId });
+        if (n.type === 'employer_verified')
+            return go({ name: 'jobs', tab: 'myPosts' });
         go({ name: 'profile', uid: n.fromUserId });
     };
     return (React.createElement("div", { onClick: openNotif, className: "flex items-center gap-3 bg-white dark:bg-ink-800 rounded-xl p-3 border border-slate-100 dark:border-ink-700 cursor-pointer" },
-        isSystem ? React.createElement("div", { className: "w-9 h-9 rounded-full bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0" }, React.createElement("i", { className: "fa-solid " + (n.type === 'announcement' ? 'fa-bullhorn' : n.groupId ? 'fa-people-group' : PAGE_NAME_CHANGE_NOTIF_TYPES.includes(n.type) ? 'fa-signature' : (n.type === 'wallet_credit' || MONETIZATION_NOTIF_TYPES.includes(n.type) || WITHDRAWAL_NOTIF_TYPES.includes(n.type) || REFERRAL_NOTIF_TYPES.includes(n.type)) ? 'fa-sack-dollar' : 'fa-store') })) : React.createElement(Avatar, { user: from, size: 9 }),
+        isSystem ? React.createElement("div", { className: "w-9 h-9 rounded-full bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0" }, React.createElement("i", { className: "fa-solid " + (n.type === 'announcement' ? 'fa-bullhorn' : n.groupId ? 'fa-people-group' : PAGE_NAME_CHANGE_NOTIF_TYPES.includes(n.type) ? 'fa-signature' : (n.type === 'wallet_credit' || MONETIZATION_NOTIF_TYPES.includes(n.type) || WITHDRAWAL_NOTIF_TYPES.includes(n.type) || REFERRAL_NOTIF_TYPES.includes(n.type)) ? 'fa-sack-dollar' : (n.type === 'job_approved' || n.type === 'job_rejected' || n.type === 'job_closed_by_admin' || n.type === 'employer_verified' || (n.type && n.type.startsWith('application_status_'))) ? 'fa-briefcase' : 'fa-store') })) : React.createElement(Avatar, { user: from, size: 9 }),
         React.createElement("p", { className: "text-sm" },
             n.type === 'announcement' ? React.createElement("span", { className: "font-semibold" }, n.title) : null,
             n.type === 'announcement' && n.title ? " " : null,
@@ -9009,6 +9336,7 @@ function SuperAdminApp({ theme, setTheme }) {
     const { profile, firebaseUser } = useAuth();
     const pendingNameChangeCount = usePendingPageNameChangeCount();
     const pendingDatingKycCount = usePendingDatingKycCount();
+    const pendingJobsCount = usePendingJobsCount();
     const pendingAdCount = usePendingAdCount();
     const pendingListingCount = usePendingListingCount();
     const pendingReferralWithdrawalCount = usePendingReferralWithdrawalCount();
@@ -9019,6 +9347,7 @@ function SuperAdminApp({ theme, setTheme }) {
         { key: 'reels', label: 'Reels', icon: 'fa-clapperboard' },
         { key: 'pages', label: 'Pages', icon: 'fa-flag' },
         { key: 'dating', label: 'Dating' + (pendingDatingKycCount ? ' (' + pendingDatingKycCount + ')' : ''), icon: 'fa-heart' },
+        { key: 'jobs', label: 'Jobs' + (pendingJobsCount ? ' (' + pendingJobsCount + ')' : ''), icon: 'fa-briefcase' },
         { key: 'pageNameRequests', label: 'Name Change Requests' + (pendingNameChangeCount ? ' (' + pendingNameChangeCount + ')' : ''), icon: 'fa-signature' },
         { key: 'monetization', label: 'Monetization', icon: 'fa-sack-dollar' },
         { key: 'ads', label: 'Ads' + (pendingAdCount ? ' (' + pendingAdCount + ')' : ''), icon: 'fa-bullhorn' },
@@ -9366,6 +9695,9 @@ function SuperAdminPanel({ tab, adminUid, adminEmail }) {
     }
     if (tab === 'dating') {
         return React.createElement(DatingAdminPanel, { adminUid: adminUid, adminEmail: adminEmail });
+    }
+    if (tab === 'jobs') {
+        return React.createElement(JobsAdminPanel, { adminUid: adminUid, adminEmail: adminEmail });
     }
     if (tab === 'ads') {
         return React.createElement(AdminAdsPanel, { adminUid: adminUid, adminEmail: adminEmail });
@@ -10353,6 +10685,11 @@ function AdminSettingsForm({ form, adminUid, adminEmail }) {
                 React.createElement("label", { className: "flex items-center gap-2 text-sm" },
                     React.createElement("input", { type: "checkbox", checked: local.goLiveEnabled !== false, onChange: setBool('goLiveEnabled') }), "Go Live enabled (users can start a live broadcast from the composer)"),
                 React.createElement("p", { className: "text-[11px] text-slate-400 mt-1" }, "When off, \"Go live\" disappears from the composer and the \"Live now\" bar disappears from the home feed. Any stream already in progress isn't cut off \u2014 this only blocks starting new ones.")),
+            React.createElement("div", { className: "border-t border-slate-100 dark:border-ink-700 pt-3" },
+                React.createElement("p", { className: "text-xs font-semibold text-slate-500 mb-2" }, "Jobs & Recruitment"),
+                React.createElement("label", { className: "flex items-center gap-2 text-sm" },
+                    React.createElement("input", { type: "checkbox", checked: local.jobsEnabled !== false, onChange: setBool('jobsEnabled') }), "Jobs platform enabled"),
+                React.createElement("p", { className: "text-[11px] text-slate-400 mt-1" }, "When off, Jobs disappears from the Menu and every Jobs page shows a friendly \"currently unavailable\" notice instead. No jobs, applications, or saved jobs are deleted \u2014 turning it back on brings everything back exactly as it was.")),
             React.createElement("button", { disabled: busy, type: "submit", className: "px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white text-sm font-semibold" }, busy ? 'Saving…' : 'Save Settings')));
 }
 /* ============================== SUPER ADMIN: AUDIT LOG ROW ============================== */
@@ -11581,6 +11918,422 @@ function ListingDetailScreen({ id, go }) {
                 "Report Seller"))),
         reportOpen === 'listing' && React.createElement(ReportModal, { title: "Report this listing", onClose: () => setReportOpen(null), onSubmit: (reason) => reportListing(id, listing.sellerId, profile.id, reason).then(() => toast('Report submitted. Thank you.', 'success')) }),
         reportOpen === 'seller' && React.createElement(ReportModal, { title: "Report this seller", onClose: () => setReportOpen(null), onSubmit: (reason) => reportSeller(listing.sellerId, profile.id, reason).then(() => toast('Report submitted. Thank you.', 'success')) })));
+}
+/* ============================== JOBS: SCREENS ============================== */
+// Whole-feature kill switch — mirrors how DatingGate gates the Dating feature. Turning
+// siteSettings.jobsEnabled off shows this notice everywhere Jobs would normally render,
+// without touching any jobs/applications/savedJobs data underneath.
+function JobsGate({ go, children }) {
+    const siteSettings = useSiteSettings();
+    if (siteSettings.jobsEnabled === false) {
+        return React.createElement("div", { className: "text-center py-16 px-4" },
+            React.createElement("i", { className: "fa-solid fa-briefcase text-4xl mb-3 text-slate-300" }),
+            React.createElement("p", { className: "font-semibold text-slate-600 dark:text-slate-300" }, "Jobs is currently unavailable"),
+            React.createElement("p", { className: "text-sm text-slate-400 mt-1" }, "This feature has been temporarily turned off. Please check back later."),
+            React.createElement("button", { onClick: () => go({ name: 'home' }), className: "mt-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl px-5 py-2.5 text-sm font-semibold" }, "Back to Home"));
+    }
+    return children;
+}
+function JobCard({ job, go, saved, onToggleSave }) {
+    const employer = useEmployerProfile(job.employerId);
+    const deadlineSoon = job.deadline && (new Date(job.deadline) - Date.now()) < 3 * 24 * 60 * 60 * 1000 && (new Date(job.deadline) - Date.now()) > 0;
+    return React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-xl border border-slate-100 dark:border-ink-700 p-3.5 cursor-pointer hover:border-brand-300 dark:hover:border-brand-700 transition", onClick: () => go({ name: 'job', id: job.id }) },
+        React.createElement("div", { className: "flex items-start gap-3" },
+            React.createElement("div", { className: "w-12 h-12 rounded-xl bg-slate-100 dark:bg-ink-700 shrink-0 overflow-hidden flex items-center justify-center" },
+                job.companyLogo ? React.createElement("img", { src: job.companyLogo, className: "w-full h-full object-cover" }) : React.createElement("i", { className: "fa-solid fa-building text-slate-400" })),
+            React.createElement("div", { className: "flex-1 min-w-0" },
+                React.createElement("p", { className: "font-bold text-[15px] leading-tight truncate" }, job.title),
+                React.createElement("p", { className: "text-sm text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5" },
+                    job.companyName,
+                    employer && employer.verified && React.createElement("i", { className: "fa-solid fa-circle-check text-brand-500 text-xs", title: "Verified Employer" }))),
+            React.createElement("button", { onClick: (e) => { e.stopPropagation(); onToggleSave(job); }, className: "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-ink-700" },
+                React.createElement("i", { className: (saved ? "fa-solid" : "fa-regular") + " fa-bookmark " + (saved ? "text-brand-600" : "") }))),
+        React.createElement("div", { className: "flex flex-wrap gap-1.5 mt-3" },
+            job.location && React.createElement("span", { className: "text-[11px] font-semibold bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-full" }, React.createElement("i", { className: "fa-solid fa-location-dot mr-1" }), job.location),
+            job.employmentType && React.createElement("span", { className: "text-[11px] font-semibold bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-full" }, job.employmentType),
+            job.workMode && React.createElement("span", { className: "text-[11px] font-semibold bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-full" }, job.workMode)),
+        React.createElement("div", { className: "flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-ink-700" },
+            React.createElement("p", { className: "text-sm font-bold text-brand-600 dark:text-brand-400" }, formatSalaryRange(job.salaryMin, job.salaryMax, job.salaryCurrency)),
+            job.deadline && React.createElement("p", { className: "text-[11px] font-semibold " + (deadlineSoon ? "text-red-500" : "text-slate-400") }, "Apply by ", new Date(job.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))));
+}
+function JobCardSkeleton() {
+    return React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-xl border border-slate-100 dark:border-ink-700 p-3.5" },
+        React.createElement("div", { className: "flex items-start gap-3" },
+            React.createElement("div", { className: "w-12 h-12 rounded-xl skeleton shrink-0" }),
+            React.createElement("div", { className: "flex-1 space-y-2" }, React.createElement("div", { className: "h-3.5 w-3/4 rounded skeleton" }), React.createElement("div", { className: "h-3 w-1/2 rounded skeleton" }))));
+}
+function JobsHomeScreen({ go, route }) {
+    const { profile } = useAuth();
+    const [tab, setTab] = useState((route && route.tab) || 'browse');
+    const [q, setQ] = useState('');
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [fCategory, setFCategory] = useState('');
+    const [fLocation, setFLocation] = useState('');
+    const [fType, setFType] = useState('');
+    const [fWorkMode, setFWorkMode] = useState('');
+    const [fMinSalary, setFMinSalary] = useState('');
+    const jobs = useApprovedJobs();
+    const categories = useJobCategories();
+    const savedIds = useSavedJobIds(profile.id);
+    const myApplications = useMyApplications(profile.id);
+    const savedJobsList = useSavedJobsList(tab === 'saved' ? profile.id : null);
+    const myJobs = useEmployerJobs(tab === 'myPosts' ? profile.id : null);
+    const toggleSave = (job) => toggleSaveJob(profile.id, job, savedIds && savedIds.has(job.id));
+    const filtered = useMemo(() => {
+        if (!jobs) return null;
+        const term = q.trim().toLowerCase();
+        return jobs.filter(j => {
+            if (term && !((j.title || '').toLowerCase().includes(term) || (j.companyName || '').toLowerCase().includes(term) || (j.location || '').toLowerCase().includes(term))) return false;
+            if (fCategory && j.category !== fCategory) return false;
+            if (fLocation.trim() && !(j.location || '').toLowerCase().includes(fLocation.trim().toLowerCase())) return false;
+            if (fType && j.employmentType !== fType) return false;
+            if (fWorkMode && j.workMode !== fWorkMode) return false;
+            if (fMinSalary && !((j.salaryMax || j.salaryMin || 0) >= Number(fMinSalary))) return false;
+            return true;
+        });
+    }, [jobs, q, fCategory, fLocation, fType, fWorkMode, fMinSalary]);
+    const activeFilterCount = [fCategory, fLocation, fType, fWorkMode, fMinSalary].filter(Boolean).length;
+    const clearFilters = () => { setFCategory(''); setFLocation(''); setFType(''); setFWorkMode(''); setFMinSalary(''); };
+    const TABS = [['browse', 'Browse'], ['applications', 'My Applications' + (myApplications && myApplications.length ? ' (' + myApplications.length + ')' : '')], ['saved', 'Saved'], ['myPosts', 'My Job Posts']];
+    return React.createElement(JobsGate, { go: go },
+        React.createElement("div", { className: "max-w-2xl mx-auto" },
+            React.createElement("div", { className: "flex items-center justify-between mb-3" },
+                React.createElement("h1", { className: "font-display font-extrabold text-xl flex items-center gap-2" }, React.createElement("i", { className: "fa-solid fa-briefcase text-brand-500" }), "Jobs"),
+                React.createElement("button", { onClick: () => go({ name: 'jobForm' }), className: "bg-brand-600 hover:bg-brand-700 text-white rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-1.5" },
+                    React.createElement("i", { className: "fa-solid fa-plus" }), "Post a Job")),
+            React.createElement("div", { className: "flex gap-2 overflow-x-auto mb-4", style: { scrollbarWidth: 'none' } }, TABS.map(([k, l]) => React.createElement("button", { key: k, onClick: () => setTab(k), className: "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold " + (tab === k ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300") }, l))),
+            tab === 'browse' && React.createElement("div", null,
+                React.createElement("div", { className: "flex gap-2 mb-3" },
+                    React.createElement("div", { className: "relative flex-1" },
+                        React.createElement("i", { className: "fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" }),
+                        React.createElement("input", { value: q, onChange: e => setQ(e.target.value), placeholder: "Search job title, company, location\u2026", className: "w-full pl-10 pr-3 py-2.5 rounded-xl bg-white dark:bg-ink-800 border border-slate-200 dark:border-ink-700 text-sm" })),
+                    React.createElement("button", { onClick: () => setFiltersOpen(o => !o), className: "shrink-0 px-3.5 rounded-xl border text-sm font-semibold flex items-center gap-1.5 " + (activeFilterCount ? "bg-brand-50 border-brand-300 text-brand-700 dark:bg-brand-900/30 dark:border-brand-700 dark:text-brand-400" : "border-slate-200 dark:border-ink-700 text-slate-600 dark:text-slate-300") },
+                        React.createElement("i", { className: "fa-solid fa-sliders" }), activeFilterCount ? activeFilterCount : '')),
+                filtersOpen && React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-xl border border-slate-200 dark:border-ink-700 p-3 mb-3 space-y-2.5" },
+                    React.createElement("div", { className: "grid grid-cols-2 gap-2.5" },
+                        React.createElement("select", { value: fCategory, onChange: e => setFCategory(e.target.value), className: "px-2.5 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }, React.createElement("option", { value: "" }, "Any category"), categories.map(c => React.createElement("option", { key: c, value: c }, c))),
+                        React.createElement("input", { value: fLocation, onChange: e => setFLocation(e.target.value), placeholder: "Location", className: "px-2.5 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }),
+                        React.createElement("select", { value: fType, onChange: e => setFType(e.target.value), className: "px-2.5 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }, React.createElement("option", { value: "" }, "Any employment type"), JOB_EMPLOYMENT_TYPES.map(t => React.createElement("option", { key: t, value: t }, t))),
+                        React.createElement("select", { value: fWorkMode, onChange: e => setFWorkMode(e.target.value), className: "px-2.5 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }, React.createElement("option", { value: "" }, "Remote/On-site/Hybrid"), JOB_WORK_MODES.map(m => React.createElement("option", { key: m, value: m }, m))),
+                        React.createElement("input", { type: "number", value: fMinSalary, onChange: e => setFMinSalary(e.target.value), placeholder: "Min salary (\u20A6)", className: "px-2.5 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm col-span-2" })),
+                    activeFilterCount > 0 && React.createElement("button", { onClick: clearFilters, className: "text-xs font-semibold text-red-500" }, "Clear all filters")),
+                filtered === null && React.createElement("div", { className: "space-y-2.5" }, [1, 2, 3].map(i => React.createElement(JobCardSkeleton, { key: i }))),
+                filtered !== null && filtered.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "No jobs match your search right now."),
+                React.createElement("div", { className: "space-y-2.5" }, (filtered || []).map(j => React.createElement(JobCard, { key: j.id, job: j, go: go, saved: savedIds && savedIds.has(j.id), onToggleSave: toggleSave })))),
+            tab === 'applications' && React.createElement("div", null,
+                myApplications === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
+                myApplications !== null && myApplications.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "You haven't applied to any jobs yet."),
+                React.createElement("div", { className: "space-y-2.5" }, (myApplications || []).map(a => React.createElement(MyApplicationRow, { key: a.id, app: a, go: go })))),
+            tab === 'saved' && React.createElement("div", null,
+                savedJobsList === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
+                savedJobsList !== null && savedJobsList.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "No saved jobs yet \u2014 tap the bookmark icon on any job to save it here."),
+                React.createElement("div", { className: "space-y-2.5" }, (savedJobsList || []).map(j => React.createElement(JobCard, { key: j.id, job: j, go: go, saved: true, onToggleSave: toggleSave })))),
+            tab === 'myPosts' && React.createElement("div", null,
+                myJobs === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
+                myJobs !== null && myJobs.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "You haven't posted any jobs yet."),
+                React.createElement("div", { className: "space-y-2.5" }, (myJobs || []).map(j => React.createElement(MyJobPostRow, { key: j.id, job: j, go: go }))))));
+}
+function MyApplicationRow({ app, go }) {
+    return React.createElement("div", { onClick: () => go({ name: 'job', id: app.jobId }), className: "bg-white dark:bg-ink-800 rounded-xl border border-slate-100 dark:border-ink-700 p-3.5 cursor-pointer" },
+        React.createElement("div", { className: "flex items-center justify-between gap-2" },
+            React.createElement("div", { className: "min-w-0" },
+                React.createElement("p", { className: "font-bold text-[15px] truncate" }, app.jobTitle),
+                React.createElement("p", { className: "text-sm text-slate-500 dark:text-slate-400 truncate" }, app.companyName)),
+            React.createElement("span", { className: "shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full " + (APPLICATION_STATUS_COLORS[app.status] || APPLICATION_STATUS_COLORS.applied) }, APPLICATION_STATUS_LABELS[app.status] || 'Applied')),
+        React.createElement("p", { className: "text-[11px] text-slate-400 mt-2" }, "Applied ", timeAgo(app.createdAt)));
+}
+function MyJobPostRow({ job, go }) {
+    const toast = useToast();
+    const [busy, setBusy] = useState(false);
+    const STATUS_BADGE = { pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', rejected: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400', closed: 'bg-slate-100 text-slate-500 dark:bg-ink-700 dark:text-slate-400' };
+    const doClose = async () => { setBusy(true); try { await closeJob(job.id); toast('Job closed', 'success'); } finally { setBusy(false); } };
+    const doReopen = async () => { setBusy(true); try { await reopenJob(job.id); toast('Job reopened \u2014 pending re-approval', 'success'); } finally { setBusy(false); } };
+    const doDelete = async () => { if (!confirm('Delete this job post permanently? This also deletes its applications.')) return; setBusy(true); try { await deleteJob(job.id); toast('Job deleted', 'success'); } finally { setBusy(false); } };
+    return React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-xl border border-slate-100 dark:border-ink-700 p-3.5" },
+        React.createElement("div", { className: "flex items-center justify-between gap-2" },
+            React.createElement("div", { className: "min-w-0 cursor-pointer", onClick: () => go({ name: 'job', id: job.id }) },
+                React.createElement("p", { className: "font-bold text-[15px] truncate" }, job.title),
+                React.createElement("p", { className: "text-sm text-slate-500 dark:text-slate-400 truncate" }, job.applicationsCount || 0, " applicant", (job.applicationsCount === 1 ? '' : 's'), " \u00B7 ", job.viewsCount || 0, " views")),
+            React.createElement("span", { className: "shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full capitalize " + (STATUS_BADGE[job.status] || STATUS_BADGE.pending) }, job.status)),
+        job.status === 'rejected' && job.rejectionReason && React.createElement("p", { className: "text-xs text-red-500 mt-2 bg-red-50 dark:bg-red-900/20 rounded-lg p-2" }, "Reason: ", job.rejectionReason),
+        React.createElement("div", { className: "flex flex-wrap gap-2 mt-3" },
+            React.createElement("button", { onClick: () => go({ name: 'jobApplicants', jobId: job.id }), className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400" }, "View Applicants"),
+            React.createElement("button", { onClick: () => go({ name: 'jobForm', id: job.id }), className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300" }, "Edit"),
+            job.status !== 'closed' ? React.createElement("button", { disabled: busy, onClick: doClose, className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300" }, "Close") : React.createElement("button", { disabled: busy, onClick: doReopen, className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300" }, "Reopen"),
+            React.createElement("button", { disabled: busy, onClick: doDelete, className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600" }, "Delete")));
+}
+function JobDetailScreen({ id, go }) {
+    const { profile } = useAuth();
+    const toast = useToast();
+    const job = useJob(id);
+    const employer = useEmployerProfile(job ? job.employerId : null);
+    const savedIds = useSavedJobIds(profile.id);
+    const myApp = useMyApplicationForJob(id, profile.id);
+    const [reportOpen, setReportOpen] = useState(false);
+    const viewedRef = useRef(false);
+    useEffect(() => {
+        if (job && job.status === 'approved' && !viewedRef.current) { viewedRef.current = true; incrementJobViews(job.id); }
+    }, [job]);
+    if (job === undefined) return React.createElement(PostSkeleton, null);
+    if (job === null) return React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "This job posting is no longer available.");
+    const isOwner = job.employerId === profile.id;
+    const saved = savedIds && savedIds.has(job.id);
+    const showPendingNotice = isOwner && job.status !== 'approved';
+    return React.createElement("div", { className: "max-w-2xl mx-auto" },
+        React.createElement("button", { onClick: () => go({ name: 'jobs' }), className: "text-sm font-semibold text-slate-500 flex items-center gap-1.5 mb-3" }, React.createElement("i", { className: "fa-solid fa-arrow-left" }), "Back to Jobs"),
+        showPendingNotice && React.createElement("div", { className: "rounded-xl p-3 mb-3 text-sm font-semibold " + (job.status === 'pending' ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' : job.status === 'rejected' ? 'bg-red-50 text-red-600 dark:bg-red-900/20' : 'bg-slate-100 text-slate-500 dark:bg-ink-800') },
+            job.status === 'pending' ? 'This job is awaiting admin approval and is only visible to you right now.' : job.status === 'rejected' ? ('Rejected by an admin' + (job.rejectionReason ? ': ' + job.rejectionReason : '.')) : 'This job post is closed and no longer accepting applications.'),
+        React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-2xl border border-slate-100 dark:border-ink-700 p-4 sm:p-5" },
+            React.createElement("div", { className: "flex items-start gap-3.5 mb-4" },
+                React.createElement("div", { className: "w-16 h-16 rounded-2xl bg-slate-100 dark:bg-ink-700 shrink-0 overflow-hidden flex items-center justify-center" },
+                    job.companyLogo ? React.createElement("img", { src: job.companyLogo, className: "w-full h-full object-cover" }) : React.createElement("i", { className: "fa-solid fa-building text-2xl text-slate-400" })),
+                React.createElement("div", { className: "flex-1 min-w-0" },
+                    React.createElement("h1", { className: "font-display font-extrabold text-xl leading-tight" }, job.title),
+                    React.createElement("p", { className: "text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1.5 mt-0.5" },
+                        job.companyName,
+                        employer && employer.verified && React.createElement("span", { className: "text-[10px] font-bold uppercase tracking-wide text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 px-1.5 py-0.5 rounded flex items-center gap-1" }, React.createElement("i", { className: "fa-solid fa-circle-check" }), "Verified Employer"))),
+                React.createElement("button", { onClick: () => toggleSaveJob(profile.id, job, saved), className: "shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-ink-700" },
+                    React.createElement("i", { className: (saved ? "fa-solid" : "fa-regular") + " fa-bookmark text-lg " + (saved ? "text-brand-600" : "") }))),
+            React.createElement("div", { className: "flex flex-wrap gap-1.5 mb-4" },
+                job.category && React.createElement("span", { className: "text-xs font-semibold bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full" }, job.category),
+                job.location && React.createElement("span", { className: "text-xs font-semibold bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full" }, React.createElement("i", { className: "fa-solid fa-location-dot mr-1" }), job.location),
+                job.employmentType && React.createElement("span", { className: "text-xs font-semibold bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full" }, job.employmentType),
+                job.workMode && React.createElement("span", { className: "text-xs font-semibold bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full" }, job.workMode),
+                job.vacancies && React.createElement("span", { className: "text-xs font-semibold bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full" }, job.vacancies, " vacanc", job.vacancies == 1 ? 'y' : 'ies')),
+            React.createElement("div", { className: "grid grid-cols-2 gap-2.5 mb-4" },
+                React.createElement("div", { className: "bg-slate-50 dark:bg-ink-700 rounded-xl p-3" }, React.createElement("p", { className: "text-[11px] text-slate-400 font-semibold mb-0.5" }, "Salary"), React.createElement("p", { className: "font-bold text-sm text-brand-600 dark:text-brand-400" }, formatSalaryRange(job.salaryMin, job.salaryMax, job.salaryCurrency))),
+                React.createElement("div", { className: "bg-slate-50 dark:bg-ink-700 rounded-xl p-3" }, React.createElement("p", { className: "text-[11px] text-slate-400 font-semibold mb-0.5" }, "Application Deadline"), React.createElement("p", { className: "font-bold text-sm" }, job.deadline ? new Date(job.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Open until filled'))),
+            [['Job Description', job.description], ['Responsibilities', job.responsibilities], ['Requirements', job.requirements], ['Qualifications', job.qualifications], ['How to Apply', job.applicationInstructions]].map(([label, text]) => text && React.createElement("div", { key: label, className: "mb-4" },
+                React.createElement("h3", { className: "font-bold text-sm mb-1.5" }, label),
+                React.createElement("p", { className: "text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed" }, text))),
+            React.createElement("div", { className: "flex items-center gap-2.5 pt-3 border-t border-slate-100 dark:border-ink-700" },
+                !isOwner && (myApp ? React.createElement("div", { className: "flex-1 text-center py-3 rounded-xl font-semibold text-sm " + (APPLICATION_STATUS_COLORS[myApp.status] || APPLICATION_STATUS_COLORS.applied) }, "You applied \u2014 ", APPLICATION_STATUS_LABELS[myApp.status]) :
+                    job.status === 'approved' ? React.createElement("button", { onClick: () => go({ name: 'jobApply', id: job.id }), className: "flex-1 bg-brand-600 hover:bg-brand-700 text-white rounded-xl py-3 font-bold text-sm" }, "Apply Now") :
+                        React.createElement("div", { className: "flex-1 text-center py-3 rounded-xl font-semibold text-sm bg-slate-100 dark:bg-ink-700 text-slate-400" }, "Not accepting applications")),
+                isOwner && React.createElement("button", { onClick: () => go({ name: 'jobApplicants', jobId: job.id }), className: "flex-1 bg-brand-600 hover:bg-brand-700 text-white rounded-xl py-3 font-bold text-sm" }, "View Applicants (", job.applicationsCount || 0, ")"),
+                !isOwner && React.createElement("button", { onClick: () => setReportOpen(true), title: "Report this job", className: "w-11 h-11 rounded-xl border border-slate-200 dark:border-ink-700 text-slate-400 flex items-center justify-center shrink-0" }, React.createElement("i", { className: "fa-solid fa-flag" })))),
+        reportOpen && React.createElement(ReportModal, { title: "Report this job", onClose: () => setReportOpen(false), onSubmit: (reason) => reportJob(job, profile.id, reason).then(() => toast('Report submitted. Thank you.', 'success')) }));
+}
+function JobApplyScreen({ id, go }) {
+    const { profile } = useAuth();
+    const toast = useToast();
+    const job = useJob(id);
+    const myApp = useMyApplicationForJob(id, profile.id);
+    const [fullName, setFullName] = useState(profile.displayName || '');
+    const [email, setEmail] = useState(profile.email || '');
+    const [phone, setPhone] = useState(profile.phone || '');
+    const [location, setLocation] = useState('');
+    const [resumeFile, setResumeFile] = useState(null);
+    const [coverLetter, setCoverLetter] = useState('');
+    const [workExperience, setWorkExperience] = useState('');
+    const [education, setEducation] = useState('');
+    const [portfolioURL, setPortfolioURL] = useState('');
+    const [busy, setBusy] = useState(false);
+    if (job === undefined || myApp === undefined) return React.createElement(PostSkeleton, null);
+    if (job === null) return React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "This job posting is no longer available.");
+    if (myApp) { go({ name: 'job', id: id }); return null; }
+    if (job.status !== 'approved') {
+        return React.createElement("div", { className: "max-w-lg mx-auto text-center py-16" },
+            React.createElement("p", { className: "text-sm text-slate-400" }, "This job isn't currently accepting applications."),
+            React.createElement("button", { onClick: () => go({ name: 'job', id: id }), className: "mt-3 text-sm font-semibold text-brand-600" }, "Back to job"));
+    }
+    const submit = async (e) => {
+        e.preventDefault();
+        if (!fullName.trim() || !email.trim() || !phone.trim()) { toast('Please fill in your name, email and phone number', 'error'); return; }
+        setBusy(true);
+        try {
+            await applyToJob(job, profile, { fullName: fullName.trim(), email: email.trim(), phone: phone.trim(), location: location.trim(), coverLetter: coverLetter.trim(), workExperience: workExperience.trim(), education: education.trim(), portfolioURL: portfolioURL.trim() }, resumeFile);
+            toast('Application submitted!', 'success');
+            go({ name: 'job', id: id });
+        } catch (err) {
+            toast(friendlyError(err) || 'Could not submit your application', 'error');
+        } finally { setBusy(false); }
+    };
+    const field = (label, value, onChange, opts) => React.createElement("div", { className: "mb-3.5" },
+        React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, label, opts && opts.required ? ' *' : ''),
+        opts && opts.textarea
+            ? React.createElement("textarea", { value: value, onChange: onChange, rows: opts.rows || 3, placeholder: opts.placeholder, className: "w-full mt-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-700 bg-transparent text-sm resize-none" })
+            : React.createElement("input", { type: opts && opts.type || 'text', value: value, onChange: onChange, placeholder: opts && opts.placeholder, className: "w-full mt-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }));
+    return React.createElement("div", { className: "max-w-lg mx-auto" },
+        React.createElement("button", { onClick: () => go({ name: 'job', id: id }), className: "text-sm font-semibold text-slate-500 flex items-center gap-1.5 mb-3" }, React.createElement("i", { className: "fa-solid fa-arrow-left" }), "Back"),
+        React.createElement("h1", { className: "font-display font-extrabold text-xl mb-0.5" }, "Apply for ", job.title),
+        React.createElement("p", { className: "text-sm text-slate-400 mb-4" }, "at ", job.companyName),
+        React.createElement("form", { onSubmit: submit, className: "bg-white dark:bg-ink-800 rounded-2xl border border-slate-100 dark:border-ink-700 p-4 sm:p-5" },
+            field('Full Name', fullName, e => setFullName(e.target.value), { required: true }),
+            field('Email', email, e => setEmail(e.target.value), { required: true, type: 'email' }),
+            field('Phone Number', phone, e => setPhone(e.target.value), { required: true, type: 'tel' }),
+            field('Location', location, e => setLocation(e.target.value), { placeholder: 'City, State' }),
+            React.createElement("div", { className: "mb-3.5" },
+                React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Resume / CV (PDF or Word, max 5MB)"),
+                React.createElement("input", { type: "file", accept: ".pdf,.doc,.docx", onChange: e => setResumeFile(e.target.files[0] || null), className: "w-full mt-1 text-sm" }),
+                resumeFile && React.createElement("p", { className: "text-xs text-emerald-600 mt-1" }, React.createElement("i", { className: "fa-solid fa-paperclip mr-1" }), resumeFile.name)),
+            field('Cover Letter', coverLetter, e => setCoverLetter(e.target.value), { textarea: true, rows: 4, placeholder: 'Tell the employer why you\u2019re a great fit\u2026' }),
+            field('Work Experience', workExperience, e => setWorkExperience(e.target.value), { textarea: true, rows: 3, placeholder: 'Summarize your relevant work experience\u2026' }),
+            field('Education', education, e => setEducation(e.target.value), { textarea: true, rows: 2, placeholder: 'Your educational background\u2026' }),
+            field('Portfolio / Website Link', portfolioURL, e => setPortfolioURL(e.target.value), { placeholder: 'https://\u2026' }),
+            job.applicationInstructions && React.createElement("div", { className: "bg-slate-50 dark:bg-ink-700 rounded-xl p-3 mb-3.5 text-sm text-slate-600 dark:text-slate-300" },
+                React.createElement("p", { className: "font-semibold text-xs text-slate-400 mb-1" }, "Note from employer"), job.applicationInstructions),
+            React.createElement("button", { type: "submit", disabled: busy, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-bold text-sm" }, busy ? 'Submitting\u2026' : 'Submit Application')));
+}
+function JobPostScreen({ id, go }) {
+    const { profile } = useAuth();
+    const toast = useToast();
+    const categories = useJobCategories();
+    const existing = useJob(id);
+    const employer = useEmployerProfile(profile.id);
+    const [title, setTitle] = useState('');
+    const [companyName, setCompanyName] = useState('');
+    const [companyLogoFile, setCompanyLogoFile] = useState(null);
+    const [companyLogoPreview, setCompanyLogoPreview] = useState(null);
+    const [companyWebsite, setCompanyWebsite] = useState('');
+    const [category, setCategory] = useState('');
+    const [description, setDescription] = useState('');
+    const [responsibilities, setResponsibilities] = useState('');
+    const [requirements, setRequirements] = useState('');
+    const [qualifications, setQualifications] = useState('');
+    const [salaryMin, setSalaryMin] = useState('');
+    const [salaryMax, setSalaryMax] = useState('');
+    const [location, setLocation] = useState('');
+    const [employmentType, setEmploymentType] = useState('Full-time');
+    const [workMode, setWorkMode] = useState('On-site');
+    const [vacancies, setVacancies] = useState('1');
+    const [deadline, setDeadline] = useState('');
+    const [applicationInstructions, setApplicationInstructions] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [loaded, setLoaded] = useState(!id);
+    useEffect(() => {
+        if (!id || existing === undefined) return;
+        if (existing === null) { setLoaded(true); return; }
+        setTitle(existing.title || ''); setCompanyName(existing.companyName || ''); setCompanyLogoPreview(existing.companyLogo || null);
+        setCategory(existing.category || ''); setDescription(existing.description || ''); setResponsibilities(existing.responsibilities || '');
+        setRequirements(existing.requirements || ''); setQualifications(existing.qualifications || '');
+        setSalaryMin(existing.salaryMin || ''); setSalaryMax(existing.salaryMax || ''); setLocation(existing.location || '');
+        setEmploymentType(existing.employmentType || 'Full-time'); setWorkMode(existing.workMode || 'On-site');
+        setVacancies(String(existing.vacancies || 1)); setDeadline(existing.deadline || ''); setApplicationInstructions(existing.applicationInstructions || '');
+        setLoaded(true);
+    }, [id, existing]);
+    useEffect(() => { if (!id && employer && !companyName) { setCompanyName(employer.companyName || ''); setCompanyLogoPreview(employer.companyLogo || null); } }, [employer, id]);
+    if (id && !loaded) return React.createElement(PostSkeleton, null);
+    if (id && existing === null) return React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "This job no longer exists.");
+    if (id && existing && existing.employerId !== profile.id) return React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "You can only edit your own job posts.");
+    const onLogoFile = (file) => { if (!file) return; setCompanyLogoFile(file); setCompanyLogoPreview(URL.createObjectURL(file)); };
+    const submit = async (e) => {
+        e.preventDefault();
+        if (!title.trim() || !companyName.trim() || !category || !description.trim() || !location.trim()) { toast('Please fill in title, company name, category, description and location', 'error'); return; }
+        setBusy(true);
+        try {
+            const fields = {
+                title: title.trim(), companyName: companyName.trim(), companyWebsite: companyWebsite.trim(),
+                category, description: description.trim(), responsibilities: responsibilities.trim(), requirements: requirements.trim(), qualifications: qualifications.trim(),
+                salaryMin: salaryMin ? Number(salaryMin) : null, salaryMax: salaryMax ? Number(salaryMax) : null, salaryCurrency: '\u20A6',
+                location: location.trim(), employmentType, workMode, vacancies: Number(vacancies) || 1, deadline: deadline || null,
+                applicationInstructions: applicationInstructions.trim()
+            };
+            if (id) {
+                await updateJob(id, profile.id, fields, companyLogoFile);
+                toast('Job updated \u2014 sent for re-approval', 'success');
+                go({ name: 'job', id: id });
+            } else {
+                if (companyLogoPreview && !companyLogoFile) fields.companyLogo = companyLogoPreview;
+                const newId = await createJob(profile.id, fields, companyLogoFile);
+                toast('Job submitted for approval!', 'success');
+                go({ name: 'job', id: newId });
+            }
+        } catch (err) {
+            toast(friendlyError(err) || 'Could not save this job', 'error');
+        } finally { setBusy(false); }
+    };
+    const field = (label, value, onChange, opts) => React.createElement("div", { className: "mb-3.5" },
+        React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, label, opts && opts.required ? ' *' : ''),
+        opts && opts.textarea
+            ? React.createElement("textarea", { value: value, onChange: onChange, rows: opts.rows || 3, placeholder: opts.placeholder, className: "w-full mt-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-700 bg-transparent text-sm resize-none" })
+            : React.createElement("input", { type: opts && opts.type || 'text', value: value, onChange: onChange, placeholder: opts && opts.placeholder, className: "w-full mt-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }));
+    return React.createElement("div", { className: "max-w-lg mx-auto" },
+        React.createElement("button", { onClick: () => go({ name: 'jobs', tab: 'myPosts' }), className: "text-sm font-semibold text-slate-500 flex items-center gap-1.5 mb-3" }, React.createElement("i", { className: "fa-solid fa-arrow-left" }), "Back"),
+        React.createElement("h1", { className: "font-display font-extrabold text-xl mb-4" }, id ? 'Edit Job Post' : 'Post a Job \u2014 100% Free'),
+        React.createElement("form", { onSubmit: submit, className: "bg-white dark:bg-ink-800 rounded-2xl border border-slate-100 dark:border-ink-700 p-4 sm:p-5" },
+            field('Job Title', title, e => setTitle(e.target.value), { required: true, placeholder: 'e.g. Frontend Developer' }),
+            React.createElement("div", { className: "flex items-center gap-3 mb-3.5" },
+                React.createElement("div", { className: "w-14 h-14 rounded-xl bg-slate-100 dark:bg-ink-700 shrink-0 overflow-hidden flex items-center justify-center" },
+                    companyLogoPreview ? React.createElement("img", { src: companyLogoPreview, className: "w-full h-full object-cover" }) : React.createElement("i", { className: "fa-solid fa-building text-slate-400" })),
+                React.createElement("label", { className: "text-xs font-semibold text-brand-600 cursor-pointer" }, "Upload company logo",
+                    React.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: e => onLogoFile(e.target.files[0]) }))),
+            field('Company Name', companyName, e => setCompanyName(e.target.value), { required: true }),
+            field('Company Website', companyWebsite, e => setCompanyWebsite(e.target.value), { placeholder: 'https://\u2026' }),
+            React.createElement("div", { className: "mb-3.5" },
+                React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Job Category *"),
+                React.createElement("select", { value: category, onChange: e => setCategory(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-700 bg-transparent text-sm" },
+                    React.createElement("option", { value: "" }, "Select a category"), categories.map(c => React.createElement("option", { key: c, value: c }, c)))),
+            field('Job Description', description, e => setDescription(e.target.value), { textarea: true, rows: 4, required: true }),
+            field('Responsibilities', responsibilities, e => setResponsibilities(e.target.value), { textarea: true, rows: 3 }),
+            field('Requirements', requirements, e => setRequirements(e.target.value), { textarea: true, rows: 3 }),
+            field('Qualifications', qualifications, e => setQualifications(e.target.value), { textarea: true, rows: 3 }),
+            React.createElement("div", { className: "grid grid-cols-2 gap-2.5 mb-3.5" },
+                field('Min Salary (\u20A6)', salaryMin, e => setSalaryMin(e.target.value), { type: 'number' }),
+                field('Max Salary (\u20A6)', salaryMax, e => setSalaryMax(e.target.value), { type: 'number' })),
+            field('Location', location, e => setLocation(e.target.value), { required: true, placeholder: 'City, State' }),
+            React.createElement("div", { className: "grid grid-cols-2 gap-2.5 mb-3.5" },
+                React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Employment Type"),
+                    React.createElement("select", { value: employmentType, onChange: e => setEmploymentType(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }, JOB_EMPLOYMENT_TYPES.map(t => React.createElement("option", { key: t, value: t }, t)))),
+                React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Work Mode"),
+                    React.createElement("select", { value: workMode, onChange: e => setWorkMode(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }, JOB_WORK_MODES.map(m => React.createElement("option", { key: m, value: m }, m))))),
+            React.createElement("div", { className: "grid grid-cols-2 gap-2.5 mb-3.5" },
+                field('Number of Vacancies', vacancies, e => setVacancies(e.target.value), { type: 'number' }),
+                React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Application Deadline"),
+                    React.createElement("input", { type: "date", value: deadline, onChange: e => setDeadline(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }))),
+            field('Application Instructions', applicationInstructions, e => setApplicationInstructions(e.target.value), { textarea: true, rows: 2, placeholder: 'Anything applicants should know before applying' }),
+            React.createElement("p", { className: "text-xs text-slate-400 mb-3.5" }, React.createElement("i", { className: "fa-solid fa-circle-info mr-1" }), "Posting is completely free. Your job will go live after a quick admin review."),
+            React.createElement("button", { type: "submit", disabled: busy, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-bold text-sm" }, busy ? 'Saving\u2026' : (id ? 'Save Changes' : 'Submit Job for Approval'))));
+}
+function ApplicantRow({ app, go }) {
+    const { profile } = useAuth();
+    const toast = useToast();
+    const [busy, setBusy] = useState(false);
+    const [messaging, setMessaging] = useState(false);
+    const changeStatus = async (status) => {
+        setBusy(true);
+        try { await updateApplicationStatus(app, status); toast('Status updated to ' + APPLICATION_STATUS_LABELS[status], 'success'); }
+        catch (e) { toast(friendlyError(e), 'error'); } finally { setBusy(false); }
+    };
+    const contactApplicant = async () => {
+        setMessaging(true);
+        try { const chatId = await ensureChat(profile.id, app.applicantId); go({ name: 'chat', chatId, otherUid: app.applicantId }); }
+        catch (e) { toast(friendlyError(e), 'error'); } finally { setMessaging(false); }
+    };
+    return React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-xl border border-slate-100 dark:border-ink-700 p-3.5" },
+        React.createElement("div", { className: "flex items-center justify-between gap-2 mb-2" },
+            React.createElement("div", { className: "min-w-0 cursor-pointer", onClick: () => go({ name: 'profile', uid: app.applicantId }) },
+                React.createElement("p", { className: "font-bold text-[15px] truncate" }, app.fullName),
+                React.createElement("p", { className: "text-xs text-slate-400 truncate" }, app.email, " \u00B7 ", app.phone)),
+            React.createElement("span", { className: "shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full " + (APPLICATION_STATUS_COLORS[app.status] || APPLICATION_STATUS_COLORS.applied) }, APPLICATION_STATUS_LABELS[app.status] || 'Applied')),
+        app.coverLetter && React.createElement("p", { className: "text-sm text-slate-600 dark:text-slate-300 mb-2 line-clamp-3" }, app.coverLetter),
+        React.createElement("div", { className: "flex flex-wrap gap-2 mb-2" },
+            app.resumeURL && React.createElement("a", { href: app.resumeURL, target: "_blank", rel: "noopener noreferrer", className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 flex items-center gap-1.5" }, React.createElement("i", { className: "fa-solid fa-file-arrow-down" }), "View/Download CV"),
+            app.portfolioURL && React.createElement("a", { href: app.portfolioURL, target: "_blank", rel: "noopener noreferrer", className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300" }, "Portfolio"),
+            React.createElement("button", { onClick: () => go({ name: 'profile', uid: app.applicantId }), className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300" }, "View Profile"),
+            React.createElement("button", { onClick: contactApplicant, disabled: messaging, className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300" }, "Contact")),
+        React.createElement("select", { disabled: busy, value: app.status, onChange: e => changeStatus(e.target.value), className: "w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm font-semibold" },
+            APPLICATION_STATUSES.map(s => React.createElement("option", { key: s, value: s }, APPLICATION_STATUS_LABELS[s]))),
+        React.createElement("p", { className: "text-[11px] text-slate-400 mt-2" }, "Applied ", timeAgo(app.createdAt)));
+}
+function JobApplicantsScreen({ jobId, go }) {
+    const { profile } = useAuth();
+    const job = useJob(jobId);
+    const applicants = useJobApplicants(jobId);
+    const [statusFilter, setStatusFilter] = useState('');
+    if (job === undefined) return React.createElement(PostSkeleton, null);
+    if (job === null) return React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "This job no longer exists.");
+    if (job.employerId !== profile.id) return React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, "You can only view applicants for your own job posts.");
+    const shown = (applicants || []).filter(a => !statusFilter || a.status === statusFilter);
+    return React.createElement("div", { className: "max-w-lg mx-auto" },
+        React.createElement("button", { onClick: () => go({ name: 'jobs', tab: 'myPosts' }), className: "text-sm font-semibold text-slate-500 flex items-center gap-1.5 mb-3" }, React.createElement("i", { className: "fa-solid fa-arrow-left" }), "Back to My Job Posts"),
+        React.createElement("h1", { className: "font-display font-extrabold text-xl mb-0.5" }, job.title),
+        React.createElement("p", { className: "text-sm text-slate-400 mb-4" }, applicants === null ? 'Loading\u2026' : (applicants.length + ' applicant' + (applicants.length === 1 ? '' : 's'))),
+        React.createElement("div", { className: "flex gap-2 overflow-x-auto mb-3", style: { scrollbarWidth: 'none' } },
+            React.createElement("button", { onClick: () => setStatusFilter(''), className: "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold " + (!statusFilter ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300") }, "All"),
+            APPLICATION_STATUSES.map(s => React.createElement("button", { key: s, onClick: () => setStatusFilter(s), className: "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold " + (statusFilter === s ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300") }, APPLICATION_STATUS_LABELS[s]))),
+        applicants !== null && shown.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-16" }, applicants.length === 0 ? "No applications yet." : "No applicants with this status."),
+        React.createElement("div", { className: "space-y-2.5" }, shown.map(a => React.createElement(ApplicantRow, { key: a.id, app: a, go: go }))));
 }
 /* ============================== REELS: SHARED HOOKS & TILE ============================== */
 function useReelLiveDoc(path) {
@@ -13647,45 +14400,6 @@ async function setDatingActive(uid, active) {
     await db.collection('datingProfiles').doc(uid).update({ active });
 }
 
-/* ============================== DATING PIN ==============================
- * Every Dating member sets a short numeric PIN that gates entry to the Dating
- * tab (separate from their main Yeloface login). The PIN itself is never
- * stored — only a SHA-256 hash of it, on datingProfiles/{uid}.pinHash — and
- * unlocking is remembered for the current browser tab only (sessionStorage),
- * so it's asked for again next time the tab/app is opened. Members can change
- * their PIN at any time from Dating → My profile → Security. ---- */
-const DATING_PIN_LENGTH = 4;
-async function hashDatingPin(pin) {
-    const enc = new TextEncoder().encode('yeloface-dating:' + pin);
-    const digest = await crypto.subtle.digest('SHA-256', enc);
-    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-async function setDatingPin(uid, pin) {
-    const pinHash = await hashDatingPin(pin);
-    await db.collection('datingProfiles').doc(uid).set({ pinHash, pinSetAt: FieldValue.serverTimestamp() }, { merge: true });
-}
-async function verifyDatingPin(dp, pin) {
-    if (!dp || !dp.pinHash) return false;
-    const pinHash = await hashDatingPin(pin);
-    return pinHash === dp.pinHash;
-}
-function datingPinUnlockKey(uid) { return 'yeloface_dating_pin_unlocked_' + uid; }
-function isDatingPinUnlocked(uid) {
-    try { return sessionStorage.getItem(datingPinUnlockKey(uid)) === '1'; } catch (e) { return false; }
-}
-function markDatingPinUnlocked(uid) {
-    try { sessionStorage.setItem(datingPinUnlockKey(uid), '1'); } catch (e) { /* private mode etc. — fine, will just re-prompt */ }
-}
-function clearDatingPinUnlock(uid) {
-    try { sessionStorage.removeItem(datingPinUnlockKey(uid)); } catch (e) { }
-}
-function useDatingPinUnlocked(uid) {
-    const [unlocked, setUnlocked] = useState(() => isDatingPinUnlocked(uid));
-    const unlock = useCallback(() => { markDatingPinUnlocked(uid); setUnlocked(true); }, [uid]);
-    const lock = useCallback(() => { clearDatingPinUnlock(uid); setUnlocked(false); }, [uid]);
-    return [unlocked, unlock, lock];
-}
-
 /* ---- profile completion % (self-facing only — not shown to other users) ---- */
 function datingProfileCompletion(dp) {
     if (!dp) return 0;
@@ -13741,11 +14455,13 @@ async function adminSetDatingVerification(uid, field, value, adminUid, adminEmai
     await db.collection('datingProfiles').doc(uid).update({ [field]: value });
     logAdminAction(adminUid, adminEmail, value ? `verify_dating_${field}` : `unverify_dating_${field}`, 'datingProfile', uid, '');
 }
-/* Lets an admin manually grant/revoke the KYC-verified badge from the Users tab, even when there is
-   no formal datingKyc application to approve (e.g. while "Require ID verification" is turned off). */
-async function adminSetDatingKycStatus(uid, verified, adminUid, adminEmail) {
-    await db.collection('datingProfiles').doc(uid).set({ kycStatus: verified ? 'verified' : 'none', verified }, { merge: true });
-    logAdminAction(adminUid, adminEmail, verified ? 'manually_verify_dating_kyc' : 'manually_unverify_dating_kyc', 'datingProfile', uid, '');
+// Manually mark a member's ID/selfie (KYC) verified without a formal submission — mainly useful
+// while the admin's "Require ID verification" toggle is off (so nothing is coming through the
+// normal KYC review queue) but the admin still wants to hand-pick trusted members to show a
+// verified badge, or to fast-track someone whose documents were reviewed some other way.
+async function adminManualKycVerify(uid, verify, adminUid, adminEmail) {
+    await db.collection('datingProfiles').doc(uid).update({ kycStatus: verify ? 'verified' : 'none' });
+    logAdminAction(adminUid, adminEmail, verify ? 'manual_verify_dating_kyc' : 'manual_unverify_dating_kyc', 'datingProfile', uid, '');
 }
 
 /* ---- discover / likes / matches ---- */
@@ -13780,36 +14496,37 @@ function computeDatingCompatibility(me, p) {
     if ((p.photos || []).length >= 2) score += 2;
     return Math.max(1, Math.min(99, Math.round(score)));
 }
-function useDatingAllMembers(me, cfg) {
+function useDatingAllMembers(me) {
+    const cfg = useDatingConfig();
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(true);
-    const kycRequired = !cfg || cfg.kycRequired !== false;
     useEffect(() => {
         if (!me) return;
         let cancelled = false;
         setLoading(true);
-        // Only filter by 'active' server-side (single-field, always indexed). profileComplete and
-        // kycStatus are applied client-side so this respects the admin's kycRequired toggle live,
-        // instead of hardcoding a verified-only filter that hides members when KYC is disabled.
-        db.collection('datingProfiles').where('active', '==', true).limit(500).get()
+        // Only require KYC-verified when the admin's "Require ID verification" toggle is on —
+        // this used to hardcode kycStatus=='verified' regardless of that setting, which is why
+        // newly registered members stayed invisible on Discover/Suggested/Members even after an
+        // admin turned KYC off.
+        let q = db.collection('datingProfiles').where('profileComplete', '==', true).where('active', '==', true);
+        if (cfg.kycRequired !== false) q = q.where('kycStatus', '==', 'verified');
+        q.limit(500).get()
             .then(snap => {
                 if (cancelled) return;
                 const members = snap.docs.map(d => Object.assign({ id: d.id }, d.data()))
-                    .filter(p => p.profileComplete === true)
-                    .filter(p => !kycRequired || p.kycStatus === 'verified')
                     .filter(p => p.id !== me.id && !(p.blockedUids || []).includes(me.id));
                 setList(members);
                 setLoading(false);
             })
             .catch(() => { if (!cancelled) { setList([]); setLoading(false); } });
         return () => { cancelled = true; };
-    }, [me && me.id, kycRequired]);
+    }, [me && me.id, cfg.kycRequired]);
     return { list, loading };
 }
-function useDatingCandidates(me, filters, refreshKey, cfg) {
+function useDatingCandidates(me, filters, refreshKey) {
+    const cfg = useDatingConfig();
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(true);
-    const kycRequired = !cfg || cfg.kycRequired !== false;
     useEffect(() => {
         if (!me) return;
         let cancelled = false;
@@ -13822,12 +14539,10 @@ function useDatingCandidates(me, filters, refreshKey, cfg) {
             const seen = new Set([me.id, ...(me.blockedUids || [])]);
             likesSnap.docs.forEach(d => seen.add(d.data().to));
             passesSnap.docs.forEach(d => seen.add(d.data().to));
-            // Only filter by 'active' server-side; profileComplete and kycStatus are applied
-            // client-side so results respect the admin's kycRequired toggle live (see useDatingAllMembers).
-            const snap = await db.collection('datingProfiles').where('active', '==', true).limit(300).get().catch(() => ({ docs: [] }));
+            let q = db.collection('datingProfiles').where('profileComplete', '==', true).where('active', '==', true);
+            if (cfg.kycRequired !== false) q = q.where('kycStatus', '==', 'verified');
+            const snap = await q.limit(150).get().catch(() => ({ docs: [] }));
             let candidates = snap.docs.map(d => Object.assign({ id: d.id }, d.data()))
-                .filter(p => p.profileComplete === true)
-                .filter(p => !kycRequired || p.kycStatus === 'verified')
                 .filter(p => !seen.has(p.id) && !(p.blockedUids || []).includes(me.id));
             if (filters) {
                 if (filters.interestedIn && filters.interestedIn !== 'Everyone') {
@@ -13843,7 +14558,7 @@ function useDatingCandidates(me, filters, refreshKey, cfg) {
             if (!cancelled) { setList(candidates); setLoading(false); }
         })();
         return () => { cancelled = true; };
-    }, [me && me.id, JSON.stringify(filters), refreshKey, kycRequired]);
+    }, [me && me.id, JSON.stringify(filters), refreshKey, cfg.kycRequired]);
     return { list, loading };
 }
 async function likeDatingProfile(meId, targetId) {
@@ -13938,11 +14653,130 @@ function DatingCardPhoto({ url, name, matchScore }) {
 }
 
 /* ================= GATE: routes the user through fee → KYC → profile setup ================= */
+/* ---- Dating PIN lock ----
+ * Every Dating member sets a 4–6 digit PIN the first time they open Dating. After that,
+ * leaving the Dating section (navigating to any non-Dating route, e.g. Home, Messages, Menu)
+ * clears the in-memory "unlocked" flag — see the effect in App() that watches route.name —
+ * so coming back to Dating always asks for the PIN again. The unlocked flag deliberately
+ * lives only in memory (window.__datingLock), never localStorage/sessionStorage, so it can't
+ * persist across a real app restart or be toggled by editing browser storage.
+ * The PIN itself is never stored in plaintext — only a SHA-256 hash (datingProfiles.pinHash).
+ */
+window.__datingLock = window.__datingLock || { unlocked: false };
+function useDatingPinLock() {
+    const [unlocked, setUnlockedState] = useState(window.__datingLock.unlocked);
+    const unlock = () => { window.__datingLock.unlocked = true; setUnlockedState(true); };
+    const lock = () => { window.__datingLock.unlocked = false; setUnlockedState(false); };
+    return { unlocked, unlock, lock };
+}
+async function hashDatingPin(pin) {
+    const enc = new TextEncoder().encode('yeloface-dating-pin:' + pin);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function setDatingPin(uid, pin) {
+    const hash = await hashDatingPin(pin);
+    await db.collection('datingProfiles').doc(uid).update({ pinHash: hash, pinSetAt: FieldValue.serverTimestamp() });
+}
+async function verifyDatingPin(dp, pin) {
+    const hash = await hashDatingPin(pin);
+    return hash === dp.pinHash;
+}
+function DatingPinInput({ value, onChange, autoFocus }) {
+    return React.createElement("input", {
+        autoFocus: autoFocus, type: "password", inputMode: "numeric", pattern: "[0-9]*", maxLength: 6,
+        value: value, onChange: e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6)),
+        placeholder: "\u2022\u2022\u2022\u2022", className: "w-full text-center tracking-[0.6em] text-2xl font-bold px-3 py-3.5 rounded-xl border border-slate-200 dark:border-ink-700 bg-transparent"
+    });
+}
+function DatingPinSetupStep({ dp }) {
+    const { profile } = useAuth();
+    const toast = useToast();
+    const lock = useDatingPinLock();
+    const [pin, setPin] = useState('');
+    const [confirmPin, setConfirmPin] = useState('');
+    const [busy, setBusy] = useState(false);
+    const submit = async (e) => {
+        e.preventDefault();
+        if (pin.length < 4) { toast('PIN must be at least 4 digits', 'error'); return; }
+        if (pin !== confirmPin) { toast('PINs don\u2019t match \u2014 try again', 'error'); return; }
+        setBusy(true);
+        try {
+            await setDatingPin(profile.id, pin);
+            lock.unlock();
+            toast('PIN set! You\u2019ll enter this each time you open Dating.', 'success');
+        } catch (e2) { toast(friendlyError(e2), 'error'); }
+        finally { setBusy(false); }
+    };
+    return React.createElement("div", { className: "max-w-xs mx-auto text-center py-12" },
+        React.createElement("div", { className: "w-14 h-14 rounded-full bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center mx-auto mb-4" }, React.createElement("i", { className: "fa-solid fa-lock text-2xl text-brand-500" })),
+        React.createElement("h2", { className: "font-display font-bold text-lg mb-1" }, "Set a Dating PIN"),
+        React.createElement("p", { className: "text-sm text-slate-400 mb-6" }, "Protects your Dating profile. You'll be asked for this PIN every time you open Dating \u2014 you can change it later from your profile."),
+        React.createElement("form", { onSubmit: submit, className: "space-y-3" },
+            React.createElement(DatingPinInput, { value: pin, onChange: setPin, autoFocus: true }),
+            React.createElement(DatingPinInput, { value: confirmPin, onChange: setConfirmPin }),
+            React.createElement("button", { type: "submit", disabled: busy || pin.length < 4, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-bold text-sm" }, busy ? 'Saving\u2026' : 'Set PIN')));
+}
+function DatingPinEntryStep({ dp }) {
+    const toast = useToast();
+    const lock = useDatingPinLock();
+    const [pin, setPin] = useState('');
+    const [busy, setBusy] = useState(false);
+    const submit = async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        try {
+            const ok = await verifyDatingPin(dp, pin);
+            if (ok) lock.unlock();
+            else { setPin(''); toast('Incorrect PIN', 'error'); }
+        } catch (e2) { toast(friendlyError(e2), 'error'); }
+        finally { setBusy(false); }
+    };
+    return React.createElement("div", { className: "max-w-xs mx-auto text-center py-12" },
+        React.createElement("div", { className: "w-14 h-14 rounded-full bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center mx-auto mb-4" }, React.createElement("i", { className: "fa-solid fa-lock text-2xl text-brand-500" })),
+        React.createElement("h2", { className: "font-display font-bold text-lg mb-1" }, "Enter your Dating PIN"),
+        React.createElement("p", { className: "text-sm text-slate-400 mb-6" }, "Enter your PIN to continue to Dating."),
+        React.createElement("form", { onSubmit: submit, className: "space-y-3" },
+            React.createElement(DatingPinInput, { value: pin, onChange: setPin, autoFocus: true }),
+            React.createElement("button", { type: "submit", disabled: busy || pin.length < 4, className: "w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl py-3 font-bold text-sm" }, busy ? 'Checking\u2026' : 'Unlock')),
+        React.createElement("p", { className: "text-xs text-slate-400 mt-5" }, "Forgot your PIN? Contact support to have it reset."));
+}
+function DatingChangePinModal({ dp, onClose }) {
+    const { profile } = useAuth();
+    const toast = useToast();
+    const [currentPin, setCurrentPin] = useState('');
+    const [newPin, setNewPin] = useState('');
+    const [confirmPin, setConfirmPin] = useState('');
+    const [busy, setBusy] = useState(false);
+    const submit = async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        try {
+            const correct = await verifyDatingPin(dp, currentPin);
+            if (!correct) { toast('Current PIN is incorrect', 'error'); setBusy(false); return; }
+            if (newPin.length < 4) { toast('New PIN must be at least 4 digits', 'error'); setBusy(false); return; }
+            if (newPin !== confirmPin) { toast('New PINs don\u2019t match', 'error'); setBusy(false); return; }
+            await setDatingPin(profile.id, newPin);
+            toast('PIN changed!', 'success');
+            onClose();
+        } catch (e2) { toast(friendlyError(e2), 'error'); setBusy(false); }
+    };
+    return React.createElement("div", { className: "fixed inset-0 z-[200] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4", onClick: onClose },
+        React.createElement("div", { onClick: e => e.stopPropagation(), className: "bg-white dark:bg-ink-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-xs p-5" },
+            React.createElement("h3", { className: "font-display font-bold text-lg mb-4 text-center" }, "Change Dating PIN"),
+            React.createElement("form", { onSubmit: submit, className: "space-y-3" },
+                React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Current PIN"), React.createElement(DatingPinInput, { value: currentPin, onChange: setCurrentPin, autoFocus: true })),
+                React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "New PIN"), React.createElement(DatingPinInput, { value: newPin, onChange: setNewPin })),
+                React.createElement("div", null, React.createElement("label", { className: "text-xs font-semibold text-slate-500" }, "Confirm New PIN"), React.createElement(DatingPinInput, { value: confirmPin, onChange: setConfirmPin })),
+                React.createElement("div", { className: "flex gap-2 pt-1" },
+                    React.createElement("button", { type: "button", onClick: onClose, className: "flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-ink-700 text-sm font-semibold" }, "Cancel"),
+                    React.createElement("button", { type: "submit", disabled: busy, className: "flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-semibold" }, busy ? 'Saving\u2026' : 'Save')))));
+}
 function DatingGate({ go }) {
     const { profile } = useAuth();
     const dp = useDatingProfile(profile.id);
     const cfg = useDatingConfig();
-    const [pinUnlocked, unlockPin] = useDatingPinUnlocked(profile.id);
+    const lock = useDatingPinLock();
     useEffect(() => { if (dp === null) ensureDatingDoc(profile.id); }, [dp, profile.id]);
     if (dp === undefined || dp === null) {
         return React.createElement("div", { className: "py-16 flex justify-center" }, React.createElement("div", { className: "w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" }));
@@ -13953,10 +14787,8 @@ function DatingGate({ go }) {
             React.createElement("p", { className: "font-semibold text-slate-600 dark:text-slate-300" }, "Your Dating account has been banned."),
             React.createElement("p", { className: "text-sm mt-1" }, "Contact support if you believe this is a mistake."));
     }
-    /* Every Dating member needs a PIN to enter the Dating tab: first-time members create one,
-       returning members (each new tab/session) re-enter it before anything else loads. */
-    if (!dp.pinHash) return React.createElement(DatingPinSetupStep, { profile: profile, onDone: unlockPin });
-    if (!pinUnlocked) return React.createElement(DatingPinEntryStep, { dp: dp, onUnlock: unlockPin });
+    if (!dp.pinHash) return React.createElement(DatingPinSetupStep, { dp: dp });
+    if (!lock.unlocked) return React.createElement(DatingPinEntryStep, { dp: dp });
     if (!dp.gender) return React.createElement(DatingGenderStep, { dp: dp });
     if (cfg.kycRequired !== false && dp.kycStatus !== 'verified') return React.createElement(DatingKycStep, { dp: dp });
     if (!dp.profileComplete) return React.createElement(DatingProfileSetupStep, { dp: dp });
@@ -13967,134 +14799,6 @@ function DatingGate({ go }) {
             React.createElement("button", { onClick: () => setDatingActive(profile.id, true), className: "mt-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl px-5 py-2.5 text-sm font-semibold" }, "Reactivate my profile"));
     }
     return React.createElement(DatingHomeScreen, { dp: dp, go: go });
-}
-
-/* Small numeric keypad shared by PIN setup / entry / change screens. `value` is the digit
-   string typed so far; calls onChange with the updated string (capped at DATING_PIN_LENGTH). */
-function DatingPinPad({ value, onChange, disabled }) {
-    const press = (d) => { if (disabled) return; if (value.length >= DATING_PIN_LENGTH) return; onChange(value + d); };
-    const backspace = () => { if (disabled) return; onChange(value.slice(0, -1)); };
-    return React.createElement("div", { className: "max-w-[220px] mx-auto" },
-        React.createElement("div", { className: "flex items-center justify-center gap-3 mb-6" },
-            Array.from({ length: DATING_PIN_LENGTH }).map((_, i) => React.createElement("span", { key: i, className: "w-3.5 h-3.5 rounded-full border-2 border-brand-500 " + (i < value.length ? "bg-brand-500" : "bg-transparent") }))),
-        React.createElement("div", { className: "grid grid-cols-3 gap-3" },
-            ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => React.createElement("button", { key: d, type: "button", disabled: disabled, onClick: () => press(d), className: "h-14 rounded-2xl bg-white dark:bg-ink-800 border border-slate-200 dark:border-ink-700 text-lg font-semibold hover:border-brand-500 disabled:opacity-50" }, d)),
-            React.createElement("div", null),
-            React.createElement("button", { type: "button", disabled: disabled, onClick: () => press('0'), className: "h-14 rounded-2xl bg-white dark:bg-ink-800 border border-slate-200 dark:border-ink-700 text-lg font-semibold hover:border-brand-500 disabled:opacity-50" }, "0"),
-            React.createElement("button", { type: "button", disabled: disabled, onClick: backspace, className: "h-14 rounded-2xl flex items-center justify-center text-slate-400 disabled:opacity-50" }, React.createElement("i", { className: "fa-solid fa-delete-left" }))));
-}
-
-/* First-time flow: every Dating member is required to create a PIN before they can do
-   anything else in Dating (before even picking a gender). Ask twice to guard against typos. */
-function DatingPinSetupStep({ profile, onDone }) {
-    const toast = useToast();
-    const [stage, setStage] = useState('create'); // 'create' -> 'confirm'
-    const [pin, setPin] = useState('');
-    const [confirmPin, setConfirmPin] = useState('');
-    const [busy, setBusy] = useState(false);
-    useEffect(() => {
-        if (stage === 'create' && pin.length === DATING_PIN_LENGTH) { setStage('confirm'); }
-    }, [pin, stage]);
-    useEffect(() => {
-        if (stage !== 'confirm' || confirmPin.length !== DATING_PIN_LENGTH) return;
-        (async () => {
-            if (confirmPin !== pin) {
-                toast("PINs didn't match — try again", 'error');
-                setPin(''); setConfirmPin(''); setStage('create');
-                return;
-            }
-            setBusy(true);
-            try {
-                await setDatingPin(profile.id, pin);
-                toast('Dating PIN created', 'success');
-                onDone();
-            } catch (e) { toast(friendlyError(e), 'error'); setBusy(false); setPin(''); setConfirmPin(''); setStage('create'); }
-        })();
-    }, [confirmPin, stage]);
-    return React.createElement("div", { className: "max-w-sm mx-auto text-center py-10" },
-        React.createElement("i", { className: "fa-solid fa-lock text-4xl text-rose-500 mb-4" }),
-        React.createElement("h2", { className: "font-display text-xl font-bold mb-2" }, stage === 'create' ? 'Create your Dating PIN' : 'Confirm your Dating PIN'),
-        React.createElement("p", { className: "text-sm text-slate-500 dark:text-slate-400 mb-6" },
-            stage === 'create' ? "Choose a " + DATING_PIN_LENGTH + "-digit PIN. You'll enter it each time you open Dating, and can change it any time from your Dating profile." : "Enter it once more to confirm."),
-        React.createElement(DatingPinPad, { value: stage === 'create' ? pin : confirmPin, onChange: stage === 'create' ? setPin : setConfirmPin, disabled: busy }));
-}
-
-/* Returning members: PIN is required again for each new tab/session before Dating loads. */
-function DatingPinEntryStep({ dp, onUnlock }) {
-    const toast = useToast();
-    const [pin, setPin] = useState('');
-    const [busy, setBusy] = useState(false);
-    const [shake, setShake] = useState(false);
-    useEffect(() => {
-        if (pin.length !== DATING_PIN_LENGTH || busy) return;
-        (async () => {
-            setBusy(true);
-            try {
-                const ok = await verifyDatingPin(dp, pin);
-                if (ok) { onUnlock(); return; }
-                toast('Incorrect PIN', 'error');
-                setShake(true);
-                setTimeout(() => setShake(false), 400);
-                setPin('');
-            } catch (e) { toast(friendlyError(e), 'error'); setPin(''); }
-            finally { setBusy(false); }
-        })();
-    }, [pin]);
-    return React.createElement("div", { className: "max-w-sm mx-auto text-center py-10" },
-        React.createElement("i", { className: "fa-solid fa-lock text-4xl text-rose-500 mb-4" }),
-        React.createElement("h2", { className: "font-display text-xl font-bold mb-2" }, "Enter your Dating PIN"),
-        React.createElement("p", { className: "text-sm text-slate-500 dark:text-slate-400 mb-6" }, "For your privacy, Dating is locked behind its own PIN."),
-        React.createElement("div", { className: shake ? "animate-shake" : "" }, React.createElement(DatingPinPad, { value: pin, onChange: setPin, disabled: busy })));
-}
-
-/* Reachable from Dating → My profile → Security. Requires the current PIN before accepting a
-   new one, then asks for the new PIN twice. Members can do this at any time. */
-function DatingChangePinSheet({ dp, onClose }) {
-    const { profile } = useAuth();
-    const toast = useToast();
-    const [step, setStep] = useState('current'); // 'current' -> 'new' -> 'confirm'
-    const [current, setCurrent] = useState('');
-    const [next, setNext] = useState('');
-    const [confirmNext, setConfirmNext] = useState('');
-    const [busy, setBusy] = useState(false);
-    useEffect(() => {
-        if (step !== 'current' || current.length !== DATING_PIN_LENGTH || busy) return;
-        (async () => {
-            setBusy(true);
-            try {
-                const ok = await verifyDatingPin(dp, current);
-                if (!ok) { toast('Incorrect current PIN', 'error'); setCurrent(''); return; }
-                setStep('new');
-            } finally { setBusy(false); }
-        })();
-    }, [current, step]);
-    useEffect(() => {
-        if (step !== 'new' || next.length !== DATING_PIN_LENGTH) return;
-        setStep('confirm');
-    }, [next, step]);
-    useEffect(() => {
-        if (step !== 'confirm' || confirmNext.length !== DATING_PIN_LENGTH || busy) return;
-        (async () => {
-            if (confirmNext !== next) {
-                toast("PINs didn't match — try again", 'error');
-                setNext(''); setConfirmNext(''); setStep('new');
-                return;
-            }
-            setBusy(true);
-            try {
-                await setDatingPin(profile.id, next);
-                toast('Dating PIN updated', 'success');
-                onClose();
-            } catch (e) { toast(friendlyError(e), 'error'); setBusy(false); setNext(''); setConfirmNext(''); setStep('new'); }
-        })();
-    }, [confirmNext, step]);
-    const titles = { current: 'Enter your current PIN', new: 'Choose a new PIN', confirm: 'Confirm your new PIN' };
-    const value = step === 'current' ? current : step === 'new' ? next : confirmNext;
-    const onChange = step === 'current' ? setCurrent : step === 'new' ? setNext : setConfirmNext;
-    return React.createElement(BottomSheet, { title: "Change Dating PIN", onClose: onClose },
-        React.createElement("div", { className: "text-center py-4" },
-            React.createElement("p", { className: "text-sm font-semibold mb-6" }, titles[step]),
-            React.createElement(DatingPinPad, { value: value, onChange: onChange, disabled: busy })));
 }
 
 function DatingGenderStep({ dp }) {
@@ -14592,12 +15296,11 @@ function DatingProfileDetailSheet({ person, onClose, onLike, onPass, isMatched }
 
 function DatingDiscoverTab({ me }) {
     const toast = useToast();
-    const cfg = useDatingConfig();
     const [filters, setFilters] = useState({ interestedIn: me.interestedIn || 'Everyone' });
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
     const [detail, setDetail] = useState(null);
-    const { list, loading } = useDatingCandidates(me, filters, refreshKey, cfg);
+    const { list, loading } = useDatingCandidates(me, filters, refreshKey);
     const [index, setIndex] = useState(0);
     useEffect(() => setIndex(0), [list.length === 0]);
     const current = list[index];
@@ -14632,9 +15335,8 @@ function DatingDiscoverTab({ me }) {
 
 function DatingSuggestedTab({ me }) {
     const toast = useToast();
-    const cfg = useDatingConfig();
     const [refreshKey, setRefreshKey] = useState(0);
-    const { list, loading } = useDatingCandidates(me, null, refreshKey, cfg);
+    const { list, loading } = useDatingCandidates(me, null, refreshKey);
     const [detail, setDetail] = useState(null);
     const top = list.slice(0, 20);
     const act = async (kind, targetId) => {
@@ -14665,8 +15367,7 @@ function DatingSuggestedTab({ me }) {
 
 function DatingMembersTab({ me }) {
     const toast = useToast();
-    const cfg = useDatingConfig();
-    const { list, loading } = useDatingAllMembers(me, cfg);
+    const { list, loading } = useDatingAllMembers(me);
     const [query, setQuery] = useState('');
     const [detail, setDetail] = useState(null);
     const q = query.trim().toLowerCase();
@@ -14784,9 +15485,9 @@ function DatingMeTab({ dp }) {
     const { profile } = useAuth();
     const toast = useToast();
     const [editing, setEditing] = useState(false);
+    const [changingPin, setChangingPin] = useState(false);
     const [blockedProfiles, setBlockedProfiles] = useState([]);
     const [sendingVerify, setSendingVerify] = useState(false);
-    const [changingPin, setChangingPin] = useState(false);
     useEffect(() => {
         (async () => {
             const ids = dp.blockedUids || [];
@@ -14844,21 +15545,18 @@ function DatingMeTab({ dp }) {
                 emailVerified ? React.createElement("span", { className: "text-xs font-semibold text-emerald-600" }, React.createElement("i", { className: "fa-solid fa-circle-check mr-1" }), "Verified") :
                     React.createElement("button", { disabled: sendingVerify, onClick: resendVerification, className: "text-xs font-semibold text-brand-600 disabled:opacity-50" }, sendingVerify ? 'Sending\u2026' : 'Verify now'))),
 
-        React.createElement("p", { className: "text-xs font-bold text-slate-400 uppercase tracking-wide mt-6 mb-2" }, "Security"),
-        React.createElement("div", { className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl divide-y divide-slate-100 dark:divide-ink-700" },
-            React.createElement("div", { className: "flex items-center justify-between p-3" },
-                React.createElement("div", null,
-                    React.createElement("span", { className: "text-sm font-semibold" }, "Dating PIN"),
-                    React.createElement("p", { className: "text-[11px] text-slate-400 mt-0.5" }, "Required each time you open Dating")),
-                React.createElement("button", { onClick: () => setChangingPin(true), className: "text-xs font-semibold text-brand-600" }, "Change PIN"))),
-        changingPin && React.createElement(DatingChangePinSheet, { dp: dp, onClose: () => setChangingPin(false) }),
-
         React.createElement("p", { className: "text-xs font-bold text-slate-400 uppercase tracking-wide mt-6 mb-2" }, "Privacy"),
         React.createElement("div", { className: "bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl divide-y divide-slate-100 dark:divide-ink-700" },
             React.createElement(Toggle, { label: "Hide phone number", hint: "Only matches (or everyone, if off) can see it", on: (dp.privacy || {}).hidePhone !== false, onClick: () => togglePrivacy('hidePhone', (dp.privacy || {}).hidePhone !== false) }),
             React.createElement(Toggle, { label: "Hide WhatsApp", hint: "Only matches (or everyone, if off) can see it", on: (dp.privacy || {}).hideWhatsapp !== false, onClick: () => togglePrivacy('hideWhatsapp', (dp.privacy || {}).hideWhatsapp !== false) }),
             React.createElement(Toggle, { label: "Hide online status", on: !!(dp.privacy || {}).hideOnline, onClick: () => togglePrivacy('hideOnline', !!(dp.privacy || {}).hideOnline) }),
             React.createElement(Toggle, { label: "Hide exact distance", on: !!(dp.privacy || {}).hideDistance, onClick: () => togglePrivacy('hideDistance', !!(dp.privacy || {}).hideDistance) })),
+
+        React.createElement("p", { className: "text-xs font-bold text-slate-400 uppercase tracking-wide mt-6 mb-2" }, "Security"),
+        React.createElement("button", { onClick: () => setChangingPin(true), className: "w-full flex items-center justify-between bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-xl p-3" },
+            React.createElement("span", { className: "text-sm font-semibold flex items-center gap-2" }, React.createElement("i", { className: "fa-solid fa-lock text-slate-400" }), "Dating PIN"),
+            React.createElement("span", { className: "text-xs font-semibold text-brand-600" }, "Change")),
+        changingPin && React.createElement(DatingChangePinModal, { dp: dp, onClose: () => setChangingPin(false) }),
 
         blockedProfiles.length > 0 && React.createElement("div", { className: "mt-6" },
             React.createElement("p", { className: "text-xs font-semibold text-slate-500 mb-2" }, "Blocked users"),
@@ -15137,10 +15835,10 @@ function DatingAdminPanel({ adminUid, adminEmail }) {
                         p.active ? React.createElement("button", { onClick: () => adminSuspendDatingProfile(p.id, adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-ink-700" }, "Suspend") :
                             React.createElement("button", { onClick: () => adminReactivateDatingProfile(p.id, adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-100 text-emerald-700" }, "Reactivate"),
                         React.createElement("button", { onClick: () => { if (confirm('Ban this Dating account?')) adminBanDatingProfile(p.id, adminUid, adminEmail); }, className: "text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-red-100 text-red-600" }, "Ban"))),
-                React.createElement("div", { className: "flex gap-1.5 mt-2 pt-2 border-t border-slate-100 dark:border-ink-700 flex-wrap" },
-                    p.phone && React.createElement("button", { onClick: () => adminSetDatingVerification(p.id, 'phoneVerified', !p.phoneVerified, adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1 rounded-lg " + (p.phoneVerified ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 dark:bg-ink-700") }, p.phoneVerified ? '\u2713 Phone verified' : 'Mark phone verified'),
+                p.phone && React.createElement("div", { className: "flex gap-1.5 mt-2 pt-2 border-t border-slate-100 dark:border-ink-700 flex-wrap" },
+                    React.createElement("button", { onClick: () => adminSetDatingVerification(p.id, 'phoneVerified', !p.phoneVerified, adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1 rounded-lg " + (p.phoneVerified ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 dark:bg-ink-700") }, p.phoneVerified ? '\u2713 Phone verified' : 'Mark phone verified'),
                     React.createElement("button", { onClick: () => adminSetDatingVerification(p.id, 'emailVerified', !p.emailVerified, adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1 rounded-lg " + (p.emailVerified ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 dark:bg-ink-700") }, p.emailVerified ? '\u2713 Email verified' : 'Mark email verified'),
-                    React.createElement("button", { onClick: () => adminSetDatingKycStatus(p.id, p.kycStatus !== 'verified', adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1 rounded-lg " + (p.kycStatus === 'verified' ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 dark:bg-ink-700") }, p.kycStatus === 'verified' ? '\u2713 KYC verified' : 'Manually verify KYC')))))),
+                    React.createElement("button", { onClick: () => adminManualKycVerify(p.id, p.kycStatus !== 'verified', adminUid, adminEmail), className: "text-xs font-semibold px-2.5 py-1 rounded-lg " + (p.kycStatus === 'verified' ? "bg-emerald-100 text-emerald-700" : "bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400") }, p.kycStatus === 'verified' ? '\u2713 ID verified' : 'Manually verify ID')))))),
 
         subtab === 'payments' && React.createElement("div", null,
             React.createElement("button", { onClick: () => exportToCsv('dating-payments.csv', payments.map(p => ({ uid: p.uid, amount: p.amount, reference: p.reference, status: p.status }))), className: "text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-ink-700 mb-3" }, React.createElement("i", { className: "fa-solid fa-file-arrow-down mr-1.5" }), "Export CSV"),
@@ -15191,6 +15889,102 @@ function DatingAdminPanel({ adminUid, adminEmail }) {
                 React.createElement("input", { value: cfgForm.bankAccountName, onChange: e => setCfgForm(f => Object.assign({}, f, { bankAccountName: e.target.value })), placeholder: "Company account name", className: "w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-sm" })),
             React.createElement("button", { onClick: saveCfg, className: "w-full bg-brand-600 hover:bg-brand-700 text-white rounded-xl py-2.5 text-sm font-semibold" }, "Save settings")) :
             React.createElement("div", { className: "py-10 flex justify-center" }, React.createElement("div", { className: "w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" }))));
+}
+/* ============================== JOBS: ADMIN PANEL ============================== */
+function AdminJobRow({ job, mode }) {
+    const employer = useEmployerProfile(job.employerId);
+    const toast = useToast();
+    const [busy, setBusy] = useState(false);
+    const [showReject, setShowReject] = useState(false);
+    const [reason, setReason] = useState('');
+    const run = async (fn, okMsg) => { setBusy(true); try { await fn(); toast(okMsg, 'success'); } catch (e) { toast(friendlyError(e), 'error'); } finally { setBusy(false); } };
+    return React.createElement("div", { className: "bg-white dark:bg-ink-800 rounded-xl border border-slate-100 dark:border-ink-700 p-3.5" },
+        React.createElement("div", { className: "flex items-start gap-3" },
+            React.createElement("div", { className: "w-11 h-11 rounded-xl bg-slate-100 dark:bg-ink-700 shrink-0 overflow-hidden flex items-center justify-center" },
+                job.companyLogo ? React.createElement("img", { src: job.companyLogo, className: "w-full h-full object-cover" }) : React.createElement("i", { className: "fa-solid fa-building text-slate-400" })),
+            React.createElement("div", { className: "min-w-0 flex-1" },
+                React.createElement("p", { className: "font-bold text-sm truncate" }, job.title),
+                React.createElement("p", { className: "text-xs text-slate-400 truncate flex items-center gap-1" }, job.companyName, employer && employer.verified && React.createElement("i", { className: "fa-solid fa-circle-check text-brand-500" })),
+                React.createElement("p", { className: "text-[11px] text-slate-400 mt-0.5" }, job.category, " \u00B7 ", job.location, " \u00B7 ", timeAgo(job.createdAt)))),
+        showReject && React.createElement("div", { className: "mt-2.5" },
+            React.createElement("textarea", { value: reason, onChange: e => setReason(e.target.value), rows: 2, placeholder: "Reason for rejection (shown to the employer)", className: "w-full px-2.5 py-2 rounded-lg border border-slate-200 dark:border-ink-600 bg-transparent text-xs resize-none" })),
+        React.createElement("div", { className: "flex flex-wrap gap-2 mt-2.5" },
+            mode === 'pending' && React.createElement(React.Fragment, null,
+                React.createElement("button", { disabled: busy, onClick: () => run(() => adminApproveJob(job), 'Job approved'), className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400" }, "Approve"),
+                !showReject ? React.createElement("button", { onClick: () => setShowReject(true), className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600" }, "Reject")
+                    : React.createElement("button", { disabled: busy, onClick: () => run(() => adminRejectJob(job, reason), 'Job rejected'), className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white" }, "Confirm Reject")),
+            mode === 'live' && React.createElement("button", { disabled: busy, onClick: () => run(() => adminCloseJob(job), 'Job closed'), className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300" }, "Suspend/Close"),
+            React.createElement("button", { disabled: busy, onClick: () => { if (confirm('Permanently delete this job and its applications?')) run(() => adminDeleteJobPermanently(job), 'Job deleted'); }, className: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600" }, "Delete")));
+}
+function AdminEmployerRow({ uid, name, logo }) {
+    const employer = useEmployerProfile(uid);
+    const toast = useToast();
+    const [busy, setBusy] = useState(false);
+    const toggle = async () => { setBusy(true); try { await adminVerifyEmployer(uid, !(employer && employer.verified)); toast(employer && employer.verified ? 'Verification removed' : 'Employer verified', 'success'); } catch (e) { toast(friendlyError(e), 'error'); } finally { setBusy(false); } };
+    return React.createElement("div", { className: "flex items-center justify-between gap-3 bg-white dark:bg-ink-800 rounded-xl border border-slate-100 dark:border-ink-700 p-3" },
+        React.createElement("div", { className: "flex items-center gap-3 min-w-0" },
+            React.createElement("div", { className: "w-10 h-10 rounded-xl bg-slate-100 dark:bg-ink-700 shrink-0 overflow-hidden flex items-center justify-center" }, logo ? React.createElement("img", { src: logo, className: "w-full h-full object-cover" }) : React.createElement("i", { className: "fa-solid fa-building text-slate-400" })),
+            React.createElement("div", { className: "min-w-0" },
+                React.createElement("p", { className: "font-semibold text-sm truncate" }, name),
+                employer && employer.verified && React.createElement("p", { className: "text-[11px] text-brand-600 font-semibold" }, React.createElement("i", { className: "fa-solid fa-circle-check mr-1" }), "Verified Employer"))),
+        React.createElement("button", { disabled: busy, onClick: toggle, className: "shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg " + (employer && employer.verified ? "bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300" : "bg-brand-600 text-white") }, employer && employer.verified ? 'Remove Verification' : 'Verify'));
+}
+function JobsAdminPanel({ adminUid, adminEmail }) {
+    const [subtab, setSubtab] = useState('pending');
+    const [allJobs, setAllJobs] = useState(null);
+    const [reports, setReports] = useState(null);
+    const [categories, setCategories] = useState(null);
+    const [newCat, setNewCat] = useState('');
+    const toast = useToast();
+    const SUB = [['pending', 'Pending Review'], ['live', 'Live Jobs'], ['reports', 'Reports'], ['categories', 'Categories'], ['employers', 'Employers']];
+    useEffect(() => {
+        const unsub = db.collection('jobs').orderBy('createdAt', 'desc').limit(500).onSnapshot(snap => setAllJobs(snap.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => setAllJobs([]));
+        return unsub;
+    }, []);
+    useEffect(() => {
+        if (subtab !== 'reports') return;
+        const unsub = db.collection('reports').where('targetType', 'in', ['job', 'employer']).limit(200)
+            .onSnapshot(snap => setReports(snap.docs.map(d => Object.assign({ id: d.id }, d.data())).sort((a, b) => (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0))), () => setReports([]));
+        return unsub;
+    }, [subtab]);
+    useEffect(() => {
+        if (subtab !== 'categories') return;
+        const unsub = db.collection('jobCategories').orderBy('name').onSnapshot(snap => setCategories(snap.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => setCategories([]));
+        return unsub;
+    }, [subtab]);
+    const pending = (allJobs || []).filter(j => j.status === 'pending');
+    const live = (allJobs || []).filter(j => j.status === 'approved' || j.status === 'closed');
+    const employersMap = useMemo(() => {
+        const map = new Map();
+        (allJobs || []).forEach(j => { if (j.employerId && !map.has(j.employerId)) map.set(j.employerId, { uid: j.employerId, name: j.companyName, logo: j.companyLogo }); });
+        return Array.from(map.values());
+    }, [allJobs]);
+    const addCategory = async () => { if (!newCat.trim()) return; await adminAddJobCategory(newCat); setNewCat(''); toast('Category added', 'success'); };
+    return React.createElement("div", { className: "max-w-3xl" },
+        React.createElement("h2", { className: "font-display font-extrabold text-xl mb-4 flex items-center gap-2" }, React.createElement("i", { className: "fa-solid fa-briefcase text-brand-500" }), "Jobs & Recruitment"),
+        React.createElement("div", { className: "flex gap-2 overflow-x-auto mb-4", style: { scrollbarWidth: 'none' } }, SUB.map(([k, l]) => React.createElement("button", { key: k, onClick: () => setSubtab(k), className: "shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold " + (subtab === k ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-ink-700 text-slate-600 dark:text-slate-300") }, l, k === 'pending' && pending.length ? ' (' + pending.length + ')' : ''))),
+        subtab === 'pending' && React.createElement("div", { className: "space-y-2.5" },
+            allJobs === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
+            allJobs !== null && pending.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-10" }, "No jobs waiting for review."),
+            pending.map(j => React.createElement(AdminJobRow, { key: j.id, job: j, mode: "pending" }))),
+        subtab === 'live' && React.createElement("div", { className: "space-y-2.5" },
+            allJobs === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
+            allJobs !== null && live.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-10" }, "No live jobs yet."),
+            live.map(j => React.createElement(AdminJobRow, { key: j.id, job: j, mode: "live" }))),
+        subtab === 'reports' && React.createElement("div", { className: "space-y-2.5" },
+            reports === null && React.createElement("p", { className: "text-sm text-slate-400" }, "Loading\u2026"),
+            reports !== null && reports.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-10" }, "No reported jobs or employers."),
+            reports && reports.map(r => React.createElement(AdminGenericReportRow, { key: r.id, report: r, adminUid: adminUid, adminEmail: adminEmail }))),
+        subtab === 'categories' && React.createElement("div", null,
+            React.createElement("div", { className: "flex gap-2 mb-3" },
+                React.createElement("input", { value: newCat, onChange: e => setNewCat(e.target.value), placeholder: "New category name", className: "flex-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-700 bg-transparent text-sm" }),
+                React.createElement("button", { onClick: addCategory, className: "px-4 rounded-lg bg-brand-600 text-white text-sm font-semibold" }, "Add")),
+            React.createElement("div", { className: "space-y-1.5" }, (categories || []).map(c => React.createElement("div", { key: c.id, className: "flex items-center justify-between bg-white dark:bg-ink-800 border border-slate-100 dark:border-ink-700 rounded-lg px-3 py-2" },
+                React.createElement("span", { className: "text-sm" }, c.name),
+                React.createElement("button", { onClick: () => adminDeleteJobCategory(c.id), className: "text-red-500 text-xs font-semibold" }, "Remove"))))),
+        subtab === 'employers' && React.createElement("div", { className: "space-y-2" },
+            employersMap.length === 0 && React.createElement("p", { className: "text-sm text-slate-400 text-center py-10" }, "No employers yet \u2014 they appear here once someone posts a job."),
+            employersMap.map(e => React.createElement(AdminEmployerRow, { key: e.uid, uid: e.uid, name: e.name, logo: e.logo }))));
 }
 
 /* ============================== WALLET ==============================
