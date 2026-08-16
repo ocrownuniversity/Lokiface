@@ -709,14 +709,18 @@ tbody tr:hover{background:var(--bg)}
               <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#DC2626;margin-bottom:4px">Expenses</div>
               <div style="font-size:1rem;font-weight:800;font-family:'JetBrains Mono',monospace;color:#DC2626" id="pr-exp">₦0</div>
             </div>
-            <div style="background:#EFF6FF;border-radius:10px;padding:12px;text-align:center;border:1px solid #BFDBFE">
-              <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#2563EB;margin-bottom:4px">Net Profit</div>
+            <div style="background:#EFF6FF;border-radius:10px;padding:12px;text-align:center;border:1px solid #BFDBFE;cursor:pointer" onclick="toggleProfitBreakdown()" title="Tap to see profit by product">
+              <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#2563EB;margin-bottom:4px">Net Profit ▾</div>
               <div style="font-size:1rem;font-weight:800;font-family:'JetBrains Mono',monospace" id="pr-net">₦0</div>
             </div>
             <div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--bord)">
               <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--t3);margin-bottom:4px">Transactions</div>
               <div style="font-size:1rem;font-weight:800;font-family:'JetBrains Mono',monospace" id="pr-count">0</div>
             </div>
+          </div>
+          <div id="profit-breakdown-box" style="display:none;margin-top:12px;border-top:1px dashed var(--bord);padding-top:12px">
+            <div style="font-size:.78rem;font-weight:700;color:var(--t3);margin-bottom:8px">Profit by Product — tap "Net Profit" above to hide</div>
+            <div id="profit-breakdown-list"></div>
           </div>
         </div>
       </div>
@@ -2406,13 +2410,48 @@ async function computeProfitReport(fromDate,toDate){
     totalSales+=s.grandTotal||s.total||0;
     txCount++;
   }
-  for(const s of all){ cogs+=(costMap.get(s.productId)||0)*(s.quantity||0); }
+  // Per-product breakdown — each sale line item counted individually (not deduped by
+  // receipt) since a receipt with 3 products needs each product's own profit shown.
+  const byProd=new Map();
+  for(const s of all){
+    const key=s.productId||s.productName||'?';
+    const revenue=s.total||0;
+    const cost=(costMap.get(s.productId)||0)*(s.quantity||0);
+    cogs+=cost;
+    if(!byProd.has(key)) byProd.set(key,{name:s.productName||'Unknown product',qty:0,revenue:0,cost:0});
+    const row=byProd.get(key);
+    row.qty+=s.quantity||0; row.revenue+=revenue; row.cost+=cost;
+  }
+  const breakdown=[...byProd.values()].map(r=>({...r,
+    revenue:Math.round(r.revenue*100)/100, cost:Math.round(r.cost*100)/100,
+    profit:Math.round((r.revenue-r.cost)*100)/100
+  })).sort((a,b)=>b.profit-a.profit);
   totalSales=Math.round(totalSales*100)/100;
   cogs=Math.round(cogs*100)/100;
   const grossProfit=Math.round((totalSales-cogs)*100)/100;
   const expenses=Math.round(EXPENSES.filter(e=>{const d=new Date(e.date); return d>=fromDate&&d<=toDate;}).reduce((a,e)=>a+(e.amount||0),0)*100)/100;
   const netProfit=Math.round((grossProfit-expenses)*100)/100;
-  return {totalSales,cogs,grossProfit,expenses,netProfit,txCount};
+  return {totalSales,cogs,grossProfit,expenses,netProfit,txCount,breakdown};
+}
+function toggleProfitBreakdown(){
+  const box=g('profit-breakdown-box'); if(!box) return;
+  const showing=box.style.display!=='none';
+  box.style.display=showing?'none':'block';
+  if(!showing) renderProfitBreakdown();
+}
+function renderProfitBreakdown(){
+  const list=g('profit-breakdown-list'); if(!list) return;
+  const bd=window._lastProfitBreakdown||[];
+  if(!bd.length){ list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:.8rem;padding:10px">No sales in this period</div>'; return; }
+  list.innerHTML=`<div class="tw"><table><thead><tr><th>Product</th><th>Qty</th><th>Revenue</th><th>Cost</th><th>Profit</th></tr></thead><tbody>
+    ${bd.map(r=>`<tr>
+      <td class="td-n">${esc(r.name)}</td>
+      <td class="td-m">${r.qty}</td>
+      <td class="td-m">${fmt(r.revenue)}</td>
+      <td class="td-m">${fmt(r.cost)}</td>
+      <td class="td-m" style="font-weight:700;color:${r.profit>=0?'#059669':'#EF4444'}">${fmt(r.profit)}</td>
+    </tr>`).join('')}
+  </tbody></table></div>`;
 }
 async function runProfitReport(){
   if(!can('rpt')) return;
@@ -2441,6 +2480,9 @@ async function runProfitReport(){
     if(g('pr-exp'))   g('pr-exp').textContent=fmt(r.expenses);
     if(g('pr-net')){ g('pr-net').textContent=fmt(r.netProfit); g('pr-net').style.color=r.netProfit>=0?'#059669':'#EF4444'; }
     if(g('pr-count')) g('pr-count').textContent=r.txCount;
+    window._lastProfitBreakdown=r.breakdown;
+    const bdBox=g('profit-breakdown-box');
+    if(bdBox && bdBox.style.display!=='none') renderProfitBreakdown();
   }catch(e){
     if(resBox) resBox.style.opacity='1';
     toast('Failed to calculate profit: '+e.message,'e');
