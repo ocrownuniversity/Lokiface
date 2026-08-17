@@ -816,13 +816,15 @@ body.dark-mode #pwreset-audit-log { background: #111 !important; border-color: #
 
 /* HEADER &mdash; white bg */
 #header{background:var(--surface)!important;box-shadow:0 1px 3px rgba(0,0,0,.08)!important}
-.header-top{padding:12px 14px 10px!important;gap:8px!important}
-.hamburger{color:var(--gray-800)!important;font-size:22px!important;background:none!important;border:none!important;padding:0!important}
-#logo-text,#header-logo-img{cursor:pointer!important;display:inline-block!important;vertical-align:middle!important;height:40px!important;width:auto!important;max-width:150px!important}
+.header-top{padding:12px 14px 10px!important;gap:8px!important;overflow:hidden!important}
+.hamburger{color:var(--gray-800)!important;font-size:22px!important;background:none!important;border:none!important;padding:0!important;flex-shrink:0!important}
+#logo-text{max-width:100%!important}
+#header-logo-img{cursor:pointer!important;display:inline-block!important;vertical-align:middle!important;height:40px!important;width:auto!important;max-width:150px!important}
 .hicon{background:transparent!important;color:var(--gray-700)!important;font-size:22px!important;padding:4px 6px!important;border:none!important}
 .hicon .badge{background:#D6127E!important;color:#fff!important;top:-5px!important;right:-4px!important;width:17px!important;height:17px!important;font-size:9px!important}
 .hicon-label{display:none!important}
 .header-icons{gap:6px!important}
+@media (max-width:360px){ #logo-text{font-size:20px!important} }
 
 /* SEARCH BAR &mdash; full-width pill below header row */
 .header-search-row{background:var(--surface)!important;padding:0 14px 12px!important}
@@ -983,10 +985,10 @@ body{padding-bottom:65px!important;background:var(--bg)!important}
   <div class="header-top">
     <button class="hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
     <!-- Logo: show image if available, fallback to styled text -->
-    <div style="flex:1;display:flex;align-items:center">
-      <span onclick="navigate('home')" style="font-family:'Poppins',sans-serif;font-weight:900;font-size:26px;background:var(--brand-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;cursor:pointer;letter-spacing:-0.5px;line-height:1">EVERYTHINGBYTISH</span>
+    <div style="flex:1;display:flex;align-items:center;min-width:0;overflow:hidden">
+      <span id="logo-text" onclick="navigate('home')" style="font-family:'Poppins',sans-serif;font-weight:900;font-size:26px;background:var(--brand-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;cursor:pointer;letter-spacing:-0.5px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block">EVERYTHINGBYTISH</span>
     </div>
-    <div class="header-icons" style="display:flex;align-items:center;gap:4px">
+    <div class="header-icons" style="display:flex;align-items:center;gap:4px;flex-shrink:0">
       <button id="dark-mode-btn" onclick="toggleDarkMode()" title="Toggle dark/light mode">🌙</button>
       <button class="hicon" onclick="navigate('profile')" title="Account"><i class="fas fa-user-circle"></i><span class="badge hidden" id="wish-count">0</span></button>
       <button class="hicon" onclick="navigate('cart')" title="Cart" style="position:relative"><i class="fas fa-shopping-cart"></i><span class="badge hidden" id="cart-count">0</span></button>
