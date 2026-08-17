@@ -986,7 +986,7 @@ body{padding-bottom:65px!important;background:var(--bg)!important}
     <button class="hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
     <!-- Logo: show image if available, fallback to styled text -->
     <div style="flex:1;display:flex;align-items:center;min-width:0;overflow:hidden">
-      <span id="logo-text" onclick="navigate('home')" style="font-family:'Poppins',sans-serif;font-weight:900;font-size:26px;background:var(--brand-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;cursor:pointer;letter-spacing:-0.5px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block">EVERYTHINGBYTISH</span>
+      <span id="logo-text" onclick="navigate('home')" style="font-family:'Poppins',sans-serif;font-weight:900;font-size:26px;background:var(--brand-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;cursor:pointer;letter-spacing:-0.5px;line-height:1;white-space:nowrap;display:inline-block">EVERYTHINGBYTISH</span>
     </div>
     <div class="header-icons" style="display:flex;align-items:center;gap:4px;flex-shrink:0">
       <button id="dark-mode-btn" onclick="toggleDarkMode()" title="Toggle dark/light mode">🌙</button>
@@ -8038,6 +8038,29 @@ function hideAppSplash() {
 document.body.classList.add('splash-lock');
 // Safety net: never let the splash block the site for more than 4s even if init() is slow/fails
 setTimeout(hideAppSplash, 4000);
+
+// ===== LOGO AUTO-FIT =====
+// Shrinks the "EVERYTHINGBYTISH" logo font-size just enough so the full
+// name always fits on one line in the available header space, on any
+// screen width — never truncates, never overlaps the icons.
+function fitLogoText() {
+  const logo = document.getElementById('logo-text');
+  if (!logo) return;
+  const wrap = logo.parentElement;
+  if (!wrap) return;
+  let fontSize = 26; // start at the default max size
+  logo.style.fontSize = fontSize + 'px';
+  const minFontSize = 10;
+  while (logo.scrollWidth > wrap.clientWidth && fontSize > minFontSize) {
+    fontSize -= 1;
+    logo.style.fontSize = fontSize + 'px';
+  }
+}
+window.addEventListener('load', fitLogoText);
+window.addEventListener('resize', fitLogoText);
+window.addEventListener('orientationchange', fitLogoText);
+// Also run once immediately in case load already fired
+fitLogoText();
 
 // ===== COUPON SYSTEM (Firestore-based) =====
 let appliedCoupon = null;
