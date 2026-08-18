@@ -8074,33 +8074,60 @@ async function init() {
   const hash = initialHash;
   if (hash && hash.startsWith('product-')) {
     // Shared product link, e.g. #product-abc123 — open that product directly.
-    const productId = hash.slice('product-'.length);
+    const productId = decodeURIComponent(hash.slice('product-'.length));
     navigate('home');
-    // First-time visitors (exactly who click shared links) have no cached
-    // product list, so waiting on the full collection listener to populate
-    // allProducts can time out before it ever arrives. Fetch this one
-    // product directly by ID instead — much faster and doesn't depend on
-    // the whole catalog loading first.
     (async () => {
-      try {
-        const snap = await getDoc(doc(db, 'products', productId));
-        if (snap.exists()) {
-          const p = { id: snap.id, ...snap.data() };
-          if (!allProducts.find(x => x.id === p.id)) allProducts.push(p);
-          openProduct(productId);
-          return;
-        }
-      } catch (e) { console.error('Direct product fetch failed:', e); }
-      // Fall back to polling the full list, in case of a transient error
-      // above or a security-rule quirk on direct single-doc reads.
-      let attempts = 0;
-      const tryOpen = () => {
-        attempts++;
-        if (allProducts.find(p => p.id === productId)) { openProduct(productId); }
-        else if (attempts < 40) { setTimeout(tryOpen, 250); }
-        else { showToast('This product could not be found — it may have been removed.','error'); }
+      // Race every lookup strategy at once instead of one after another —
+      // whichever resolves first (or finds the product first) wins. This
+      // way a slow/blocked path can never single-handedly cause a timeout.
+      const found = (p) => {
+        if (!p) return false;
+        if (!allProducts.find(x => x.id === p.id)) allProducts.push(p);
+        return true;
       };
-      tryOpen();
+
+      // Strategy A: direct single-document read.
+      const directFetch = (async () => {
+        try {
+          const snap = await getDoc(doc(db, 'products', productId));
+          return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+        } catch (e) { console.error('Direct product fetch failed:', e); return null; }
+      })();
+
+      // Strategy B: fresh one-time read of the whole collection (separate
+      // from the live onSnapshot listener, in case that listener is slow,
+      // stalled, or hasn't been set up yet).
+      const collectionFetch = (async () => {
+        try {
+          const snap = await getDocs(collection(db, 'products'));
+          return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            .find(p => p.id === productId) || null;
+        } catch (e) { console.error('Collection product fetch failed:', e); return null; }
+      })();
+
+      // Strategy C: poll whatever the existing live listener already has
+      // (cheapest, works instantly if allProducts is already populated).
+      const pollExisting = new Promise((resolve) => {
+        let attempts = 0;
+        const tryOpen = () => {
+          attempts++;
+          const p = allProducts.find(p => p.id === productId);
+          if (p) resolve(p);
+          else if (attempts < 60) setTimeout(tryOpen, 250);
+          else resolve(null);
+        };
+        tryOpen();
+      });
+
+      const [a, b] = await Promise.all([directFetch, collectionFetch]);
+      const c = await pollExisting;
+      const product = a || b || c;
+
+      if (found(product)) {
+        openProduct(productId);
+      } else {
+        showToast('This product could not be found — it may have been removed.','error');
+      }
     })();
   } else if(hash && hash !== 'home' && hash !== '__guard__' && document.getElementById('page-'+hash)) {
     navigate(hash);
