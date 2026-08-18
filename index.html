@@ -7663,6 +7663,8 @@ async function loadBanners() {
   } catch(e) { return DEFAULT_BANNERS.map(d=>({...d})); }
 }
 
+const BANNERS_CACHE_KEY = 'everythingbytish-banners-cache';
+
 function paintSlides(banners) {
   const container = document.getElementById('slides');
   if(!container) return;
@@ -7684,14 +7686,29 @@ function paintSlides(banners) {
 }
 
 function renderSlider() {
-  // Paint default slides instantly — no waiting on Firestore — so the banner
-  // appears at the same time as everything else, not lagging behind products.
-  paintSlides(DEFAULT_BANNERS);
-  // Then quietly fetch any saved/custom banners from Firestore and swap them
-  // in once ready, without making the user wait for the first paint.
+  // Same pattern as products: show the last-known banners instantly from
+  // localStorage cache (no waiting on Firestore) if we have any saved from
+  // a previous visit — otherwise paint the defaults instantly instead.
+  let startedFromCache = false;
+  try {
+    const cached = JSON.parse(localStorage.getItem(BANNERS_CACHE_KEY) || 'null');
+    if (cached && Array.isArray(cached) && cached.length) {
+      paintSlides(cached);
+      startedFromCache = true;
+    }
+  } catch(e) { /* ignore bad cache */ }
+  if (!startedFromCache) paintSlides(DEFAULT_BANNERS);
+
+  // Then quietly fetch the live banners from Firestore and swap them in
+  // once ready (and refresh the cache for next time), without making the
+  // user wait for the first paint.
   loadBanners().then(banners => {
-    const changed = JSON.stringify(banners) !== JSON.stringify(DEFAULT_BANNERS);
+    const compareBase = startedFromCache
+      ? JSON.parse(localStorage.getItem(BANNERS_CACHE_KEY) || 'null')
+      : DEFAULT_BANNERS;
+    const changed = JSON.stringify(banners) !== JSON.stringify(compareBase);
     if(changed) paintSlides(banners);
+    try { localStorage.setItem(BANNERS_CACHE_KEY, JSON.stringify(banners)); } catch(e) { /* storage full/unavailable — safe to skip */ }
   }).catch(()=>{});
 }
 
@@ -7700,6 +7717,7 @@ function renderSlider() {
 async function refreshSlider() {
   const banners = await loadBanners();
   paintSlides(banners);
+  try { localStorage.setItem(BANNERS_CACHE_KEY, JSON.stringify(banners)); } catch(e) { /* storage full/unavailable — safe to skip */ }
 }
 
 window.loadAdminBanners = async function() {
