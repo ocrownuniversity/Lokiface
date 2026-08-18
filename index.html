@@ -1469,6 +1469,11 @@ body{padding-bottom:65px!important;background:var(--bg)!important}
         <p><strong>Account Number:</strong> <strong style="font-size:18px;color:var(--orange)">6392562244</strong></p>
         <p><strong>Phone:</strong> +2347086520559</p>
         <p style="margin-top:8px;color:var(--red);font-size:12px"><i class="fas fa-exclamation-triangle"></i> Please transfer exact amount and include your order ID as reference.</p>
+        <div style="margin-top:12px;border-top:1px solid var(--gray-200);padding-top:10px">
+          <p style="font-weight:800;font-size:13px;margin-bottom:6px;color:var(--orange)"><i class="fas fa-receipt"></i> Upload Proof of Payment (required)</p>
+          <input type="file" accept="image/*" id="checkout-receipt-file" onchange="handleCheckoutReceiptUpload(this.files[0])">
+          <div id="checkout-receipt-preview" style="margin-top:8px"></div>
+        </div>
       </div>
     </div>
     <div class="checkout-section">
@@ -5224,6 +5229,35 @@ window.selectAddr = async function(el, id) {
   } catch(e) {}
 };
 
+// Generates a short, unique-ish order ID like "EBT1234" (7 characters total).
+// Checks the given collection for a collision and retries a few times before
+// falling back to a timestamp-derived suffix (extremely unlikely to be needed).
+async function generateOrderId(prefix, coll) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const id = prefix + Math.floor(1000 + Math.random() * 9000);
+    try {
+      const snap = await getDocs(query(collection(db, coll), where('orderId', '==', id)));
+      if (snap.empty) return id;
+    } catch (e) {
+      return id; // if the uniqueness check fails, don't block checkout — just use it
+    }
+  }
+  return prefix + Date.now().toString().slice(-4);
+}
+
+// ===== CHECKOUT: BANK TRANSFER RECEIPT UPLOAD =====
+let _checkoutReceipt = null;
+
+window.handleCheckoutReceiptUpload = async function(file) {
+  if (!file) return;
+  try {
+    const dataUrl = await compressImageFile(file, 900, 0.7);
+    _checkoutReceipt = dataUrl;
+    const preview = document.getElementById('checkout-receipt-preview');
+    if (preview) preview.innerHTML = '<img src="'+dataUrl+'" style="max-width:140px;border-radius:8px;border:2px solid var(--orange)"><div style="font-size:11px;color:var(--green);margin-top:4px;font-weight:700"><i class="fas fa-check-circle"></i> Receipt attached</div>';
+  } catch(e) { showToast('Could not read that image — try another','error'); }
+};
+
 window.selectPayment = function(type) {
   selectedPayment = type;
   ['wallet','bank','cod'].forEach(t => {
@@ -5396,6 +5430,7 @@ window.placeOrder = async function() {
     if(!document.getElementById('delivery-phone-input')?.value.trim()) return showToast('Please enter the recipient\'s phone number','error');
   }
   if(!selectedPayment) return showToast('Please select a payment method','error');
+  if(selectedPayment === 'bank' && !_checkoutReceipt) return showToast('Please upload your payment receipt to continue','error');
   if(!cart.length) return showToast('Your cart is empty','error');
 
   // ---- Wallet checkout ----
@@ -5414,11 +5449,12 @@ window.placeOrder = async function() {
     const couponDiscount = window._checkoutCouponDiscount || 0;
     const loyaltyDiscount = useLoyaltyDiscount || 0;
     const grandTotal = Math.max(0, subtotal - couponDiscount - loyaltyDiscount + deliveryFee);
-    const orderId = 'EBT-'+Date.now();
+    const orderId = await generateOrderId('EBT', 'orders');
     const itemsCopy = [...cart];
     const orderData = {
       orderId, userId: currentUser.uid, userEmail: currentUser.email,
       items: itemsCopy, address: addr, payment: selectedPayment,
+      paymentProof: selectedPayment === 'bank' ? (_checkoutReceipt || null) : null,
       deliveryType: dType,
       pickupStation: dType === 'pickup' ? SHOP_PICKUP_INFO.name : '',
       subtotal, deliveryFee, couponCode: appliedCoupon?.code||'', couponDiscount, loyaltyDiscount,
@@ -5460,6 +5496,12 @@ window.placeOrder = async function() {
     cart = [];
     await saveCart();
     updateCartBadge();
+    // Reset receipt upload state for next checkout
+    _checkoutReceipt = null;
+    const _receiptPreviewEl = document.getElementById('checkout-receipt-preview');
+    if (_receiptPreviewEl) _receiptPreviewEl.innerHTML = '';
+    const _receiptFileEl = document.getElementById('checkout-receipt-file');
+    if (_receiptFileEl) _receiptFileEl.value = '';
     // Reduce stock for each item in Firestore
     for(const item of itemsCopy) {
       if(!item.productId && !item.id) continue;
@@ -6048,7 +6090,7 @@ window.submitPreorderOrder = async function() {
 
 async function createPreorderOrder(p, payNow, grand, method) {
   try {
-    const orderId = 'PRE-'+Date.now();
+    const orderId = await generateOrderId('PRE', 'preorder_orders');
     const initialStatus = (method === 'wallet') ? 'payment_received' : 'pending';
     let buyerPhone = '';
     try {
@@ -6793,6 +6835,7 @@ window.loadAdminOrders = function() {
           <td style="display:flex;flex-direction:column;gap:5px;padding:8px 6px">
             <button style="background:var(--orange);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;padding:5px 8px;cursor:pointer;white-space:nowrap" onclick="viewOrderDetails('${d.id}')"><i class="fas fa-eye"></i> Details</button>
             <button class="btn-success" style="font-size:11px;padding:5px 8px;white-space:nowrap" onclick="openStatusModal('${d.id}','${o.status||'pending'}','${o.userEmail||''}')"><i class="fas fa-edit"></i> Update</button>
+            ${o.paymentProof ? `<button style="background:var(--gray-100);color:var(--gray-700);border:none;border-radius:6px;font-size:11px;font-weight:700;padding:5px 8px;cursor:pointer;white-space:nowrap" onclick="window.open('${o.paymentProof}','_blank')"><i class="fas fa-receipt"></i> Receipt</button>` : ''}
           </td>
         </tr>`;
       } catch(rowErr) {
@@ -6897,6 +6940,11 @@ window.viewOrderDetails = async function(docId) {
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--gray-500)">Subtotal</span><span style="font-weight:700">₦${((o.total||0)-(o.deliveryFee||0)).toLocaleString()}</span></div>
         ${o.deliveryType ? '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--gray-500)">Delivery</span><span style="font-weight:700">'+(o.deliveryType==='pickup'?'🏬 FREE — Pickup at store':'🚚 To be confirmed')+'</span></div>' : ''}
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:900;border-top:2px solid var(--gray-200);padding-top:10px;margin-top:4px"><span>Total</span><span style="color:var(--orange)">₦${(o.total||0).toLocaleString()}</span></div>
+        ${o.paymentProof ? `<div style="margin-top:14px;background:var(--gray-50);border-radius:8px;padding:10px">
+          <div style="font-size:11px;font-weight:800;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px"><i class="fas fa-receipt"></i> Payment Receipt (Proof)</div>
+          <img src="${o.paymentProof}" style="max-width:200px;width:100%;border-radius:8px;border:2px solid var(--orange);cursor:pointer;display:block" onclick="window.open('${o.paymentProof}','_blank')">
+          <div style="font-size:11px;color:var(--gray-400);margin-top:6px">Tap image to view full size</div>
+        </div>` : (o.payment==='bank' ? `<div style="margin-top:14px;background:#fef3c7;border-radius:8px;padding:10px;font-size:12px;color:#92400e"><i class="fas fa-exclamation-triangle"></i> No receipt uploaded for this bank transfer order.</div>` : '')}
       </div>`;
 
     // Wire up the Update Status button in the modal footer
@@ -8041,8 +8089,33 @@ async function init() {
   _navStack.push('home');
   // Then navigate to hash page if present
   const hash = location.hash.replace('#','');
-  if(hash && hash !== 'home' && hash !== '__guard__' && document.getElementById('page-'+hash)) navigate(hash);
+  if(hash && hash !== 'home' && hash !== '__guard__') {
+    if(hash.startsWith('product-')) {
+      openProductFromHash(hash.slice('product-'.length));
+    } else if(document.getElementById('page-'+hash)) {
+      navigate(hash);
+    }
+  }
   hideAppSplash();
+}
+
+// Opens a product shared via link (#product-<id>). Products may not have
+// finished loading yet on a fresh visit, so this waits for them to arrive
+// (from cache or Firestore) before giving up.
+function openProductFromHash(id) {
+  const tryOpen = () => {
+    if(!allProducts.length) return false;
+    const p = allProducts.find(x=>x.id===id);
+    if(p) { openProduct(id); }
+    else { showToast('Product not found — it may have been removed','error'); navigate('home'); }
+    return true;
+  };
+  if(tryOpen()) return;
+  let attempts = 0;
+  const poll = setInterval(() => {
+    attempts++;
+    if(tryOpen() || attempts > 50) clearInterval(poll); // give up after ~10s
+  }, 200);
 }
 
 // ===== SPLASH SCREEN =====
