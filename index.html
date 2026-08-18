@@ -938,6 +938,17 @@ body{padding-bottom:65px!important;background:var(--bg)!important}
 </div>
 
 <!-- iOS INSTALL GUIDE MODAL -->
+<div class="modal-overlay" id="modal-receipt-view">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title"><i class="fas fa-receipt"></i> Payment Receipt</span>
+      <button class="modal-close" onclick="closeModal('modal-receipt-view')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" style="padding:16px;text-align:center">
+      <img id="receipt-view-img" src="" style="max-width:100%;max-height:70vh;border-radius:8px;border:2px solid var(--border);object-fit:contain">
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-ios-install">
   <div class="modal" style="max-width:360px">
     <div class="modal-header">
@@ -6441,7 +6452,7 @@ function renderAdminPreorderOrders() {
     <td><span style="background:${poStatusColor(o.status)};color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap">${PREORDER_STATUS_LABELS[o.status]||o.status}</span></td>
     <td style="display:flex;flex-direction:column;gap:4px;padding:8px 6px">
       <button style="background:var(--orange);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;padding:5px 8px;cursor:pointer;white-space:nowrap" onclick="openPreorderStatusModal('${o.id}','${o.status}','${escHtml(o.userEmail||'')}')"><i class="fas fa-edit"></i> Update</button>
-      ${o.paymentProof ? `<button style="background:var(--gray-100);color:var(--gray-700);border:none;border-radius:6px;font-size:11px;font-weight:700;padding:5px 8px;cursor:pointer" onclick="window.open('${o.paymentProof}','_blank')"><i class="fas fa-receipt"></i> Proof</button>` : ''}
+      ${o.paymentProof ? `<button style="background:var(--gray-100);color:var(--gray-700);border:none;border-radius:6px;font-size:11px;font-weight:700;padding:5px 8px;cursor:pointer" onclick="viewReceipt('${o.paymentProof}')"><i class="fas fa-receipt"></i> Proof</button>` : ''}
     </td>
   </tr>`).join('');
 }
@@ -6840,7 +6851,7 @@ window.loadAdminOrders = function() {
           <td style="display:flex;flex-direction:column;gap:5px;padding:8px 6px">
             <button style="background:var(--orange);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;padding:5px 8px;cursor:pointer;white-space:nowrap" onclick="viewOrderDetails('${d.id}')"><i class="fas fa-eye"></i> Details</button>
             <button class="btn-success" style="font-size:11px;padding:5px 8px;white-space:nowrap" onclick="openStatusModal('${d.id}','${o.status||'pending'}','${o.userEmail||''}')"><i class="fas fa-edit"></i> Update</button>
-            ${o.paymentProof ? `<button style="background:var(--gray-100);color:var(--gray-700);border:none;border-radius:6px;font-size:11px;font-weight:700;padding:5px 8px;cursor:pointer;white-space:nowrap" onclick="window.open('${o.paymentProof}','_blank')"><i class="fas fa-receipt"></i> Receipt</button>` : ''}
+            ${o.paymentProof ? `<button style="background:var(--gray-100);color:var(--gray-700);border:none;border-radius:6px;font-size:11px;font-weight:700;padding:5px 8px;cursor:pointer;white-space:nowrap" onclick="viewReceipt('${o.paymentProof}')"><i class="fas fa-receipt"></i> Receipt</button>` : ''}
           </td>
         </tr>`;
       } catch(rowErr) {
@@ -6947,7 +6958,7 @@ window.viewOrderDetails = async function(docId) {
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:900;border-top:2px solid var(--gray-200);padding-top:10px;margin-top:4px"><span>Total</span><span style="color:var(--orange)">₦${(o.total||0).toLocaleString()}</span></div>
         ${o.paymentProof ? `<div style="margin-top:14px;background:var(--gray-50);border-radius:8px;padding:10px">
           <div style="font-size:11px;font-weight:800;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px"><i class="fas fa-receipt"></i> Payment Receipt (Proof)</div>
-          <img src="${o.paymentProof}" style="max-width:200px;width:100%;border-radius:8px;border:2px solid var(--orange);cursor:pointer;display:block" onclick="window.open('${o.paymentProof}','_blank')">
+          <img src="${o.paymentProof}" style="max-width:200px;width:100%;border-radius:8px;border:2px solid var(--orange);cursor:pointer;display:block" onclick="viewReceipt('${o.paymentProof}')">
           <div style="font-size:11px;color:var(--gray-400);margin-top:6px">Tap image to view full size</div>
         </div>` : (o.payment==='bank' ? `<div style="margin-top:14px;background:#fef3c7;border-radius:8px;padding:10px;font-size:12px;color:#92400e"><i class="fas fa-exclamation-triangle"></i> No receipt uploaded for this bank transfer order.</div>` : '')}
       </div>`;
@@ -8041,6 +8052,14 @@ window.toggleSidebar = function() {
 // ===== MODALS =====
 window.openModal = function(id) {
   document.getElementById(id).classList.add('open');
+};
+// Show a payment-proof / receipt image (base64 data URL) in an in-page modal.
+// Using window.open() on a data: URL gets blocked by mobile browsers as a blank
+// tab, so receipts must be shown inline instead of navigated to.
+window.viewReceipt = function(dataUrl) {
+  if (!dataUrl) return showToast('No receipt image found for this order','error');
+  document.getElementById('receipt-view-img').src = dataUrl;
+  openModal('modal-receipt-view');
 };
 window.closeModal = function(id) {
   document.getElementById(id).classList.remove('open');
