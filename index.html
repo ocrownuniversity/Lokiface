@@ -1221,7 +1221,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 
     <!-- ============ ROOMS ============ -->
     <div class=&quot;apage&quot; id=&quot;page-rooms&quot;>
-      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Rooms</div><div class=&quot;ph-sub&quot;>Manage the pool of physical room numbers for each room type. New bookings are auto-assigned the next free number from this list.</div></div>
+      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Rooms</div><div class=&quot;ph-sub&quot;>Upload a photo for each room type and manage the pool of physical room numbers. Both changes reflect on the public website immediately.</div></div>
       <div class=&quot;stat-grid&quot; id=&quot;rooms-stats&quot;></div>
       <div id=&quot;rooms-list&quot;></div>
     </div>
@@ -1504,6 +1504,36 @@ function generateUniqueAccessCode() {
   });
 }
 
+// ── ROOM PHOTOS (settings/roomImages, read by the public site) ──
+var ROOM_IMAGES = {};
+db.collection(&quot;settings&quot;).doc(&quot;roomImages&quot;).onSnapshot(function(doc) {
+  ROOM_IMAGES = doc.exists ? (doc.data() || {}) : {};
+  if (document.getElementById(&quot;page-rooms&quot;) &amp;&amp; document.getElementById(&quot;page-rooms&quot;).classList.contains(&quot;active&quot;)) {
+    renderRooms();
+  }
+}, function(e) { console.warn(&quot;roomImages listener:&quot;, e); });
+function uploadRoomImage(type, input) {
+  var file = input.files &amp;&amp; input.files[0];
+  if (!file) return;
+  compressImageToLimit(file, function(dataUrl) {
+    var o = {}; o[type] = dataUrl;
+    db.collection(&quot;settings&quot;).doc(&quot;roomImages&quot;).set(o, { merge: true }).then(function() {
+      ROOM_IMAGES[type] = dataUrl;
+      renderRooms();
+      T(&quot;Photo Updated&quot;, type + &quot; photo is now live on the website.&quot;);
+    }).catch(function() { T(&quot;Error&quot;, &quot;Could not save photo. Check Firestore rules.&quot;); });
+  }, { maxBytes: 600000, maxDim: 1000, minDim: 300, onError: function(){ T(&quot;Error&quot;, &quot;Could not process that photo.&quot;); } });
+  input.value = &quot;&quot;;
+}
+function removeRoomImage(type) {
+  var o = {}; o[type] = firebase.firestore.FieldValue.delete();
+  db.collection(&quot;settings&quot;).doc(&quot;roomImages&quot;).set(o, { merge: true }).then(function() {
+    delete ROOM_IMAGES[type];
+    renderRooms();
+    T(&quot;Photo Removed&quot;, type + &quot; reverted to the default icon.&quot;);
+  }).catch(function() { T(&quot;Error&quot;, &quot;Could not remove photo.&quot;); });
+}
+
 // ── ROOMS PAGE ──
 function occupiedRoomNumbersToday() {
   var today = new Date().toISOString().split(&quot;T&quot;)[0];
@@ -1524,9 +1554,23 @@ function renderRooms() {
   ROOM_TYPE_LIST.forEach(function(type) {
     var nums = ROOM_INVENTORY[type] || [];
     totalRooms += nums.length;
+    var imgUrl = ROOM_IMAGES[type];
     html += '<div class=&quot;card&quot; style=&quot;margin-bottom:1rem&quot;>' +
       '<div class=&quot;card-title&quot; style=&quot;display:flex;align-items:center;justify-content:space-between&quot;>' +
         '<span>' + esc(type) + ' <span style=&quot;font-weight:400;color:var(--muted2);font-size:.82rem&quot;>(' + nums.length + ' room' + (nums.length===1?'':'s') + ')</span></span>' +
+      '</div>' +
+      '<div style=&quot;display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start;margin:.75rem 0 1rem&quot;>' +
+        '<div style=&quot;width:160px;height:110px;border-radius:10px;overflow:hidden;background:var(--blue-dim);flex-shrink:0;display:flex;align-items:center;justify-content:center&quot;>' +
+          (imgUrl ? '<img src=&quot;' + imgUrl + '&quot; style=&quot;width:100%;height:100%;object-fit:cover;display:block&quot;/>' : '<span style=&quot;font-size:2rem&quot;>&amp;#128716;</span>') +
+        '</div>' +
+        '<div style=&quot;flex:1;min-width:180px&quot;>' +
+          '<div style=&quot;font-size:.78rem;color:var(--muted);margin-bottom:.5rem&quot;>This photo appears on the room card for ' + esc(type) + ' on the public website.</div>' +
+          '<label class=&quot;btn btn-o btn-sm&quot; style=&quot;cursor:pointer;display:inline-block&quot;>' +
+            (imgUrl ? '&amp;#128247; Change Photo' : '&amp;#128247; Upload Photo') +
+            '<input type=&quot;file&quot; accept=&quot;image/*&quot; style=&quot;display:none&quot; onchange=&quot;uploadRoomImage(\'' + type.replace(/'/g,&quot;\\'&quot;) + '\', this)&quot;/>' +
+          '</label>' +
+          (imgUrl ? ' <button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;removeRoomImage(\'' + type.replace(/'/g,&quot;\\'&quot;) + '\')&quot;>Remove</button>' : '') +
+        '</div>' +
       '</div>' +
       '<div style=&quot;display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0&quot;>' +
       (nums.length ? nums.map(function(n) {
@@ -3398,27 +3442,28 @@ function loadHomeReviews() {
   }).catch(function(e) { console.error(e); });
 }
 
+var _roomCardDefaults = {};
 function updateRoomCard(room, url) {
   var el = document.getElementById("rt-" + room);
   if (!el) return;
+  if (_roomCardDefaults[room] === undefined) _roomCardDefaults[room] = el.innerHTML;
   if (url) {
     el.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display=\'none\'"/>';
+  } else {
+    el.innerHTML = _roomCardDefaults[room];
   }
 }
 function applyRoomImages() {
-  var rooms = ["Single","Double","VIP","Deluxe","Executive","Family","Honeymoon"];
-  rooms.forEach(function(r) {
-    if (ROOM_IMGS[r]) updateRoomCard(r, ROOM_IMGS[r]);
+  ROOM_TYPE_LIST.forEach(function(r) {
+    updateRoomCard(r, ROOM_IMGS[r]);
   });
 }
 function loadSavedImages() {
-  db.collection("settings").doc("roomImages").get().then(function(doc) {
-    if (doc.exists) {
-      var data = doc.data();
-      Object.keys(data).forEach(function(r) { if (data[r]) ROOM_IMGS[r] = data[r]; });
-      applyRoomImages();
-    }
-  }).catch(function() {});
+  db.collection("settings").doc("roomImages").onSnapshot(function(doc) {
+    var data = doc.exists ? (doc.data() || {}) : {};
+    ROOM_TYPE_LIST.forEach(function(r) { ROOM_IMGS[r] = data[r] || ""; });
+    applyRoomImages();
+  }, function() {});
 }
 // ═══════════════════════════════════════════
 // PROMO CODES
