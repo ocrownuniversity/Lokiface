@@ -695,18 +695,26 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   </div>
 
   <div id="acc-app" style="display:none">
-    <div class="bpw" style="max-width:640px">
-      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.4rem">
-        <div style="position:relative">
-          <div id="acc-avatar" style="width:64px;height:64px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold);overflow:hidden;flex-shrink:0">U</div>
+    <div class="bpw" style="max-width:640px;padding-top:1.4rem">
+      <div style="background:linear-gradient(135deg,var(--ink),#132b52);border-radius:20px;padding:1.6rem 1.4rem 1.4rem;color:#fff;margin-bottom:1rem">
+        <div style="display:flex;align-items:center;gap:1rem">
+          <div id="acc-avatar" style="width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.4rem;color:#fff;overflow:hidden;flex-shrink:0">U</div>
+          <div>
+            <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:#fff" id="acc-name">Guest</div>
+            <span style="font-size:.66rem;color:var(--gold2);background:rgba(255,255,255,.12);display:inline-block;padding:.18rem .6rem;border-radius:100px;margin-top:.3rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase" id="acc-role">Member</span>
+            <div id="acc-email" style="display:none"></div>
+          </div>
         </div>
-        <div>
-          <div style="font-family:'Playfair Display',serif;font-size:1.3rem" id="acc-name">Guest</div>
-          <div style="font-size:.78rem;color:var(--muted)" id="acc-email">-</div>
+        <div onclick="accOpenSub('payments')" style="margin-top:1.3rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+          <div>
+            <div style="font-size:.66rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem">Wallet Balance</div>
+            <div style="display:flex;align-items:center;gap:.55rem">
+              <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold2)" id="acc-wallet-val">&#8358;0.00</div>
+              <button type="button" onclick="event.stopPropagation();accToggleWalletVisibility()" style="background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;font-size:1rem;padding:0;line-height:1" id="acc-wallet-eye">&#128065;</button>
+            </div>
+          </div>
+          <span style="color:rgba(255,255,255,.5);font-size:1.2rem">&#8250;</span>
         </div>
-      </div>
-      <div class="acard" style="margin-bottom:1rem">
-        <div class="atitle" style="margin-bottom:0">Bookings &amp; Wallet</div>
       </div>
       <div id="acc-menu"></div>
     </div>
@@ -1307,6 +1315,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;sb-item&quot; id=&quot;sb-subadmin&quot; data-page=&quot;subadmins&quot; onclick=&quot;goPage('subadmins')&quot; style=&quot;display:none&quot;><span class=&quot;ic&quot;>&amp;#128272;</span>Sub-Admins</div>
       <div class=&quot;sb-item&quot; data-page=&quot;rooms&quot; onclick=&quot;goPage('rooms')&quot;><span class=&quot;ic&quot;>&amp;#128716;</span>Rooms</div>
       <div class=&quot;sb-item&quot; data-page=&quot;withdrawals&quot; onclick=&quot;goPage('withdrawals')&quot;><span class=&quot;ic&quot;>&amp;#128179;</span>Hotel Withdrawals</div>
+      <div class=&quot;sb-item&quot; data-page=&quot;walletfundings&quot; onclick=&quot;goPage('walletfundings')&quot;><span class=&quot;ic&quot;>&amp;#128176;</span>Wallet Fundings</div>
       <div class=&quot;sb-item&quot; data-page=&quot;settings&quot; onclick=&quot;goPage('settings')&quot;><span class=&quot;ic&quot;>&amp;#9881;</span>Settings</div>
     </div>
     <div class=&quot;sb-foot&quot;><button class=&quot;sb-logout&quot; onclick=&quot;adminLogout()&quot;>&amp;#128682; Log Out</button></div>
@@ -1333,6 +1342,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelregs')&quot;><span class=&quot;ic&quot;>&amp;#128196;</span>Hotel Registrations<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('payments')&quot;><span class=&quot;ic&quot;>&amp;#128179;</span>Payments &amp;amp; Wallet<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('payouts')&quot;><span class=&quot;ic&quot;>&amp;#128176;</span>Payouts<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('walletfundings')&quot;><span class=&quot;ic&quot;>&amp;#128176;</span>Wallet Fundings<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('promotions')&quot;><span class=&quot;ic&quot;>&amp;#127881;</span>Promotions<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('reports')&quot;><span class=&quot;ic&quot;>&amp;#128200;</span>Reports<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('reviews')&quot;><span class=&quot;ic&quot;>&amp;#11088;</span>Reviews<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
@@ -1461,6 +1471,14 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;stat-grid&quot; id=&quot;wd-stats&quot;></div>
       <div class=&quot;tabs&quot; id=&quot;wd-tabs&quot; style=&quot;display:flex;gap:.3rem;border-bottom:1px solid var(--border);margin:1rem 0&quot;></div>
       <div id=&quot;wd-list&quot;></div>
+    </div>
+
+    <!-- ============ WALLET FUNDINGS ============ -->
+    <div class=&quot;apage&quot; id=&quot;page-walletfundings&quot;>
+      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Wallet Fundings</div><div class=&quot;ph-sub&quot;>Customer wallet top-ups. Paystack fundings are credited automatically; bank transfer fundings need your approval before the wallet balance is credited.</div></div>
+      <div class=&quot;stat-grid&quot; id=&quot;wf-stats&quot;></div>
+      <div class=&quot;tabs&quot; id=&quot;wf-tabs&quot; style=&quot;display:flex;gap:.3rem;border-bottom:1px solid var(--border);margin:1rem 0&quot;></div>
+      <div id=&quot;wf-list&quot;></div>
     </div>
 
     <!-- ============ SETTINGS ============ -->
@@ -1962,6 +1980,81 @@ function rejectWithdrawal(id) {
     T(&quot;Withdrawal Rejected&quot;, &quot;&amp;#8358;&quot;+w.amount.toLocaleString()+&quot; refunded to &quot;+w.hotelName+&quot;'s wallet.&quot;);
   }).catch(function() { T(&quot;Error&quot;, &quot;Could not reject this withdrawal.&quot;); });
 }
+
+// ── CUSTOMER WALLET FUNDINGS ──
+// Paystack fundings arrive already &quot;paid&quot; (credited instantly on the customer
+// side). Bank-transfer fundings arrive &quot;pending&quot; with a receipt image and only
+// get credited to the customer's users/{uid}.walletBalance once approved here.
+var _allWalletFundings = [];
+var _wfTab = &quot;pending&quot;;
+function loadWalletFundings() {
+  return db.collection(&quot;walletFundings&quot;).get().then(function(snap) {
+    _allWalletFundings = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+    _allWalletFundings.sort(function(a,b){ return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
+  }).catch(function() { _allWalletFundings = []; });
+}
+function renderWalletFundings() {
+  if (!document.getElementById(&quot;wf-stats&quot;)) return;
+  var pending = _allWalletFundings.filter(function(w){ return w.status===&quot;pending&quot;; });
+  var paid = _allWalletFundings.filter(function(w){ return w.status===&quot;paid&quot;; });
+  var rejected = _allWalletFundings.filter(function(w){ return w.status===&quot;rejected&quot;; });
+  var pendingTotal = pending.reduce(function(s,w){ return s+(w.amount||0); }, 0);
+  document.getElementById(&quot;wf-stats&quot;).innerHTML =
+    statCard(&quot;&amp;#9203;&quot;,&quot;var(--amber)&quot;,&quot;var(--amber-bg)&quot;,&quot;Pending Requests&quot;, pending.length) +
+    statCard(&quot;&amp;#128176;&quot;,&quot;var(--blue)&quot;,&quot;var(--blue-dim)&quot;,&quot;Pending Amount&quot;, &quot;&amp;#8358;&quot;+pendingTotal.toLocaleString()) +
+    statCard(&quot;&amp;#9989;&quot;,&quot;var(--green)&quot;,&quot;var(--green-bg)&quot;,&quot;Credited&quot;, paid.length) +
+    statCard(&quot;&amp;#10060;&quot;,&quot;var(--red)&quot;,&quot;var(--red-bg)&quot;,&quot;Rejected&quot;, rejected.length);
+  var tabs = [
+    {key:&quot;pending&quot;, label:&quot;Pending (&quot;+pending.length+&quot;)&quot;},
+    {key:&quot;paid&quot;, label:&quot;Credited (&quot;+paid.length+&quot;)&quot;},
+    {key:&quot;rejected&quot;, label:&quot;Rejected (&quot;+rejected.length+&quot;)&quot;},
+    {key:&quot;&quot;, label:&quot;All (&quot;+_allWalletFundings.length+&quot;)&quot;}
+  ];
+  document.getElementById(&quot;wf-tabs&quot;).innerHTML = tabs.map(function(t){
+    return '<button class=&quot;tab-btn'+(t.key===_wfTab?' on':'')+'&quot; onclick=&quot;setWfTab(\''+t.key+'\')&quot;>'+t.label+'</button>';
+  }).join(&quot;&quot;);
+  var list = _allWalletFundings.filter(function(w){ return !_wfTab || w.status === _wfTab; });
+  document.getElementById(&quot;wf-list&quot;).innerHTML = list.length ? list.map(function(w) {
+    var methodLabel = w.method === &quot;manual&quot; ? &quot;Bank Transfer&quot; : &quot;Paystack&quot;;
+    var statusPill = w.status===&quot;paid&quot; ? '<span class=&quot;pill pill-green&quot;>Credited</span>' : w.status===&quot;rejected&quot; ? '<span class=&quot;pill pill-red&quot;>Rejected</span>' : '<span class=&quot;pill pill-amber&quot;>Pending</span>';
+    var actions = w.status === &quot;pending&quot; ?
+      '<div style=&quot;display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap&quot;>'+
+        (w.receiptImage ? '<button class=&quot;btn btn-o&quot; onclick=&quot;viewWalletFundingReceipt(\''+w.id+'\')&quot;>&amp;#128196; View Receipt</button>' : (w.method===&quot;manual&quot; ? '<span style=&quot;font-size:.72rem;color:var(--red);align-self:center&quot;>No receipt uploaded</span>' : ''))+
+        '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--green)&quot; onclick=&quot;approveWalletFunding(\''+w.id+'\')&quot;>&amp;#9989; Approve &amp;amp; Credit Wallet</button>'+
+        '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--red)&quot; onclick=&quot;rejectWalletFunding(\''+w.id+'\')&quot;>&amp;#10060; Reject</button>'+
+      '</div>' : (w.receiptImage ? '<div style=&quot;margin-top:.5rem&quot;><button class=&quot;btn btn-o&quot; onclick=&quot;viewWalletFundingReceipt(\''+w.id+'\')&quot;>&amp;#128196; View Receipt</button></div>' : '');
+    return '<div class=&quot;card&quot;><div style=&quot;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.6rem&quot;>'+
+      '<div><div style=&quot;font-weight:700&quot;>'+esc(w.name||w.email||&quot;User&quot;)+'</div>'+
+      '<div style=&quot;font-size:.78rem;color:var(--muted2)&quot;>'+esc(w.email||&quot;-&quot;)+' &amp;middot; '+methodLabel+' &amp;middot; '+(w.createdAt ? new Date(w.createdAt.toMillis()).toLocaleString() : &quot;-&quot;)+'</div></div>'+
+      '<div style=&quot;text-align:right&quot;><div style=&quot;font-weight:800;font-size:1.1rem&quot;>&amp;#8358;'+(w.amount||0).toLocaleString()+'</div>'+statusPill+'</div>'+
+      '</div>'+actions+'</div>';
+  }).join(&quot;&quot;) : '<div class=&quot;empty&quot;>No wallet funding requests in this category.</div>';
+}
+function setWfTab(key) { _wfTab = key; renderWalletFundings(); }
+function approveWalletFunding(id) {
+  var w = _allWalletFundings.find(function(x){ return x.id===id; }); if (!w || w.status !== &quot;pending&quot;) return;
+  db.collection(&quot;walletFundings&quot;).doc(id).update({ status:&quot;paid&quot;, resolvedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(function() {
+    return db.collection(&quot;users&quot;).doc(w.uid).update({ walletBalance: firebase.firestore.FieldValue.increment(w.amount) });
+  }).then(function() {
+    w.status = &quot;paid&quot;;
+    renderWalletFundings();
+    T(&quot;Wallet Credited&quot;, &quot;&amp;#8358;&quot;+w.amount.toLocaleString()+&quot; added to &quot;+(w.name||w.email)+&quot;'s wallet.&quot;);
+  }).catch(function() { T(&quot;Error&quot;, &quot;Could not approve this funding request.&quot;); });
+}
+function rejectWalletFunding(id) {
+  var w = _allWalletFundings.find(function(x){ return x.id===id; }); if (!w || w.status !== &quot;pending&quot;) return;
+  db.collection(&quot;walletFundings&quot;).doc(id).update({ status:&quot;rejected&quot;, resolvedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(function() {
+    w.status = &quot;rejected&quot;;
+    renderWalletFundings();
+    T(&quot;Request Rejected&quot;, &quot;The wallet funding request was rejected. No amount was credited.&quot;);
+  }).catch(function() { T(&quot;Error&quot;, &quot;Could not reject this request.&quot;); });
+}
+function viewWalletFundingReceipt(id) {
+  var w = _allWalletFundings.find(function(x){ return x.id===id; }); if (!w || !w.receiptImage) return;
+  var win = window.open(&quot;&quot;);
+  win.document.write('<title>Wallet Funding Receipt</title><body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;>'+
+    '<img src=&quot;'+w.receiptImage+'&quot; style=&quot;max-width:100%;max-height:100vh&quot;/></body>');
+}
 // This is only used to tell a super admin apart from a staff/sub-admin
 // after Firebase Authentication has already verified the password.
 // It grants nothing by itself.
@@ -2199,7 +2292,7 @@ function goPage(page) {
 function loadAll() {
   document.getElementById(&quot;loader&quot;).style.display = &quot;flex&quot;;
   ensureDefaultHotel().then(function(){
-    return Promise.all([loadHotels(), loadBookings(), loadUsers(), loadSubAdmins(), loadPayouts(), loadPromotions(), loadSettings(), loadReviews(), loadHotelRegs(), loadWithdrawals(), loadHotelBookings()]);
+    return Promise.all([loadHotels(), loadBookings(), loadUsers(), loadSubAdmins(), loadPayouts(), loadPromotions(), loadSettings(), loadReviews(), loadHotelRegs(), loadWithdrawals(), loadHotelBookings(), loadWalletFundings()]);
   }).then(function(){
     syncUsersFromBookings();
     ensureHVFields();
@@ -2387,6 +2480,7 @@ function renderAll() {
   ensureRoomsHotelSelected();
   renderWithdrawals();
   renderHotelBookingsAdmin();
+  renderWalletFundings();
   var badge = document.getElementById(&quot;notif-badge&quot;);
   var pending = _allBookings.filter(function(b){ return b.status === &quot;Pending&quot;; }).length;
   badge.textContent = pending;
@@ -4499,6 +4593,7 @@ function accSignup() {
     return db.collection("users").doc(cred.user.uid).set({
       name: name, email: email, phone: phone, photoURL: "",
       referralCode: cred.user.uid.slice(0, 8).toUpperCase(),
+      walletBalance: 0,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
   }).then(function() {
@@ -4612,6 +4707,7 @@ function accRenderHeader() {
   var p = _accProfile || {};
   document.getElementById("acc-name").textContent = p.name || "Guest";
   document.getElementById("acc-email").textContent = p.email || "";
+  var roleEl = document.getElementById("acc-role"); if (roleEl) roleEl.textContent = "Member";
   var av = document.getElementById("acc-avatar");
   if (p.photoURL) {
     av.innerHTML = '<img src="' + p.photoURL + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
@@ -4622,11 +4718,40 @@ function accRenderHeader() {
   var navA = document.getElementById("ni-account"); if (navA) navA.textContent = firstName;
   var navAm = document.getElementById("ni-account-m"); if (navAm) navAm.textContent = firstName;
   accShowMenu();
+  accRenderWalletSummary();
+}
+
+var _accWalletHidden = false;
+var _accWalletBalRaw = 0;
+function accRenderWalletSummary() {
+  var uid = _accUser ? _accUser.uid : "";
+  if (!uid) return;
+  db.collection("users").doc(uid).get().then(function(doc) {
+    _accWalletBalRaw = (doc.exists && doc.data().walletBalance) || 0;
+    accUpdateWalletDisplay();
+  }).catch(function() {});
+}
+function accUpdateWalletDisplay() {
+  var el = document.getElementById("acc-wallet-val");
+  var eye = document.getElementById("acc-wallet-eye");
+  if (!el) return;
+  if (_accWalletHidden) {
+    el.textContent = "\u20a6 \u2022\u2022\u2022\u2022\u2022\u2022";
+    if (eye) eye.innerHTML = "&#128584;";
+  } else {
+    el.textContent = "\u20a6" + Math.round(_accWalletBalRaw).toLocaleString() + ".00";
+    if (eye) eye.innerHTML = "&#128065;";
+  }
+}
+function accToggleWalletVisibility() {
+  _accWalletHidden = !_accWalletHidden;
+  accUpdateWalletDisplay();
 }
 
 function accShowMenu() {
   document.getElementById("acc-sub").style.display = "none";
   document.getElementById("acc-app").style.display = "block";
+  accRenderWalletSummary();
   var items = [
     { key: "bookings", ic: "&#128197;", lbl: "My Bookings" },
     { key: "wishlist", ic: "&#9825;", lbl: "My Wishlist" },
@@ -4641,10 +4766,29 @@ function accShowMenu() {
     { key: "privacy", ic: "&#128274;", lbl: "Privacy Policy" }
   ];
   var html = items.map(function(it) {
-    return '<div class="acc-item" onclick="accOpenSub(\'' + it.key + '\')"><span class="aic">' + it.ic + '</span><span class="alb">' + it.lbl + '</span><span class="aarrow">&#8250;</span></div>';
+    var badge = "";
+    if (it.key === "inbox") badge = '<span class="abadge" id="acc-inbox-badge" style="display:none">0</span>';
+    if (it.key === "notifications") badge = '<span class="abadge" id="acc-notif-badge" style="display:none">0</span>';
+    return '<div class="acc-item" onclick="accOpenSub(\'' + it.key + '\')"><span class="aic">' + it.ic + '</span><span class="alb">' + it.lbl + '</span>' + badge + '<span class="aarrow">&#8250;</span></div>';
   }).join("");
-  html += '<div class="acc-item" style="color:var(--red);margin-top:.6rem" onclick="accLogout()"><span class="aic">&#9211;</span><span class="alb">Log Out</span></div>';
+  html += '<div class="acc-item" style="color:var(--red);margin-top:.6rem;justify-content:center;text-align:center" onclick="accLogout()"><span class="aic">&#9211;</span><span class="alb" style="flex:none">Log Out</span></div>';
   document.getElementById("acc-menu").innerHTML = html;
+  accLoadMenuBadges();
+}
+
+function accLoadMenuBadges() {
+  var uid = _accUser ? _accUser.uid : "";
+  if (!uid) return;
+  db.collection("messages").where("uid", "==", uid).get().then(function(snap) {
+    var el = document.getElementById("acc-inbox-badge");
+    if (!el) return;
+    if (snap.size) { el.textContent = snap.size; el.style.display = "flex"; } else { el.style.display = "none"; }
+  }).catch(function() {});
+  db.collection("notifications").where("uid", "==", uid).get().then(function(snap) {
+    var el = document.getElementById("acc-notif-badge");
+    if (!el) return;
+    if (snap.size) { el.textContent = snap.size; el.style.display = "flex"; } else { el.style.display = "none"; }
+  }).catch(function() {});
 }
 
 function accOpenSub(key) {
@@ -4687,17 +4831,184 @@ function accRenderBookings(body) {
 }
 
 function accRenderPayments(body) {
+  var uid = _accUser ? _accUser.uid : "";
   var email = (_accProfile && _accProfile.email || "").toLowerCase();
-  db.collection("bookings").where("email", "==", email).get().then(function(snap) {
-    var docs = snap.docs.map(function(d) { return d.data(); }).filter(function(b) { return b.paymentStatus === "paid"; });
-    if (!docs.length) { body.innerHTML = '<div class="emst"><span class="ei">&#128179;</span>No payments yet.</div>'; return; }
-    var total = docs.reduce(function(s, b) { return s + (b.amountPaid || 0); }, 0);
-    var html = '<div class="lcard"><div class="fst">Total Spent</div><div style="font-family:\'Playfair Display\',serif;font-size:2rem;color:var(--gold)">&#8358;' + Math.round(total).toLocaleString() + '</div></div>';
-    docs.forEach(function(b) {
-      html += '<div class="bkc"><div class="bkh"><div class="bkn">' + (b.roomType || "-") + '</div><div class="badge bA">' + (b.paymentMethod || "paystack") + '</div></div><div class="bmv">&#8358;' + Math.round(b.amountPaid || 0).toLocaleString() + '</div><div class="rev-room">Ref: ' + (b.paymentRef || "-") + '</div></div>';
-    });
+  Promise.all([
+    db.collection("users").doc(uid).get(),
+    db.collection("walletFundings").where("uid", "==", uid).get(),
+    db.collection("bookings").where("email", "==", email).get()
+  ]).then(function(results) {
+    var udoc = results[0];
+    var bal = (udoc.exists && udoc.data().walletBalance) || 0;
+    if (_accProfile) _accProfile.walletBalance = bal;
+
+    var fundings = results[1].docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+    fundings.sort(function(a, b) { return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
+
+    var payDocs = results[2].docs.map(function(d) { return d.data(); }).filter(function(b) { return b.paymentStatus === "paid"; });
+    var totalSpent = payDocs.reduce(function(s, b) { return s + (b.amountPaid || 0); }, 0);
+
+    var html = '<div class="lcard" style="background:linear-gradient(135deg,var(--ink),#132b52);color:#fff;border:none">' +
+      '<div style="font-size:.7rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em">Wallet Balance</div>' +
+      '<div style="font-family:\'Playfair Display\',serif;font-size:2.1rem;color:var(--gold2);margin:.2rem 0 .9rem">&#8358;' + Math.round(bal).toLocaleString() + '</div>' +
+      '<button class="btn bg" style="width:100%" onclick="accToggleFundWallet()" id="fw-toggle-btn">&#43; Fund Wallet</button>' +
+      '</div>' +
+      '<div id="fw-panel" style="display:none">' + fwPanelHTML() + '</div>';
+
+    if (fundings.length) {
+      html += '<div class="fst" style="margin-top:.4rem">Wallet Transactions</div>';
+      html += fundings.map(function(f) {
+        var st = f.status === "paid" ? "Successful" : f.status === "pending" ? "Pending Approval" : "Rejected";
+        var stColor = f.status === "paid" ? "var(--green)" : f.status === "pending" ? "#b5820a" : "var(--red)";
+        return '<div class="bkc"><div class="bkh"><div class="bkn">Wallet Funding &middot; ' + (f.method === "manual" ? "Bank Transfer" : "Paystack") + '</div>' +
+          '<span class="badge" style="background:transparent;border:1px solid ' + stColor + ';color:' + stColor + '">' + st + '</span></div>' +
+          '<div class="bmv">&#8358;' + Math.round(f.amount || 0).toLocaleString() + '</div>' +
+          '<div class="rev-room">' + (f.createdAt ? new Date(f.createdAt.toMillis()).toLocaleDateString() : "-") + (f.status === "pending" ? " &middot; awaiting admin approval" : "") + '</div></div>';
+      }).join("");
+    }
+
+    html += '<div class="fst" style="margin-top:1.2rem">Booking Payments</div>';
+    if (!payDocs.length) {
+      html += '<div class="emst"><span class="ei">&#128179;</span>No booking payments yet.</div>';
+    } else {
+      html += '<div class="lcard"><div class="fst">Total Spent</div><div style="font-family:\'Playfair Display\',serif;font-size:2rem;color:var(--gold)">&#8358;' + Math.round(totalSpent).toLocaleString() + '</div></div>';
+      payDocs.forEach(function(b) {
+        html += '<div class="bkc"><div class="bkh"><div class="bkn">' + (b.roomType || "-") + '</div><div class="badge bA">' + (b.paymentMethod || "paystack") + '</div></div><div class="bmv">&#8358;' + Math.round(b.amountPaid || 0).toLocaleString() + '</div><div class="rev-room">Ref: ' + (b.paymentRef || "-") + '</div></div>';
+      });
+    }
+
     body.innerHTML = html;
-  }).catch(function() { body.innerHTML = '<div class="emst"><span class="ei">&#9888;</span>Could not load payments.</div>'; });
+  }).catch(function(e) { console.error(e); body.innerHTML = '<div class="emst"><span class="ei">&#9888;</span>Could not load payments.</div>'; });
+}
+
+function fwPanelHTML() {
+  return '<div class="lcard">' +
+    '<div class="fst" style="font-size:1rem">Fund Your Wallet</div>' +
+    '<div class="fg"><label>Amount (&#8358;)</label><input type="number" id="fw-amount" min="100" step="1" placeholder="e.g. 5000" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.7rem;font-family:Jost,sans-serif;font-size:.88rem;color:var(--text);margin-top:.3rem"/><div class="eferr" id="fw-eamt">Enter a valid amount (minimum &#8358;100).</div></div>' +
+    '<div class="fg"><label>Funding Method</label>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.3rem">' +
+    '<div id="fw-pm-paystack" onclick="accSelectFundMethod(\'paystack\')" style="border:2px solid var(--gold);border-radius:10px;padding:.85rem;text-align:center;cursor:pointer;background:var(--gold-dim);transition:all .2s">' +
+    '<div style="font-size:1.3rem">&#128179;</div><div style="font-size:.78rem;font-weight:600;color:var(--gold);margin-top:.3rem">Paystack</div><div style="font-size:.65rem;color:var(--muted)">Instant, automatic</div></div>' +
+    '<div id="fw-pm-manual" onclick="accSelectFundMethod(\'manual\')" style="border:2px solid var(--border);border-radius:10px;padding:.85rem;text-align:center;cursor:pointer;background:var(--surface2);transition:all .2s">' +
+    '<div style="font-size:1.3rem">&#127968;</div><div style="font-size:.78rem;font-weight:600;color:var(--text);margin-top:.3rem">Bank Transfer</div><div style="font-size:.65rem;color:var(--muted)">Needs admin approval</div></div>' +
+    '</div></div>' +
+    '<div id="fw-manual-section" style="display:none;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem">' +
+    '<div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:.75rem">&#127968; Bank Transfer Details</div>' +
+    '<div style="display:flex;flex-direction:column;gap:.4rem;font-size:.82rem">' +
+    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Bank</span><span style="font-weight:600">Opay</span></div>' +
+    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Number</span><span style="font-weight:600;font-family:monospace">8150898386</span></div>' +
+    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Name</span><span style="font-weight:600">Oladeji Opeyemi Ridwan</span></div>' +
+    '</div>' +
+    '<div style="margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--border)">' +
+    '<label style="display:block;font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.38rem">Upload Payment Receipt</label>' +
+    '<input type="file" id="fw-receipt-file" accept="image/*" onchange="accWalletReceiptChange(this)" style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:.62rem;font-family:Jost,sans-serif;font-size:.82rem;color:var(--text)"/>' +
+    '<div id="fw-receipt-preview" style="margin-top:.5rem;display:none"><img id="fw-receipt-img" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border)"/></div>' +
+    '<div class="eferr" id="fw-ereceipt">Please upload your payment receipt.</div>' +
+    '</div></div>' +
+    '<button class="fsub" id="fw-sub" onclick="accSubmitFundWallet()">&#128176; Fund with Paystack</button>' +
+    '</div>';
+}
+
+var _fwMethod = "paystack";
+var _fwReceiptB64 = "";
+
+function accToggleFundWallet() {
+  var p = document.getElementById("fw-panel");
+  var open = p.style.display !== "none";
+  p.style.display = open ? "none" : "block";
+  if (!open) { _fwMethod = "paystack"; _fwReceiptB64 = ""; accSelectFundMethod("paystack"); }
+}
+
+function accSelectFundMethod(method) {
+  _fwMethod = method;
+  var ps = document.getElementById("fw-pm-paystack"), mn = document.getElementById("fw-pm-manual");
+  var ms = document.getElementById("fw-manual-section"), btn = document.getElementById("fw-sub");
+  if (!ps || !mn) return;
+  if (method === "paystack") {
+    ps.style.border = "2px solid var(--gold)"; ps.style.background = "var(--gold-dim)";
+    mn.style.border = "2px solid var(--border)"; mn.style.background = "var(--surface2)";
+    ms.style.display = "none";
+    btn.innerHTML = "&#128176; Fund with Paystack";
+  } else {
+    mn.style.border = "2px solid var(--gold)"; mn.style.background = "var(--gold-dim)";
+    ps.style.border = "2px solid var(--border)"; ps.style.background = "var(--surface2)";
+    ms.style.display = "block";
+    btn.innerHTML = "&#128228; Submit with Receipt";
+  }
+}
+
+function accWalletReceiptChange(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var e = document.getElementById("fw-ereceipt");
+  if (e) e.classList.remove("show");
+  compressImage(file, function(b64) {
+    _fwReceiptB64 = b64;
+    var preview = document.getElementById("fw-receipt-preview"), img = document.getElementById("fw-receipt-img");
+    if (preview && img) { img.src = b64; preview.style.display = "block"; }
+  });
+}
+
+function accSubmitFundWallet() {
+  var amtInput = document.getElementById("fw-amount");
+  var amount = parseInt(amtInput.value, 10);
+  var eamt = document.getElementById("fw-eamt");
+  if (!amount || amount < 100) { eamt.classList.add("show"); return; }
+  eamt.classList.remove("show");
+
+  var uid = _accUser ? _accUser.uid : "";
+  var email = (_accProfile && _accProfile.email) || "";
+  var name = (_accProfile && _accProfile.name) || "";
+  if (!uid) { T("Sign In Required", "Please sign in to fund your wallet."); return; }
+
+  if (_fwMethod === "paystack") {
+    var btnP = document.getElementById("fw-sub");
+    btnP.disabled = true;
+    var handler = PaystackPop.setup({
+      key: PAYSTACK_KEY,
+      email: email,
+      amount: amount * 100,
+      currency: "NGN",
+      ref: "HCWALLET_" + Date.now(),
+      metadata: { uid: uid, type: "wallet_funding" },
+      callback: function(response) {
+        db.collection("walletFundings").add({
+          uid: uid, name: name, email: email, amount: amount,
+          method: "paystack", status: "paid", reference: response.reference,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function() {
+          return db.collection("users").doc(uid).update({ walletBalance: firebase.firestore.FieldValue.increment(amount) });
+        }).then(function() {
+          T("Wallet Funded!", "\u20a6" + amount.toLocaleString() + " has been added to your wallet.");
+          accOpenSub("payments");
+        }).catch(function() {
+          T("Error", "Payment received but wallet update failed. Contact support with ref: " + response.reference, 8000);
+        });
+      },
+      onClose: function() {
+        if (btnP) btnP.disabled = false;
+        T("Payment Cancelled", "You closed the payment window.");
+      }
+    });
+    handler.openIframe();
+  } else {
+    var ereceipt = document.getElementById("fw-ereceipt");
+    if (!_fwReceiptB64) { ereceipt.classList.add("show"); return; }
+    ereceipt.classList.remove("show");
+    var btn = document.getElementById("fw-sub");
+    btn.disabled = true; btn.textContent = "Submitting...";
+    db.collection("walletFundings").add({
+      uid: uid, name: name, email: email, amount: amount,
+      method: "manual", status: "pending", receiptImage: _fwReceiptB64,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      T("Submitted for Approval", "Your bank transfer receipt has been sent. We'll credit your wallet once approved.", 6000);
+      accOpenSub("payments");
+    }).catch(function() {
+      btn.disabled = false; btn.innerHTML = "&#128228; Submit with Receipt";
+      T("Error", "Could not submit. Try again.", 6000);
+    });
+  }
 }
 
 function accRenderInbox(body) {
