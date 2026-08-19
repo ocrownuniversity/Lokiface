@@ -1446,7 +1446,11 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 
     <!-- ============ ROOMS ============ -->
     <div class=&quot;apage&quot; id=&quot;page-rooms&quot;>
-      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Rooms</div><div class=&quot;ph-sub&quot;>Upload a photo for each room type and manage the pool of physical room numbers. Both changes reflect on the public website immediately.</div></div>
+      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Rooms</div><div class=&quot;ph-sub&quot;>Manage room types, photos and the pool of physical room numbers for every hotel on the platform. Changes reflect on the public marketplace immediately.</div></div>
+      <div class=&quot;toolbar&quot;>
+        <select class=&quot;tb-select&quot; id=&quot;rooms-hotel-select&quot; style=&quot;min-width:220px&quot; onchange=&quot;setRoomsHotel(this.value)&quot;></select>
+        <button class=&quot;btn btn-p&quot; onclick=&quot;openRoomTypeModal()&quot;>&amp;#43; Add Room Type</button>
+      </div>
       <div class=&quot;stat-grid&quot; id=&quot;rooms-stats&quot;></div>
       <div id=&quot;rooms-list&quot;></div>
     </div>
@@ -1604,6 +1608,19 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
   </div>
 </div>
 
+<!-- Room Type Modal -->
+<div class=&quot;modal-ov&quot; id=&quot;room-type-modal&quot;>
+  <div class=&quot;modal&quot;>
+    <div class=&quot;modal-title&quot; id=&quot;rt-modal-title&quot;>Add Room Type <button class=&quot;modal-close&quot; onclick=&quot;closeModal('room-type-modal')&quot;>&amp;#10005;</button></div>
+    <div class=&quot;fg&quot;><label>Room Type Name</label><input type=&quot;text&quot; id=&quot;rt-name&quot; placeholder=&quot;e.g. Deluxe Suite&quot;/></div>
+    <div class=&quot;fg&quot;><label>Price per Night (&amp;#8358;)</label><input type=&quot;number&quot; id=&quot;rt-price&quot; placeholder=&quot;e.g. 45000&quot;/></div>
+    <div class=&quot;fg&quot;><label>Description</label><input type=&quot;text&quot; id=&quot;rt-desc&quot; placeholder=&quot;Short description shown to guests&quot;/></div>
+    <div class=&quot;fg&quot;><label>Room Numbers (comma separated, optional)</label><input type=&quot;text&quot; id=&quot;rt-nums&quot; placeholder=&quot;e.g. 101, 102, 103&quot;/></div>
+    <div class=&quot;fg&quot;><label>Photo (optional)</label><input type=&quot;file&quot; accept=&quot;image/*&quot; id=&quot;rt-photo&quot;/></div>
+    <button class=&quot;fsub&quot; onclick=&quot;saveRoomType()&quot;>Save Room Type</button>
+  </div>
+</div>
+
 <!-- User Modal -->
 <div class=&quot;modal-ov&quot; id=&quot;user-modal&quot;>
   <div class=&quot;modal&quot;>
@@ -1687,72 +1704,41 @@ emailjs.init(&quot;r7qlEfPQs7hyHnOHR&quot;);
 var EJS_SVC = &quot;service_munqxoi&quot;;
 var EJS_TPL = &quot;template_nm4cjm9&quot;;
 
-// ROOM INVENTORY &amp; AUTO-ASSIGNMENT
-// The pool of physical room numbers per room type is stored in Firestore
-// (settings/roomInventory) and edited from the Rooms page below, so it
-// stays in sync with the public booking site in real time.
-var DEFAULT_ROOM_INVENTORY = {
-  Single:    [&quot;101&quot;,&quot;102&quot;,&quot;103&quot;,&quot;104&quot;,&quot;105&quot;,&quot;106&quot;,&quot;107&quot;,&quot;108&quot;],
-  Double:    [&quot;201&quot;,&quot;202&quot;,&quot;203&quot;,&quot;204&quot;,&quot;205&quot;,&quot;206&quot;,&quot;207&quot;,&quot;208&quot;],
-  VIP:       [&quot;301&quot;,&quot;302&quot;,&quot;303&quot;,&quot;304&quot;,&quot;305&quot;],
-  Deluxe:    [&quot;401&quot;,&quot;402&quot;,&quot;403&quot;,&quot;404&quot;,&quot;405&quot;,&quot;406&quot;],
-  Executive: [&quot;501&quot;,&quot;502&quot;,&quot;503&quot;,&quot;504&quot;,&quot;505&quot;],
-  Family:    [&quot;601&quot;,&quot;602&quot;,&quot;603&quot;,&quot;604&quot;,&quot;605&quot;],
-  Honeymoon: [&quot;701&quot;,&quot;702&quot;,&quot;703&quot;,&quot;704&quot;]
-};
-var ROOM_TYPE_LIST = Object.keys(DEFAULT_ROOM_INVENTORY);
-var ROOM_INVENTORY = JSON.parse(JSON.stringify(DEFAULT_ROOM_INVENTORY));
-db.collection(&quot;settings&quot;).doc(&quot;roomInventory&quot;).onSnapshot(function(doc) {
-  if (doc.exists) {
-    var data = doc.data();
-    ROOM_TYPE_LIST.forEach(function(type) {
-      ROOM_INVENTORY[type] = Array.isArray(data[type]) ? data[type].slice() : (ROOM_INVENTORY[type] || []);
-    });
-  } else {
-    db.collection(&quot;settings&quot;).doc(&quot;roomInventory&quot;).set(DEFAULT_ROOM_INVENTORY).catch(function(){});
-  }
-  if (document.querySelector('.sb-item[data-page=&quot;rooms&quot;].on') || (document.getElementById(&quot;page-rooms&quot;) &amp;&amp; document.getElementById(&quot;page-rooms&quot;).classList.contains(&quot;active&quot;))) {
-    renderRooms();
-  }
-}, function(e) { console.warn(&quot;roomInventory listener:&quot;, e); });
-function datesOverlap(aStart, aEnd, bStart, bEnd) { return aStart < bEnd &amp;&amp; bStart < aEnd; }
+// ── ROOMS PAGE (multi-hotel) ──
+// Each hotel manages its own room types in hotels/{hotelId}/rooms/{roomId},
+// with fields: name, price, description, imageURL, roomNumbers[]. This is the
+// same collection the public Marketplace reads from, and the same collection
+// hotel partners edit from their own portal — so admin edits here show up
+// for guests immediately, for every hotel, not just Hotels Continental.
+var _roomsHotelId = null;
+var _roomsList = [];
+var _roomsUnsub = null;
+var _rtEditingId = null;
 
-// ── ROOM PHOTOS (settings/roomImages, read by the public site) ──
-var ROOM_IMAGES = {};
-db.collection(&quot;settings&quot;).doc(&quot;roomImages&quot;).onSnapshot(function(doc) {
-  ROOM_IMAGES = doc.exists ? (doc.data() || {}) : {};
-  if (document.getElementById(&quot;page-rooms&quot;) &amp;&amp; document.getElementById(&quot;page-rooms&quot;).classList.contains(&quot;active&quot;)) {
-    renderRooms();
+function ensureRoomsHotelSelected() {
+  if (!_allHotels.length) return;
+  if (!_roomsHotelId || !_hotelById[_roomsHotelId]) {
+    _roomsHotelId = (_hotelById[_defaultHotelId] ? _defaultHotelId : _allHotels[0].id);
   }
-}, function(e) { console.warn(&quot;roomImages listener:&quot;, e); });
-function uploadRoomImage(type, input) {
-  var file = input.files &amp;&amp; input.files[0];
-  if (!file) return;
-  compressImageToLimit(file, function(dataUrl) {
-    var o = {}; o[type] = dataUrl;
-    db.collection(&quot;settings&quot;).doc(&quot;roomImages&quot;).set(o, { merge: true }).then(function() {
-      ROOM_IMAGES[type] = dataUrl;
-      renderRooms();
-      T(&quot;Photo Updated&quot;, type + &quot; photo is now live on the website.&quot;);
-    }).catch(function() { T(&quot;Error&quot;, &quot;Could not save photo. Check Firestore rules.&quot;); });
-  }, { maxBytes: 600000, maxDim: 1000, minDim: 300, onError: function(){ T(&quot;Error&quot;, &quot;Could not process that photo.&quot;); } });
-  input.value = &quot;&quot;;
+  loadRoomsForHotel(_roomsHotelId);
 }
-function removeRoomImage(type) {
-  var o = {}; o[type] = firebase.firestore.FieldValue.delete();
-  db.collection(&quot;settings&quot;).doc(&quot;roomImages&quot;).set(o, { merge: true }).then(function() {
-    delete ROOM_IMAGES[type];
+function setRoomsHotel(hotelId) {
+  _roomsHotelId = hotelId;
+  loadRoomsForHotel(hotelId);
+}
+function loadRoomsForHotel(hotelId) {
+  if (_roomsUnsub) { _roomsUnsub(); _roomsUnsub = null; }
+  if (!hotelId) { _roomsList = []; renderRooms(); return; }
+  _roomsUnsub = db.collection(&quot;hotels&quot;).doc(hotelId).collection(&quot;rooms&quot;).onSnapshot(function(snap) {
+    _roomsList = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
     renderRooms();
-    T(&quot;Photo Removed&quot;, type + &quot; reverted to the default icon.&quot;);
-  }).catch(function() { T(&quot;Error&quot;, &quot;Could not remove photo.&quot;); });
+  }, function(e) { console.warn(&quot;rooms listener:&quot;, e); _roomsList = []; renderRooms(); });
 }
-
-// ── ROOMS PAGE ──
-function occupiedRoomNumbersToday() {
+function occupiedRoomNumbersToday(hotelId) {
   var today = new Date().toISOString().split(&quot;T&quot;)[0];
   var out = {};
   _allBookings.forEach(function(b) {
-    if (b.status === &quot;Approved&quot; &amp;&amp; b.roomNumber &amp;&amp; b.checkIn &amp;&amp; b.checkOut &amp;&amp; b.checkIn <= today &amp;&amp; today < b.checkOut) {
+    if (b.status === &quot;Approved&quot; &amp;&amp; b.roomNumber &amp;&amp; b.checkIn &amp;&amp; b.checkOut &amp;&amp; b.checkIn <= today &amp;&amp; today < b.checkOut &amp;&amp; (!hotelId || b.hotelId === hotelId)) {
       out[b.roomNumber] = true;
     }
   });
@@ -1761,28 +1747,36 @@ function occupiedRoomNumbersToday() {
 function renderRooms() {
   var wrap = document.getElementById(&quot;rooms-list&quot;);
   if (!wrap) return;
-  var occ = (typeof _allBookings !== &quot;undefined&quot;) ? occupiedRoomNumbersToday() : {};
+  var sel = document.getElementById(&quot;rooms-hotel-select&quot;);
+  if (sel) {
+    sel.innerHTML = _allHotels.map(function(h) {
+      return '<option value=&quot;' + h.id + '&quot;' + (h.id === _roomsHotelId ? &quot; selected&quot; : &quot;&quot;) + '>' + esc(h.name) + '</option>';
+    }).join(&quot;&quot;) || '<option value=&quot;&quot;>No hotels yet</option>';
+  }
+  var occ = occupiedRoomNumbersToday(_roomsHotelId);
   var totalRooms = 0, totalOccupied = 0;
   var html = &quot;&quot;;
-  ROOM_TYPE_LIST.forEach(function(type) {
-    var nums = ROOM_INVENTORY[type] || [];
+  _roomsList.forEach(function(r) {
+    var nums = r.roomNumbers || [];
     totalRooms += nums.length;
-    var imgUrl = ROOM_IMAGES[type];
+    var imgUrl = r.imageURL;
     html += '<div class=&quot;card&quot; style=&quot;margin-bottom:1rem&quot;>' +
-      '<div class=&quot;card-title&quot; style=&quot;display:flex;align-items:center;justify-content:space-between&quot;>' +
-        '<span>' + esc(type) + ' <span style=&quot;font-weight:400;color:var(--muted2);font-size:.82rem&quot;>(' + nums.length + ' room' + (nums.length===1?'':'s') + ')</span></span>' +
+      '<div class=&quot;card-title&quot; style=&quot;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem&quot;>' +
+        '<span>' + esc(r.name) + ' <span style=&quot;font-weight:400;color:var(--muted2);font-size:.82rem&quot;>(' + nums.length + ' room' + (nums.length===1?'':'s') + ' &amp;middot; &amp;#8358;' + (Number(r.price)||0).toLocaleString() + '/night)</span></span>' +
+        '<span style=&quot;display:flex;gap:.4rem&quot;><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;openRoomTypeModal(\'' + r.id + '\')&quot;>Edit</button><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;deleteRoomType(\'' + r.id + '\')&quot;>Delete</button></span>' +
       '</div>' +
+      (r.description ? '<div style=&quot;font-size:.8rem;color:var(--muted);margin:.3rem 0 .5rem&quot;>' + esc(r.description) + '</div>' : '') +
       '<div style=&quot;display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start;margin:.75rem 0 1rem&quot;>' +
         '<div style=&quot;width:160px;height:110px;border-radius:10px;overflow:hidden;background:var(--blue-dim);flex-shrink:0;display:flex;align-items:center;justify-content:center&quot;>' +
           (imgUrl ? '<img src=&quot;' + imgUrl + '&quot; style=&quot;width:100%;height:100%;object-fit:cover;display:block&quot;/>' : '<span style=&quot;font-size:2rem&quot;>&amp;#128716;</span>') +
         '</div>' +
         '<div style=&quot;flex:1;min-width:180px&quot;>' +
-          '<div style=&quot;font-size:.78rem;color:var(--muted);margin-bottom:.5rem&quot;>This photo appears on the room card for ' + esc(type) + ' on the public website.</div>' +
+          '<div style=&quot;font-size:.78rem;color:var(--muted);margin-bottom:.5rem&quot;>This photo appears on the room card for ' + esc(r.name) + ' on the public website.</div>' +
           '<label class=&quot;btn btn-o btn-sm&quot; style=&quot;cursor:pointer;display:inline-block&quot;>' +
             (imgUrl ? '&amp;#128247; Change Photo' : '&amp;#128247; Upload Photo') +
-            '<input type=&quot;file&quot; accept=&quot;image/*&quot; style=&quot;display:none&quot; onchange=&quot;uploadRoomImage(\'' + type.replace(/'/g,&quot;\\'&quot;) + '\', this)&quot;/>' +
+            '<input type=&quot;file&quot; accept=&quot;image/*&quot; style=&quot;display:none&quot; onchange=&quot;uploadRoomImage(\'' + r.id + '\', this)&quot;/>' +
           '</label>' +
-          (imgUrl ? ' <button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;removeRoomImage(\'' + type.replace(/'/g,&quot;\\'&quot;) + '\')&quot;>Remove</button>' : '') +
+          (imgUrl ? ' <button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;removeRoomImage(\'' + r.id + '\')&quot;>Remove</button>' : '') +
         '</div>' +
       '</div>' +
       '<div style=&quot;display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0&quot;>' +
@@ -1791,52 +1785,115 @@ function renderRooms() {
         totalOccupied += isOcc ? 1 : 0;
         return '<span style=&quot;display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .5rem .35rem .75rem;border-radius:8px;font-size:.8rem;font-weight:600;background:' + (isOcc ? 'var(--red-bg)' : 'var(--green-bg)') + ';color:' + (isOcc ? 'var(--red)' : 'var(--green)') + ';border:1px solid ' + (isOcc ? 'var(--red-bd)' : 'var(--green-bd)') + '&quot;>' +
           esc(n) + (isOcc ? ' &amp;middot; occupied' : '') +
-          '<button title=&quot;Remove room ' + esc(n) + '&quot; onclick=&quot;removeRoomNumber(\'' + type.replace(/'/g,&quot;\\'&quot;) + '\',\'' + n.replace(/'/g,&quot;\\'&quot;) + '\')&quot; style=&quot;background:none;border:none;cursor:pointer;color:inherit;font-size:.85rem;line-height:1;padding:0 0 0 .1rem&quot;>&amp;#10005;</button>' +
+          '<button title=&quot;Remove room ' + esc(n) + '&quot; onclick=&quot;removeRoomNumber(\'' + r.id + '\',\'' + n.replace(/'/g,&quot;\\'&quot;) + '\')&quot; style=&quot;background:none;border:none;cursor:pointer;color:inherit;font-size:.85rem;line-height:1;padding:0 0 0 .1rem&quot;>&amp;#10005;</button>' +
         '</span>';
       }).join(&quot;&quot;) : '<span style=&quot;color:var(--muted2);font-size:.82rem&quot;>No rooms added yet for this type.</span>') +
       '</div>' +
       '<div style=&quot;display:flex;gap:.5rem&quot;>' +
-        '<input type=&quot;text&quot; placeholder=&quot;e.g. 109&quot; id=&quot;rt-input-' + type + '&quot; style=&quot;flex:1;padding:.5rem .7rem;border:1px solid var(--blue-bd);border-radius:8px;font-size:.85rem&quot; onkeypress=&quot;if(event.key===\'Enter\')addRoomNumber(\'' + type.replace(/'/g,&quot;\\'&quot;) + '\')&quot;/>' +
-        '<button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;addRoomNumber(\'' + type.replace(/'/g,&quot;\\'&quot;) + '\')&quot;>&amp;#43; Add Room</button>' +
+        '<input type=&quot;text&quot; placeholder=&quot;e.g. 109&quot; id=&quot;rt-input-' + r.id + '&quot; style=&quot;flex:1;padding:.5rem .7rem;border:1px solid var(--blue-bd);border-radius:8px;font-size:.85rem&quot; onkeypress=&quot;if(event.key===\'Enter\')addRoomNumber(\'' + r.id + '\')&quot;/>' +
+        '<button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;addRoomNumber(\'' + r.id + '\')&quot;>&amp;#43; Add Room</button>' +
       '</div>' +
     '</div>';
   });
-  wrap.innerHTML = html;
+  wrap.innerHTML = html || '<div class=&quot;empty&quot;>This hotel has no room types yet. Use &amp;#8220;+ Add Room Type&amp;#8221; above to create one.</div>';
   document.getElementById(&quot;rooms-stats&quot;).innerHTML =
     statCard(&quot;&amp;#128716;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Rooms&quot;, totalRooms) +
     statCard(&quot;&amp;#128274;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Occupied Today&quot;, totalOccupied) +
     statCard(&quot;&amp;#9989;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Free Today&quot;, totalRooms - totalOccupied) +
-    statCard(&quot;&amp;#127974;&quot;, &quot;var(--orange)&quot;, &quot;rgba(247,148,29,.1)&quot;, &quot;Room Types&quot;, ROOM_TYPE_LIST.length);
+    statCard(&quot;&amp;#127974;&quot;, &quot;var(--orange)&quot;, &quot;rgba(247,148,29,.1)&quot;, &quot;Room Types&quot;, _roomsList.length);
 }
-function addRoomNumber(type) {
-  var input = document.getElementById(&quot;rt-input-&quot; + type);
+function addRoomNumber(roomId) {
+  var input = document.getElementById(&quot;rt-input-&quot; + roomId);
   var num = (input.value || &quot;&quot;).trim();
   if (!num) { T(&quot;Missing Room Number&quot;, &quot;Enter a room number first.&quot;); return; }
-  var pool = ROOM_INVENTORY[type] || [];
-  if (pool.indexOf(num) > -1) { T(&quot;Already Exists&quot;, &quot;Room &quot; + num + &quot; is already in &quot; + type + &quot;.&quot;); return; }
-  var dupType = ROOM_TYPE_LIST.find(function(t) { return t !== type &amp;&amp; (ROOM_INVENTORY[t] || []).indexOf(num) > -1; });
-  if (dupType) { T(&quot;Already Used&quot;, &quot;Room &quot; + num + &quot; already belongs to &quot; + dupType + &quot;.&quot;); return; }
+  var r = _roomsList.find(function(x){ return x.id === roomId; }); if (!r) return;
+  var pool = r.roomNumbers || [];
+  if (pool.indexOf(num) > -1) { T(&quot;Already Exists&quot;, &quot;Room &quot; + num + &quot; is already in &quot; + r.name + &quot;.&quot;); return; }
+  var dup = _roomsList.find(function(x){ return x.id !== roomId &amp;&amp; (x.roomNumbers||[]).indexOf(num) > -1; });
+  if (dup) { T(&quot;Already Used&quot;, &quot;Room &quot; + num + &quot; already belongs to &quot; + dup.name + &quot;.&quot;); return; }
   var updated = pool.concat([num]);
-  db.collection(&quot;settings&quot;).doc(&quot;roomInventory&quot;).set(
-    (function(){ var o = {}; o[type] = updated; return o; })(), { merge: true }
-  ).then(function() {
-    ROOM_INVENTORY[type] = updated;
+  db.collection(&quot;hotels&quot;).doc(_roomsHotelId).collection(&quot;rooms&quot;).doc(roomId).update({ roomNumbers: updated }).then(function() {
+    r.roomNumbers = updated;
     input.value = &quot;&quot;;
     renderRooms();
-    T(&quot;Room Added&quot;, &quot;Room &quot; + num + &quot; added to &quot; + type + &quot;.&quot;);
+    T(&quot;Room Added&quot;, &quot;Room &quot; + num + &quot; added to &quot; + r.name + &quot;.&quot;);
   }).catch(function() { T(&quot;Error&quot;, &quot;Could not add room. Check Firestore rules.&quot;); });
 }
-function removeRoomNumber(type, num) {
-  var pool = ROOM_INVENTORY[type] || [];
-  var updated = pool.filter(function(n) { return n !== num; });
-  db.collection(&quot;settings&quot;).doc(&quot;roomInventory&quot;).set(
-    (function(){ var o = {}; o[type] = updated; return o; })(), { merge: true }
-  ).then(function() {
-    ROOM_INVENTORY[type] = updated;
+function removeRoomNumber(roomId, num) {
+  var r = _roomsList.find(function(x){ return x.id === roomId; }); if (!r) return;
+  var updated = (r.roomNumbers || []).filter(function(n) { return n !== num; });
+  db.collection(&quot;hotels&quot;).doc(_roomsHotelId).collection(&quot;rooms&quot;).doc(roomId).update({ roomNumbers: updated }).then(function() {
+    r.roomNumbers = updated;
     renderRooms();
-    T(&quot;Room Removed&quot;, &quot;Room &quot; + num + &quot; removed from &quot; + type + &quot;.&quot;);
+    T(&quot;Room Removed&quot;, &quot;Room &quot; + num + &quot; removed from &quot; + r.name + &quot;.&quot;);
   }).catch(function() { T(&quot;Error&quot;, &quot;Could not remove room. Check Firestore rules.&quot;); });
 }
+function uploadRoomImage(roomId, input) {
+  var file = input.files &amp;&amp; input.files[0];
+  if (!file) return;
+  compressImageToLimit(file, function(dataUrl) {
+    db.collection(&quot;hotels&quot;).doc(_roomsHotelId).collection(&quot;rooms&quot;).doc(roomId).update({ imageURL: dataUrl }).then(function() {
+      var r = _roomsList.find(function(x){ return x.id === roomId; });
+      if (r) r.imageURL = dataUrl;
+      renderRooms();
+      T(&quot;Photo Updated&quot;, &quot;Photo is now live on the website.&quot;);
+    }).catch(function() { T(&quot;Error&quot;, &quot;Could not save photo. Check Firestore rules.&quot;); });
+  }, { maxBytes: 600000, maxDim: 1000, minDim: 300, onError: function(){ T(&quot;Error&quot;, &quot;Could not process that photo.&quot;); } });
+  input.value = &quot;&quot;;
+}
+function removeRoomImage(roomId) {
+  db.collection(&quot;hotels&quot;).doc(_roomsHotelId).collection(&quot;rooms&quot;).doc(roomId).update({ imageURL: firebase.firestore.FieldValue.delete() }).then(function() {
+    var r = _roomsList.find(function(x){ return x.id === roomId; });
+    if (r) delete r.imageURL;
+    renderRooms();
+    T(&quot;Photo Removed&quot;, &quot;Reverted to the default icon.&quot;);
+  }).catch(function() { T(&quot;Error&quot;, &quot;Could not remove photo.&quot;); });
+}
+function openRoomTypeModal(id) {
+  if (!_roomsHotelId) { T(&quot;Select a Hotel&quot;, &quot;Choose a hotel first.&quot;); return; }
+  _rtEditingId = id || null;
+  var r = id ? _roomsList.find(function(x){ return x.id === id; }) : null;
+  document.getElementById(&quot;rt-modal-title&quot;).innerHTML = (r ? &quot;Edit Room Type&quot; : &quot;Add Room Type&quot;) + ' <button class=&quot;modal-close&quot; onclick=&quot;closeModal(\'room-type-modal\')&quot;>&amp;#10005;</button>';
+  document.getElementById(&quot;rt-name&quot;).value = r ? (r.name || &quot;&quot;) : &quot;&quot;;
+  document.getElementById(&quot;rt-price&quot;).value = r ? (r.price || &quot;&quot;) : &quot;&quot;;
+  document.getElementById(&quot;rt-desc&quot;).value = r ? (r.description || &quot;&quot;) : &quot;&quot;;
+  document.getElementById(&quot;rt-nums&quot;).value = r ? (r.roomNumbers || []).join(&quot;, &quot;) : &quot;&quot;;
+  document.getElementById(&quot;rt-photo&quot;).value = &quot;&quot;;
+  openModalEl(&quot;room-type-modal&quot;);
+}
+function saveRoomType() {
+  if (!_roomsHotelId) { T(&quot;Select a Hotel&quot;, &quot;Choose a hotel first.&quot;); return; }
+  var name = document.getElementById(&quot;rt-name&quot;).value.trim();
+  var price = parseInt(document.getElementById(&quot;rt-price&quot;).value, 10) || 0;
+  var desc = document.getElementById(&quot;rt-desc&quot;).value.trim();
+  var numsRaw = document.getElementById(&quot;rt-nums&quot;).value.trim();
+  var roomNumbers = numsRaw ? numsRaw.split(&quot;,&quot;).map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; }) : [];
+  var file = document.getElementById(&quot;rt-photo&quot;).files[0];
+  if (!name || !price) { T(&quot;Missing Info&quot;, &quot;Enter a room type name and price.&quot;); return; }
+  function save(imageURL) {
+    var data = { name: name, price: price, description: desc, roomNumbers: roomNumbers };
+    if (imageURL) data.imageURL = imageURL;
+    var ref = _rtEditingId
+      ? db.collection(&quot;hotels&quot;).doc(_roomsHotelId).collection(&quot;rooms&quot;).doc(_rtEditingId)
+      : db.collection(&quot;hotels&quot;).doc(_roomsHotelId).collection(&quot;rooms&quot;).doc();
+    ref.set(data, { merge: true }).then(function() {
+      closeModal(&quot;room-type-modal&quot;);
+      T(&quot;Saved&quot;, name + &quot; has been saved.&quot;);
+    }).catch(function() { T(&quot;Error&quot;, &quot;Could not save this room type.&quot;); });
+  }
+  if (file) {
+    compressImageToLimit(file, function(dataUrl) { save(dataUrl); }, { maxBytes: 600000, maxDim: 1000, minDim: 300, onError: function() { T(&quot;Error&quot;, &quot;Could not process that photo.&quot;); } });
+  } else {
+    save(null);
+  }
+}
+function deleteRoomType(id) {
+  if (!_roomsHotelId) return;
+  db.collection(&quot;hotels&quot;).doc(_roomsHotelId).collection(&quot;rooms&quot;).doc(id).delete().then(function() {
+    T(&quot;Deleted&quot;, &quot;Room type removed.&quot;);
+  }).catch(function() { T(&quot;Error&quot;, &quot;Could not delete this room type.&quot;); });
+}
+
 
 // ── HOTEL WITHDRAWALS ──
 var _allWithdrawals = [];
@@ -2133,7 +2190,7 @@ function goPage(page) {
   if (target) target.classList.add(&quot;active&quot;);
   document.querySelectorAll(&quot;.sb-item&quot;).forEach(function(el){ el.classList.toggle(&quot;on&quot;, el.dataset.page === page); });
   document.querySelectorAll(&quot;.bnav-item&quot;).forEach(function(el){ el.classList.toggle(&quot;on&quot;, el.dataset.page === page); });
-  if (page === &quot;rooms&quot;) renderRooms();
+  if (page === &quot;rooms&quot;) ensureRoomsHotelSelected();
   closeDrawers();
   window.scrollTo(0,0);
 }
@@ -2327,7 +2384,7 @@ function renderAll() {
   renderPromotions();
   renderSettings();
   renderReviews();
-  renderRooms();
+  ensureRoomsHotelSelected();
   renderWithdrawals();
   renderHotelBookingsAdmin();
   var badge = document.getElementById(&quot;notif-badge&quot;);
@@ -2349,6 +2406,7 @@ function fmtDate(ts) {
 function daysAgo(n) { var d = new Date(); d.setDate(d.getDate()-n); return d; }
 function isSameDay(a,b) { return a.getFullYear()===b.getFullYear() &amp;&amp; a.getMonth()===b.getMonth() &amp;&amp; a.getDate()===b.getDate(); }
 function bkDate(b) { return b.createdAt &amp;&amp; b.createdAt.toDate ? b.createdAt.toDate() : new Date(); }
+function datesOverlap(aStart, aEnd, bStart, bEnd) { return aStart < bEnd &amp;&amp; bStart < aEnd; }
 
 /* ============ DASHBOARD ============ */
 var _chartDashB, _chartDashR;
