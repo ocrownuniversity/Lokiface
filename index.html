@@ -1295,7 +1295,6 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     <div class=&quot;sb-nav&quot;>
       <div class=&quot;sb-item on&quot; data-page=&quot;dashboard&quot; onclick=&quot;goPage('dashboard')&quot;><span class=&quot;ic&quot;>&amp;#128202;</span>Dashboard</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotels&quot; onclick=&quot;goPage('hotels')&quot;><span class=&quot;ic&quot;>&amp;#127974;</span>Hotels</div>
-      <div class=&quot;sb-item&quot; data-page=&quot;bookings&quot; onclick=&quot;goPage('bookings')&quot;><span class=&quot;ic&quot;>&amp;#128197;</span>Bookings</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage('hotelbookings')&quot;><span class=&quot;ic&quot;>&amp;#128273;</span>Marketplace Bookings</div>
       <div class=&quot;sb-item&quot; data-page=&quot;users&quot; onclick=&quot;goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span>Users</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotelverification&quot; onclick=&quot;goPage('hotelverification')&quot;><span class=&quot;ic&quot;>&amp;#9989;</span>Hotel Verification</div>
@@ -1327,7 +1326,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       </div>
     </div>
     <div class=&quot;ad-menu&quot;>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('bookings')&quot;><span class=&quot;ic&quot;>&amp;#128197;</span>All Bookings<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelbookings')&quot;><span class=&quot;ic&quot;>&amp;#128197;</span>All Bookings<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotels')&quot;><span class=&quot;ic&quot;>&amp;#127974;</span>Manage Hotels<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span>Manage Users<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelverification')&quot;><span class=&quot;ic&quot;>&amp;#9989;</span>Hotel Verification<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
@@ -1355,7 +1354,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
         <div class=&quot;card&quot;><div class=&quot;card-title&quot;>Revenue (Last 7 Days)</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;dash-chart-revenue&quot;></canvas></div></div>
       </div>
       <div class=&quot;card&quot;>
-        <div class=&quot;card-title&quot;>Recent Bookings <button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage('bookings')&quot;>View All</button></div>
+        <div class=&quot;card-title&quot;>Recent Bookings <button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage('hotelbookings')&quot;>View All</button></div>
         <div id=&quot;dash-recent&quot; class=&quot;tbl-wrap&quot;></div>
       </div>
     </div>
@@ -1366,14 +1365,6 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;stat-grid&quot; id=&quot;hotels-stats&quot;></div>
       <div class=&quot;toolbar&quot;><div class=&quot;tb-search&quot;><span class=&quot;si&quot;>&amp;#128269;</span><input type=&quot;text&quot; id=&quot;hotels-search&quot; placeholder=&quot;Search hotels...&quot; oninput=&quot;renderHotels()&quot;/></div><select class=&quot;tb-select&quot; id=&quot;hotels-status-filter&quot; onchange=&quot;renderHotels()&quot;><option value=&quot;&quot;>All Status</option><option>Active</option><option>Pending</option><option>Blocked</option></select></div>
       <div class=&quot;card&quot;><div id=&quot;hotels-list&quot;></div></div>
-    </div>
-
-    <!-- ============ BOOKINGS ============ -->
-    <div class=&quot;apage&quot; id=&quot;page-bookings&quot;>
-      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Bookings</div><div class=&quot;ph-sub&quot;>Track and manage bookings across all hotels.</div></div>
-      <div class=&quot;stat-grid&quot; id=&quot;bookings-stats&quot;></div>
-      <div class=&quot;toolbar&quot;><div class=&quot;tb-search&quot;><span class=&quot;si&quot;>&amp;#128269;</span><input type=&quot;text&quot; id=&quot;bk-search&quot; placeholder=&quot;Search guest, email, hotel...&quot; oninput=&quot;renderBookingsList()&quot;/></div><select class=&quot;tb-select&quot; id=&quot;bk-status-filter&quot; onchange=&quot;renderBookingsList()&quot;><option value=&quot;&quot;>All Status</option><option>Pending</option><option>Approved</option><option>Rejected</option><option>CheckedOut</option></select><button class=&quot;btn btn-o&quot; onclick=&quot;exportBookingsCSV()&quot;>&amp;#8681; Export</button></div>
-      <div class=&quot;card&quot;><div class=&quot;tbl-wrap&quot; id=&quot;bk-table&quot;></div><div class=&quot;pager&quot; id=&quot;bk-pager&quot;></div></div>
     </div>
 
     <!-- ============ USERS ============ -->
@@ -1594,21 +1585,13 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
   <div class=&quot;bnav&quot;>
     <button class=&quot;bnav-item on&quot; data-page=&quot;dashboard&quot; onclick=&quot;goPage('dashboard')&quot;><span class=&quot;ic&quot;>&amp;#127968;</span><span class=&quot;lbl&quot;>Dashboard</span></button>
     <button class=&quot;bnav-item&quot; data-page=&quot;hotels&quot; onclick=&quot;goPage('hotels')&quot;><span class=&quot;ic&quot;>&amp;#127974;</span><span class=&quot;lbl&quot;>Hotels</span></button>
-    <button class=&quot;bnav-item&quot; data-page=&quot;bookings&quot; onclick=&quot;goPage('bookings')&quot;><span class=&quot;ic&quot;>&amp;#128197;</span><span class=&quot;lbl&quot;>Bookings</span></button>
+    <button class=&quot;bnav-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage('hotelbookings')&quot;><span class=&quot;ic&quot;>&amp;#128273;</span><span class=&quot;lbl&quot;>Bookings</span></button>
     <button class=&quot;bnav-item&quot; data-page=&quot;users&quot; onclick=&quot;goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span><span class=&quot;lbl&quot;>Users</span></button>
     <button class=&quot;bnav-item&quot; onclick=&quot;toggleSidebar(true)&quot;><span class=&quot;ic&quot;>&amp;#8942;</span><span class=&quot;lbl&quot;>More</span></button>
   </div>
 </div>
 
 <!-- Hotel Modal -->
-<!-- Booking Detail / Receipt Modal -->
-<div class=&quot;modal-ov&quot; id=&quot;booking-modal&quot;>
-  <div class=&quot;modal&quot; style=&quot;max-width:480px&quot;>
-    <div class=&quot;modal-title&quot;>Booking Details <button class=&quot;modal-close&quot; onclick=&quot;closeModal('booking-modal')&quot;>&amp;#10005;</button></div>
-    <div id=&quot;bk-modal-body&quot;></div>
-  </div>
-</div>
-
 <div class=&quot;modal-ov&quot; id=&quot;hotel-modal&quot;>
   <div class=&quot;modal&quot;>
     <div class=&quot;modal-title&quot;>Add Hotel <button class=&quot;modal-close&quot; onclick=&quot;closeModal('hotel-modal')&quot;>&amp;#10005;</button></div>
@@ -1733,26 +1716,6 @@ db.collection(&quot;settings&quot;).doc(&quot;roomInventory&quot;).onSnapshot(fu
   }
 }, function(e) { console.warn(&quot;roomInventory listener:&quot;, e); });
 function datesOverlap(aStart, aEnd, bStart, bEnd) { return aStart < bEnd &amp;&amp; bStart < aEnd; }
-function findAvailableRoomNumber(roomType, checkIn, checkOut, excludeBookingId) {
-  var pool = ROOM_INVENTORY[roomType] || [];
-  if (!pool.length) return Promise.resolve(null);
-  return db.collection(&quot;bookings&quot;).where(&quot;roomType&quot;, &quot;==&quot;, roomType).where(&quot;status&quot;, &quot;==&quot;, &quot;Approved&quot;).get().then(function(snap) {
-    var taken = {};
-    snap.forEach(function(doc) {
-      if (excludeBookingId &amp;&amp; doc.id === excludeBookingId) return;
-      var b = doc.data();
-      if (b.roomNumber &amp;&amp; b.checkIn &amp;&amp; b.checkOut &amp;&amp; datesOverlap(checkIn, checkOut, b.checkIn, b.checkOut)) taken[b.roomNumber] = true;
-    });
-    for (var i = 0; i < pool.length; i++) { if (!taken[pool[i]]) return pool[i]; }
-    return null;
-  });
-}
-function generateUniqueAccessCode() {
-  var code = String(Math.floor(100000 + Math.random() * 900000));
-  return db.collection(&quot;bookings&quot;).where(&quot;accessCode&quot;, &quot;==&quot;, code).where(&quot;codeStatus&quot;, &quot;==&quot;, &quot;active&quot;).get().then(function(snap) {
-    return snap.empty ? code : generateUniqueAccessCode();
-  });
-}
 
 // ── ROOM PHOTOS (settings/roomImages, read by the public site) ──
 var ROOM_IMAGES = {};
@@ -2212,29 +2175,25 @@ function loadHotels() {
   });
 }
 
+// Bookings are now sourced entirely from the Marketplace (&quot;hotelBookings&quot; collection),
+// since the Marketplace is the only way guests can book. This normalized array feeds
+// the Dashboard, Reports, Payments, Hotels stats, Room occupancy and User sync — so all
+// of those automatically reflect Marketplace activity.
 function loadBookings() {
-  return db.collection(&quot;bookings&quot;).orderBy(&quot;createdAt&quot;,&quot;desc&quot;).limit(1000).get().then(function(snap){
-    _allBookings = snap.docs.map(function(d){
-      var o = d.data(); o.id = d.id;
-      if (!o.hotelId) { o.hotelId = _defaultHotelId; o.hotelName = o.hotelName || _defaultHotelName; }
-      o.hotelName = o.hotelName || (_hotelById[o.hotelId] ? _hotelById[o.hotelId].name : _defaultHotelName);
-      o.amountPaid = o.amountPaid || 0;
-      o.paymentMethod = o.paymentMethod || &quot;paystack&quot;;
-      o.paymentStatus = o.paymentStatus || (o.status === &quot;Approved&quot; || o.status === &quot;CheckedOut&quot; ? &quot;paid&quot; : &quot;pending&quot;);
-      o.channel = o.channel || &quot;Website&quot;;
-      return o;
-    });
+  function normalize(d) {
+    var o = d.data(); o.id = d.id;
+    o.amountPaid = Number(o.amount) || 0;
+    o.paymentMethod = o.paymentMethod || &quot;paystack&quot;;
+    if (o.paymentStatus === &quot;unpaid&quot;) o.paymentStatus = &quot;pending&quot;;
+    o.paymentStatus = o.paymentStatus || (o.status === &quot;Approved&quot; ? &quot;paid&quot; : &quot;pending&quot;);
+    o.channel = &quot;Marketplace&quot;;
+    return o;
+  }
+  return db.collection(&quot;hotelBookings&quot;).orderBy(&quot;createdAt&quot;,&quot;desc&quot;).limit(1000).get().then(function(snap){
+    _allBookings = snap.docs.map(normalize);
   }).catch(function(){
-    return db.collection(&quot;bookings&quot;).get().then(function(snap){
-      _allBookings = snap.docs.map(function(d){
-        var o = d.data(); o.id = d.id;
-        if (!o.hotelId) { o.hotelId = _defaultHotelId; o.hotelName = o.hotelName || _defaultHotelName; }
-        o.amountPaid = o.amountPaid || 0;
-        o.paymentMethod = o.paymentMethod || &quot;paystack&quot;;
-        o.paymentStatus = o.paymentStatus || (o.status === &quot;Approved&quot; || o.status === &quot;CheckedOut&quot; ? &quot;paid&quot; : &quot;pending&quot;);
-        o.channel = o.channel || &quot;Website&quot;;
-        return o;
-      });
+    return db.collection(&quot;hotelBookings&quot;).get().then(function(snap){
+      _allBookings = snap.docs.map(normalize);
     });
   });
 }
@@ -2355,8 +2314,6 @@ function renderAll() {
   renderDashboard();
   renderHotelsStats();
   renderHotels();
-  renderBookingsStats();
-  renderBookingsList();
   renderUsersStats();
   renderUsersTabs();
   renderUsersList();
@@ -2480,8 +2437,8 @@ function renderHotelBookingsAdmin() {
       '<div style=&quot;display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap&quot;>'+
         '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--green)&quot; onclick=&quot;approveHotelBooking(\''+b.id+'\')&quot;>&amp;#9989; Approve</button>'+
         '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--red)&quot; onclick=&quot;rejectHotelBooking(\''+b.id+'\')&quot;>&amp;#10060; Reject</button>'+
-        (b.receiptURL ? '<button class=&quot;btn btn-o&quot; onclick=&quot;window.open(\''+b.receiptURL+'\',\'_blank\')&quot;>&amp;#128196; View Receipt</button>' : '')+
-      '</div>' : (b.receiptURL ? '<button class=&quot;btn btn-o&quot; style=&quot;margin-top:.5rem&quot; onclick=&quot;window.open(\''+b.receiptURL+'\',\'_blank\')&quot;>&amp;#128196; View Receipt</button>' : '');
+        (b.receiptURL ? '<button class=&quot;btn btn-o&quot; onclick=&quot;viewHotelBookingReceipt(\''+b.id+'\')&quot;>&amp;#128196; View Receipt</button>' : (b.paymentMethod===&quot;manual&quot; ? '<span style=&quot;font-size:.72rem;color:var(--red);align-self:center&quot;>No receipt uploaded</span>' : ''))+
+      '</div>' : (b.receiptURL ? '<button class=&quot;btn btn-o&quot; style=&quot;margin-top:.5rem&quot; onclick=&quot;viewHotelBookingReceipt(\''+b.id+'\')&quot;>&amp;#128196; View Receipt</button>' : '');
     return '<div class=&quot;card&quot;><div style=&quot;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.6rem&quot;>'+
       '<div><div style=&quot;font-weight:700&quot;>'+esc(b.name)+' &amp;middot; '+esc(b.hotelName)+'</div>'+
       '<div style=&quot;font-size:.78rem;color:var(--muted2)&quot;>'+esc(b.roomType)+(b.roomNumber?' (Room '+esc(b.roomNumber)+')':'')+' &amp;middot; '+esc(b.checkIn)+' &amp;#8594; '+esc(b.checkOut)+'</div>'+
@@ -2491,6 +2448,20 @@ function renderHotelBookingsAdmin() {
   }).join(&quot;&quot;) : '<div class=&quot;empty&quot;>No marketplace bookings in this category.</div>';
 }
 function setHBAdminTab(key) { _hbAdminTab = key; renderHotelBookingsAdmin(); }
+function viewHotelBookingReceipt(id) {
+  var b = _allHotelBookings.find(function(x){ return x.id===id; });
+  var url = b &amp;&amp; b.receiptURL;
+  if (!url) { T(&quot;No Receipt&quot;, &quot;No receipt was uploaded for this booking.&quot;); return; }
+  // Opened via window.open(url) directly, Chrome/most browsers silently block a new tab
+  // navigating straight to a data: URL (it shows a blank about:blank tab). Instead we open
+  // a blank window and write the image/file into it ourselves, which works reliably.
+  var w = window.open(&quot;&quot;);
+  if (!w) { T(&quot;Pop-up Blocked&quot;, &quot;Please allow pop-ups to view the receipt.&quot;); return; }
+  var isImg = /^data:image/.test(url);
+  w.document.write('<title>Payment Receipt</title><body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;>'+
+    (isImg ? '<img src=&quot;'+url+'&quot; style=&quot;max-width:100%;max-height:100vh&quot;/>' : '<iframe src=&quot;'+url+'&quot; style=&quot;width:100vw;height:100vh;border:none&quot;></iframe>') +
+    '</body>');
+}
 function approveHotelBooking(id) {
   var b = _allHotelBookings.find(function(x){ return x.id===id; }); if (!b) return;
   findAvailableHotelRoomNumberAdmin(b.hotelId, b.roomId, b.checkIn, b.checkOut).then(function(roomNum) {
@@ -2585,125 +2556,6 @@ function saveHotel() {
 
 /* ============ BOOKINGS ============ */
 var _bkPage = 1, _bkPerPage = 10;
-function renderBookingsStats() {
-  var approved = _allBookings.filter(function(b){ return b.status===&quot;Approved&quot;; }).length;
-  var pending = _allBookings.filter(function(b){ return b.status===&quot;Pending&quot;; }).length;
-  var rejected = _allBookings.filter(function(b){ return b.status===&quot;Rejected&quot;; }).length;
-  var co = _allBookings.filter(function(b){ return b.status===&quot;CheckedOut&quot;; }).length;
-  document.getElementById(&quot;bookings-stats&quot;).innerHTML =
-    statCard(&quot;&amp;#128197;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total&quot;, _allBookings.length) +
-    statCard(&quot;&amp;#9989;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Approved&quot;, approved) +
-    statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending&quot;, pending) +
-    statCard(&quot;&amp;#10060;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Rejected&quot;, rejected) +
-    statCard(&quot;&amp;#128274;&quot;, &quot;var(--navy)&quot;, &quot;#e8ecf7&quot;, &quot;Checked Out&quot;, co);
-}
-function filteredBookings() {
-  var q = (document.getElementById(&quot;bk-search&quot;).value||&quot;&quot;).toLowerCase();
-  var statusF = document.getElementById(&quot;bk-status-filter&quot;).value;
-  return _allBookings.filter(function(b){
-    var match = !q || (b.name||&quot;&quot;).toLowerCase().indexOf(q)>-1 || (b.email||&quot;&quot;).toLowerCase().indexOf(q)>-1 || (b.hotelName||&quot;&quot;).toLowerCase().indexOf(q)>-1;
-    var st = !statusF || b.status===statusF;
-    return match &amp;&amp; st;
-  });
-}
-function renderBookingsList() {
-  var list = filteredBookings();
-  var totalPages = Math.max(1, Math.ceil(list.length / _bkPerPage));
-  if (_bkPage > totalPages) _bkPage = totalPages;
-  var slice = list.slice((_bkPage-1)*_bkPerPage, _bkPage*_bkPerPage);
-  var html = '<table><tr><th>Guest</th><th>Hotel</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Amount</th><th>Status</th><th></th></tr>';
-  slice.forEach(function(b){
-    html += '<tr><td>'+esc(b.name)+'<div class=&quot;lr-sub&quot;>'+esc(b.email)+'</div></td><td>'+esc(b.hotelName)+'</td><td>'+esc(b.roomType||&quot;-&quot;)+'</td><td>'+esc(b.checkIn||&quot;-&quot;)+'</td><td>'+esc(b.checkOut||&quot;-&quot;)+'</td><td>'+NGN(b.amountPaid)+'</td><td>'+pill(b.status)+'</td><td>'+bkActions(b)+'</td></tr>';
-  });
-  html += '</table>';
-  document.getElementById(&quot;bk-table&quot;).innerHTML = slice.length ? html : '<div class=&quot;empty&quot;>No bookings found.</div>';
-  var pager = &quot;&quot;;
-  for (var i=1;i<=totalPages;i++) pager += '<button class=&quot;pg-btn'+(i===_bkPage?&quot; on&quot;:&quot;&quot;)+'&quot; onclick=&quot;_bkPage='+i+';renderBookingsList()&quot;>'+i+'</button>';
-  document.getElementById(&quot;bk-pager&quot;).innerHTML = totalPages>1 ? pager : &quot;&quot;;
-}
-function bkActions(b) {
-  var out = '<button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;openBookingDetail(\''+b.id+'\')&quot;>View</button> ';
-  if (b.status === &quot;Pending&quot;) out += '<button class=&quot;btn btn-sm btn-p&quot; onclick=&quot;setBookingStatus(\''+b.id+'\',\'Approved\')&quot;>Approve</button> <button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;setBookingStatus(\''+b.id+'\',\'Rejected\')&quot;>Reject</button>';
-  if (b.status === &quot;Approved&quot;) out += '<button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;setBookingStatus(\''+b.id+'\',\'CheckedOut\')&quot;>Check Out</button>';
-  return out;
-}
-function openBookingDetail(id) {
-  var b = _allBookings.find(function(x){ return x.id===id; });
-  if (!b) return;
-  var isImg = b.receiptImage &amp;&amp; /^data:image/.test(b.receiptImage);
-  var receiptBlock = &quot;&quot;;
-  if (b.receiptImage) {
-    receiptBlock = '<div class=&quot;card-title&quot; style=&quot;margin-top:1rem&quot;>Payment Receipt</div>' +
-      (isImg
-        ? '<img src=&quot;'+b.receiptImage+'&quot; style=&quot;width:100%;border-radius:10px;border:1px solid var(--border);cursor:pointer&quot; onclick=&quot;window.open(this.src,\'_blank\')&quot;/>'
-        : '<a href=&quot;'+b.receiptImage+'&quot; target=&quot;_blank&quot; class=&quot;btn btn-o&quot; style=&quot;display:inline-block&quot;>&amp;#128196; View Uploaded Receipt</a>') +
-      '<div style=&quot;font-size:.7rem;color:var(--muted2);margin-top:.4rem&quot;>Click the image to open it full-size in a new tab.</div>';
-  } else if (b.paymentMethod === &quot;manual&quot;) {
-    receiptBlock = '<div class=&quot;card-title&quot; style=&quot;margin-top:1rem&quot;>Payment Receipt</div><div class=&quot;empty&quot; style=&quot;padding:1rem&quot;>No receipt was uploaded for this booking.</div>';
-  }
-  var actions = &quot;&quot;;
-  if (b.status === &quot;Pending&quot;) {
-    actions = '<div class=&quot;hv-actions&quot; style=&quot;margin-top:1rem&quot;>'+
-      '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--green)&quot; onclick=&quot;setBookingStatus(\''+id+'\',\'Approved\');closeModal(\'booking-modal\')&quot;>&amp;#9989; Approve Booking</button>'+
-      '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--red)&quot; onclick=&quot;setBookingStatus(\''+id+'\',\'Rejected\');closeModal(\'booking-modal\')&quot;>&amp;#10060; Reject Booking</button>'+
-    '</div>';
-  }
-  document.getElementById(&quot;bk-modal-body&quot;).innerHTML =
-    '<div class=&quot;fgrid2&quot;>'+
-    '<div><div class=&quot;lr-sub&quot;>Guest</div><div class=&quot;lr-name&quot;>'+esc(b.name)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Email</div><div class=&quot;lr-name&quot;>'+esc(b.email)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Phone</div><div class=&quot;lr-name&quot;>'+esc(b.phone||&quot;-&quot;)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Hotel</div><div class=&quot;lr-name&quot;>'+esc(b.hotelName||&quot;Hotels Continental&quot;)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Room Type</div><div class=&quot;lr-name&quot;>'+esc(b.roomType||&quot;-&quot;)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Room Number</div><div class=&quot;lr-name&quot;>'+esc(b.roomNumber||&quot;Not yet assigned&quot;)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Check-In</div><div class=&quot;lr-name&quot;>'+esc(b.checkIn||&quot;-&quot;)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Check-Out</div><div class=&quot;lr-name&quot;>'+esc(b.checkOut||&quot;-&quot;)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Amount</div><div class=&quot;lr-name&quot;>'+NGN(b.amountPaid)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Payment Method</div><div class=&quot;lr-name&quot;>'+esc(b.paymentMethod||&quot;-&quot;)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Status</div><div>'+pill(b.status)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Access Code</div><div class=&quot;lr-name&quot;>'+esc(b.accessCode||&quot;-&quot;)+'</div></div>'+
-    '</div>'+receiptBlock+actions;
-  openModalEl(&quot;booking-modal&quot;);
-}
-function setBookingStatus(id, status) {
-  var b = _allBookings.find(function(x){ return x.id===id; });
-  if (status === &quot;Approved&quot; &amp;&amp; b &amp;&amp; !b.roomNumber) {
-    // Auto-assign a real room number + access code the moment a
-    // pending (e.g. bank-transfer) booking is approved.
-    findAvailableRoomNumber(b.roomType, b.checkIn, b.checkOut, id).then(function(room) {
-      if (!room) {
-        T(&quot;No Rooms Available&quot;, &quot;All &quot;+b.roomType+&quot; rooms are already booked for those dates. Reassign the guest to another room type or dates before approving.&quot;, 8000);
-        return;
-      }
-      return generateUniqueAccessCode().then(function(code) {
-        var exp = new Date(b.checkOut + &quot;T23:59:59&quot;);
-        return db.collection(&quot;bookings&quot;).doc(id).update({
-          status: &quot;Approved&quot;, roomNumber: room, accessCode: code,
-          codeStatus: &quot;active&quot;, codeExpiry: firebase.firestore.Timestamp.fromDate(exp),
-          paymentStatus: &quot;paid&quot;
-        }).then(function(){
-          b.status = &quot;Approved&quot;; b.roomNumber = room; b.accessCode = code; b.codeStatus = &quot;active&quot;; b.paymentStatus = &quot;paid&quot;;
-          renderBookingsList(); renderBookingsStats(); renderDashboard(); renderReports(); renderPayments();
-          T(&quot;Approved — Room &quot;+room, &quot;Access code &quot;+code+&quot; generated for &quot;+b.email+&quot;.&quot;);
-          if (typeof emailjs !== &quot;undefined&quot; &amp;&amp; b.email) {
-            emailjs.send(EJS_SVC, EJS_TPL, {
-              to_name: b.name, to_email: b.email, room_type: b.roomType, room_number: room,
-              check_in: b.checkIn, check_out: b.checkOut, access_code: code,
-              hotel_name: &quot;Hotels Continental&quot;, hotel_phone: &quot;09123213212&quot;,
-              hotel_email: &quot;HotelsContinental@gmail.com&quot;, hotel_address: &quot;Lagos, Nigeria&quot;
-            }).catch(function(e){ console.warn(&quot;EmailJS:&quot;, e); });
-          }
-        });
-      });
-    }).catch(function(){ T(&quot;Error&quot;, &quot;Could not approve this booking.&quot;); });
-    return;
-  }
-  db.collection(&quot;bookings&quot;).doc(id).update({status:status}).then(function(){
-    if (b) { b.status = status; if (status===&quot;Approved&quot;) b.paymentStatus=&quot;paid&quot;; }
-    renderBookingsList(); renderBookingsStats(); renderDashboard(); renderReports(); renderPayments();
-    T(&quot;Updated&quot;, &quot;Booking marked as &quot;+status+&quot;.&quot;);
-  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update booking.&quot;); });
-}
 function exportBookingsCSV() {
   var rows = [[&quot;Guest&quot;,&quot;Email&quot;,&quot;Phone&quot;,&quot;Hotel&quot;,&quot;Room&quot;,&quot;Check-in&quot;,&quot;Check-out&quot;,&quot;Amount&quot;,&quot;Payment Method&quot;,&quot;Status&quot;]];
   _allBookings.forEach(function(b){
