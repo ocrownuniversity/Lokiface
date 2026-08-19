@@ -340,7 +340,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   </button>
   <div class="nmenu">
     <button class="ni on" id="ni-home" onclick="SP('home')">Home</button>
-    <button class="ni" id="ni-booking" onclick="SP('booking')">Book Now</button>
+    <button class="ni" id="ni-booking" onclick="SP('hotels')">Book Now</button>
     <button class="ni" id="ni-access" onclick="SP('access')">Room Access</button>
     <button class="ni" id="ni-history" onclick="SP('history')">My Booking</button>
     <button class="ni" id="ni-hotels" onclick="SP('hotels')">Hotels</button>
@@ -355,7 +355,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 </nav>
 <div class="mnav" id="mnav">
   <button class="ni" onclick="SP('home');toggleNav()">Home</button>
-  <button class="ni" onclick="SP('booking');toggleNav()">Book Now</button>
+  <button class="ni" onclick="SP('hotels');toggleNav()">Book Now</button>
   <button class="ni" onclick="SP('access');toggleNav()">Room Access</button>
   <button class="ni" onclick="SP('history');toggleNav()">My Booking</button>
   <button class="ni" id="ni-hotels-m" onclick="SP('hotels');toggleNav()">Hotels</button>
@@ -374,7 +374,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       <h1 class="htitle">Hotels<em>Continental</em></h1>
       <p class="hsub">Where Lagos's finest hospitality meets modern comfort</p>
       <div class="hbtns">
-        <button class="btn bg" onclick="SP('booking')">Reserve Your Suite</button>
+        <button class="btn bg" onclick="SP('hotels')">Book Now</button>
         <button class="btn bo" onclick="document.getElementById('rsec').scrollIntoView({behavior:'smooth'})">Explore Rooms</button>
         <button class="btn bo" onclick="SP('account')">Sign Up / Log In</button>
       </div>
@@ -930,6 +930,31 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
           <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.4rem"><span>Nights</span><strong id="hb-sum-nights">-</strong></div>
           <div style="display:flex;justify-content:space-between;font-size:1rem;padding-top:.5rem;border-top:1px solid var(--border)"><span>Total</span><strong id="hb-sum-total" style="color:var(--gold)">&#8358;0</strong></div>
         </div>
+        <div class="fg">
+          <label>Payment Method</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.3rem">
+            <div id="hb-pm-paystack" onclick="hbSelectPayMethod('paystack')" style="border:2px solid var(--gold);border-radius:10px;padding:.85rem;text-align:center;cursor:pointer;background:var(--gold-dim);transition:all .2s">
+              <div style="font-size:1.3rem">&#128179;</div>
+              <div style="font-size:.78rem;font-weight:600;color:var(--gold);margin-top:.3rem">Pay with Paystack</div>
+              <div style="font-size:.65rem;color:var(--muted)">Card / Bank / USSD &middot; Instant</div>
+            </div>
+            <div id="hb-pm-manual" onclick="hbSelectPayMethod('manual')" style="border:2px solid var(--border);border-radius:10px;padding:.85rem;text-align:center;cursor:pointer;background:var(--surface2);transition:all .2s">
+              <div style="font-size:1.3rem">&#127968;</div>
+              <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-top:.3rem">Bank Transfer</div>
+              <div style="font-size:.65rem;color:var(--muted)">Upload receipt &middot; Needs approval</div>
+            </div>
+          </div>
+        </div>
+        <div id="hb-manual-section" style="display:none;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem">
+          <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:.75rem">&#127968; Bank Transfer Details</div>
+          <div id="hb-bank-details" style="display:flex;flex-direction:column;gap:.4rem;font-size:.82rem"></div>
+          <div style="margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--border)">
+            <label style="display:block;font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.38rem">Upload Payment Receipt</label>
+            <input type="file" id="hb-receipt-file" accept="image/*" onchange="hbReceiptChange(this)" style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:.62rem;font-family:Jost,sans-serif;font-size:.82rem;color:var(--text)"/>
+            <div id="hb-receipt-preview" style="margin-top:.5rem;display:none"><img id="hb-receipt-img" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border)"/></div>
+            <div class="eferr" id="hb-ereceipt">Please upload your payment receipt.</div>
+          </div>
+        </div>
         <button class="fsub" id="hbsub" onclick="hotelBookInitiatePayment()">Pay &amp; Confirm Booking</button>
       </div>
       <div class="sstate" id="hb-success">
@@ -975,6 +1000,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
             <div class="fg"><label>Price per Night (&#8358;)</label><input type="number" id="hdr-price" placeholder="e.g. 35000"/></div>
           </div>
           <div class="fg"><label>Short Description (optional)</label><input type="text" id="hdr-desc" placeholder="e.g. King bed, city view, free breakfast"/></div>
+          <div class="fg"><label>Room Numbers (comma-separated)</label><input type="text" id="hdr-roomnums" placeholder="e.g. 101, 102, 103"/><div style="font-size:.68rem;color:var(--muted);margin-top:.3rem">Enter the actual physical room numbers for this room type. A guest is auto-assigned one of these free numbers when their booking is approved.</div></div>
           <div class="fg"><label>Photo</label><input type="file" accept="image/*" id="hdr-photo" class="img-input"/></div>
           <div style="display:flex;gap:.5rem"><button class="fsub" style="margin-top:.3rem" onclick="hdSaveRoom()">Save Room Type</button><button class="btn btn-o" id="hdr-cancel" style="display:none" onclick="hdCancelEditRoom()">Cancel</button></div>
         </div>
@@ -1270,6 +1296,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;sb-item on&quot; data-page=&quot;dashboard&quot; onclick=&quot;goPage('dashboard')&quot;><span class=&quot;ic&quot;>&amp;#128202;</span>Dashboard</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotels&quot; onclick=&quot;goPage('hotels')&quot;><span class=&quot;ic&quot;>&amp;#127974;</span>Hotels</div>
       <div class=&quot;sb-item&quot; data-page=&quot;bookings&quot; onclick=&quot;goPage('bookings')&quot;><span class=&quot;ic&quot;>&amp;#128197;</span>Bookings</div>
+      <div class=&quot;sb-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage('hotelbookings')&quot;><span class=&quot;ic&quot;>&amp;#128273;</span>Marketplace Bookings</div>
       <div class=&quot;sb-item&quot; data-page=&quot;users&quot; onclick=&quot;goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span>Users</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotelverification&quot; onclick=&quot;goPage('hotelverification')&quot;><span class=&quot;ic&quot;>&amp;#9989;</span>Hotel Verification</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotelregs&quot; onclick=&quot;goPage('hotelregs')&quot;><span class=&quot;ic&quot;>&amp;#128196;</span>Hotel Registrations<span class=&quot;abadge&quot; id=&quot;hr-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;display:none;align-items:center;justify-content:center;padding:0 .3rem&quot;></span></div>
@@ -1350,6 +1377,13 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     </div>
 
     <!-- ============ USERS ============ -->
+    <div class=&quot;apage&quot; id=&quot;page-hotelbookings&quot;>
+      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Marketplace Bookings</div><div class=&quot;ph-sub&quot;>Bookings made through the Hotels Marketplace, across all partner hotels including Hotels Continental.</div></div>
+      <div class=&quot;stat-grid&quot; id=&quot;hb-admin-stats&quot;></div>
+      <div class=&quot;tabs&quot; id=&quot;hb-admin-tabs&quot;></div>
+      <div class=&quot;card&quot;><div id=&quot;hb-admin-list&quot;></div></div>
+    </div>
+
     <div class=&quot;apage&quot; id=&quot;page-users&quot;>
       <div class=&quot;ph&quot;><div class=&quot;ph-row&quot;><div><div class=&quot;ph-title&quot;>Users</div><div class=&quot;ph-sub&quot;>Manage all users on the platform.</div></div><button class=&quot;btn btn-p&quot; onclick=&quot;openUserModal()&quot;>&amp;#43; Add User</button></div></div>
       <div class=&quot;stat-grid&quot; id=&quot;users-stats&quot;></div>
@@ -1844,6 +1878,8 @@ function removeRoomNumber(type, num) {
 // ── HOTEL WITHDRAWALS ──
 var _allWithdrawals = [];
 var _wdTab = &quot;Pending&quot;;
+var _allHotelBookings = [];
+var _hbAdminTab = &quot;Pending&quot;;
 function loadWithdrawals() {
   return db.collection(&quot;withdrawals&quot;).get().then(function(snap) {
     _allWithdrawals = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
@@ -2143,7 +2179,7 @@ function goPage(page) {
 function loadAll() {
   document.getElementById(&quot;loader&quot;).style.display = &quot;flex&quot;;
   ensureDefaultHotel().then(function(){
-    return Promise.all([loadHotels(), loadBookings(), loadUsers(), loadSubAdmins(), loadPayouts(), loadPromotions(), loadSettings(), loadReviews(), loadHotelRegs(), loadWithdrawals()]);
+    return Promise.all([loadHotels(), loadBookings(), loadUsers(), loadSubAdmins(), loadPayouts(), loadPromotions(), loadSettings(), loadReviews(), loadHotelRegs(), loadWithdrawals(), loadHotelBookings()]);
   }).then(function(){
     syncUsersFromBookings();
     ensureHVFields();
@@ -2336,6 +2372,7 @@ function renderAll() {
   renderReviews();
   renderRooms();
   renderWithdrawals();
+  renderHotelBookingsAdmin();
   var badge = document.getElementById(&quot;notif-badge&quot;);
   var pending = _allBookings.filter(function(b){ return b.status === &quot;Pending&quot;; }).length;
   badge.textContent = pending;
@@ -2395,6 +2432,92 @@ function renderDashboard() {
 
 function statCard(icon, color, bg, label, val, delta) {
   return '<div class=&quot;stat-card&quot;><div class=&quot;stat-top&quot;><div class=&quot;stat-ico&quot; style=&quot;background:'+bg+';color:'+color+'&quot;>'+icon+'</div><div class=&quot;stat-lbl&quot;>'+label+'</div></div><div class=&quot;stat-val&quot;>'+val+'</div>'+(delta?'<div class=&quot;stat-delta up&quot;>'+delta+'</div>':'')+'</div>';
+}
+function loadHotelBookings() {
+  return db.collection(&quot;hotelBookings&quot;).get().then(function(snap) {
+    _allHotelBookings = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+    _allHotelBookings.sort(function(a,b) { return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
+  }).catch(function() { _allHotelBookings = []; });
+}
+function findAvailableHotelRoomNumberAdmin(hotelId, roomId, checkIn, checkOut) {
+  return db.collection(&quot;hotels&quot;).doc(hotelId).collection(&quot;rooms&quot;).doc(roomId).get().then(function(rdoc) {
+    var pool = (rdoc.exists &amp;&amp; Array.isArray(rdoc.data().roomNumbers)) ? rdoc.data().roomNumbers : [];
+    if (!pool.length) return &quot;Unassigned&quot;;
+    return db.collection(&quot;hotelBookings&quot;).where(&quot;hotelId&quot;, &quot;==&quot;, hotelId).where(&quot;roomId&quot;, &quot;==&quot;, roomId).where(&quot;status&quot;, &quot;==&quot;, &quot;Approved&quot;).get().then(function(snap) {
+      var taken = {};
+      snap.forEach(function(d) {
+        var b = d.data();
+        if (b.roomNumber &amp;&amp; b.checkIn &amp;&amp; b.checkOut &amp;&amp; datesOverlap(checkIn, checkOut, b.checkIn, b.checkOut)) taken[b.roomNumber] = true;
+      });
+      for (var i = 0; i < pool.length; i++) { if (!taken[pool[i]]) return pool[i]; }
+      return null;
+    });
+  });
+}
+function renderHotelBookingsAdmin() {
+  if (!document.getElementById(&quot;hb-admin-list&quot;)) return;
+  var pending = _allHotelBookings.filter(function(b){ return b.status===&quot;Pending&quot;; });
+  var approved = _allHotelBookings.filter(function(b){ return b.status===&quot;Approved&quot;; });
+  var rejected = _allHotelBookings.filter(function(b){ return b.status===&quot;Rejected&quot;; });
+  document.getElementById(&quot;hb-admin-stats&quot;).innerHTML =
+    statCard(&quot;&amp;#9203;&quot;,&quot;var(--amber)&quot;,&quot;var(--amber-bg)&quot;,&quot;Pending Approval&quot;, pending.length) +
+    statCard(&quot;&amp;#9989;&quot;,&quot;var(--green)&quot;,&quot;var(--green-bg)&quot;,&quot;Approved&quot;, approved.length) +
+    statCard(&quot;&amp;#10060;&quot;,&quot;var(--red)&quot;,&quot;var(--red-bg)&quot;,&quot;Rejected&quot;, rejected.length) +
+    statCard(&quot;&amp;#128176;&quot;,&quot;var(--blue)&quot;,&quot;var(--blue-dim)&quot;,&quot;Total Bookings&quot;, _allHotelBookings.length);
+  var tabs = [
+    {key:&quot;Pending&quot;, label:&quot;Pending (&quot;+pending.length+&quot;)&quot;},
+    {key:&quot;Approved&quot;, label:&quot;Approved (&quot;+approved.length+&quot;)&quot;},
+    {key:&quot;Rejected&quot;, label:&quot;Rejected (&quot;+rejected.length+&quot;)&quot;},
+    {key:&quot;&quot;, label:&quot;All (&quot;+_allHotelBookings.length+&quot;)&quot;}
+  ];
+  document.getElementById(&quot;hb-admin-tabs&quot;).innerHTML = tabs.map(function(t){
+    return '<button class=&quot;tab-btn'+(t.key===_hbAdminTab?' on':'')+'&quot; onclick=&quot;setHBAdminTab(\''+t.key+'\')&quot;>'+t.label+'</button>';
+  }).join(&quot;&quot;);
+  var list = _allHotelBookings.filter(function(b){ return !_hbAdminTab || b.status === _hbAdminTab; });
+  document.getElementById(&quot;hb-admin-list&quot;).innerHTML = list.length ? list.map(function(b) {
+    var methodLabel = b.paymentMethod === &quot;manual&quot; ? &quot;Bank Transfer&quot; : &quot;Paystack&quot;;
+    var actions = b.status === &quot;Pending&quot; ?
+      '<div style=&quot;display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap&quot;>'+
+        '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--green)&quot; onclick=&quot;approveHotelBooking(\''+b.id+'\')&quot;>&amp;#9989; Approve</button>'+
+        '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--red)&quot; onclick=&quot;rejectHotelBooking(\''+b.id+'\')&quot;>&amp;#10060; Reject</button>'+
+        (b.receiptURL ? '<button class=&quot;btn btn-o&quot; onclick=&quot;window.open(\''+b.receiptURL+'\',\'_blank\')&quot;>&amp;#128196; View Receipt</button>' : '')+
+      '</div>' : (b.receiptURL ? '<button class=&quot;btn btn-o&quot; style=&quot;margin-top:.5rem&quot; onclick=&quot;window.open(\''+b.receiptURL+'\',\'_blank\')&quot;>&amp;#128196; View Receipt</button>' : '');
+    return '<div class=&quot;card&quot;><div style=&quot;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.6rem&quot;>'+
+      '<div><div style=&quot;font-weight:700&quot;>'+esc(b.name)+' &amp;middot; '+esc(b.hotelName)+'</div>'+
+      '<div style=&quot;font-size:.78rem;color:var(--muted2)&quot;>'+esc(b.roomType)+(b.roomNumber?' (Room '+esc(b.roomNumber)+')':'')+' &amp;middot; '+esc(b.checkIn)+' &amp;#8594; '+esc(b.checkOut)+'</div>'+
+      '<div style=&quot;font-size:.76rem;color:var(--muted2)&quot;>'+esc(b.email)+' &amp;middot; '+esc(b.phone)+' &amp;middot; '+methodLabel+'</div></div>'+
+      '<div style=&quot;text-align:right&quot;><div style=&quot;font-weight:800;font-size:1.05rem&quot;>&amp;#8358;'+(b.amount||0).toLocaleString()+'</div>'+pill(b.status)+'</div>'+
+      '</div>'+actions+'</div>';
+  }).join(&quot;&quot;) : '<div class=&quot;empty&quot;>No marketplace bookings in this category.</div>';
+}
+function setHBAdminTab(key) { _hbAdminTab = key; renderHotelBookingsAdmin(); }
+function approveHotelBooking(id) {
+  var b = _allHotelBookings.find(function(x){ return x.id===id; }); if (!b) return;
+  findAvailableHotelRoomNumberAdmin(b.hotelId, b.roomId, b.checkIn, b.checkOut).then(function(roomNum) {
+    var code = String(Math.floor(100000 + Math.random()*900000));
+    var exp = new Date(b.checkOut + &quot;T23:59:59&quot;);
+    return db.collection(&quot;hotelBookings&quot;).doc(id).update({
+      status: &quot;Approved&quot;, paymentStatus: &quot;paid&quot;, roomNumber: roomNum || &quot;&quot;,
+      accessCode: code, codeStatus: &quot;active&quot;, codeExpiry: firebase.firestore.Timestamp.fromDate(exp)
+    }).then(function() {
+      return db.collection(&quot;hotels&quot;).doc(b.hotelId).update({
+        walletBalance: firebase.firestore.FieldValue.increment(b.hotelShare||0),
+        totalEarned: firebase.firestore.FieldValue.increment(b.hotelShare||0)
+      });
+    }).then(function() {
+      b.status = &quot;Approved&quot;; b.roomNumber = roomNum || &quot;&quot;; b.accessCode = code;
+      renderHotelBookingsAdmin();
+      T(&quot;Booking Approved&quot;, &quot;Room &quot;+(roomNum||&quot;&quot;)+&quot; assigned and access code sent.&quot;);
+    });
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not approve this booking.&quot;); });
+}
+function rejectHotelBooking(id) {
+  var b = _allHotelBookings.find(function(x){ return x.id===id; }); if (!b) return;
+  db.collection(&quot;hotelBookings&quot;).doc(id).update({ status: &quot;Rejected&quot;, paymentStatus: &quot;failed&quot; }).then(function() {
+    b.status = &quot;Rejected&quot;;
+    renderHotelBookingsAdmin();
+    T(&quot;Booking Rejected&quot;, &quot;The booking request has been rejected.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not reject this booking.&quot;); });
 }
 function pill(status) {
   var map = { Pending:&quot;pill-amber&quot;, Approved:&quot;pill-green&quot;, Rejected:&quot;pill-red&quot;, CheckedOut:&quot;pill-blue&quot;, Active:&quot;pill-green&quot;, Blocked:&quot;pill-red&quot;, Inactive:&quot;pill-gray&quot;, active:&quot;pill-green&quot;, blocked:&quot;pill-red&quot;, inactive:&quot;pill-gray&quot;, Pending2:&quot;pill-amber&quot; };
@@ -3409,6 +3532,54 @@ db.collection("settings").doc("roomInventory").onSnapshot(function(doc) {
     db.collection("settings").doc("roomInventory").set(DEFAULT_ROOM_INVENTORY).catch(function(){});
   }
 }, function(e) { console.warn("roomInventory listener:", e); });
+
+// ═══════════════════════════════════════════
+// MARKETPLACE BOOTSTRAP: make sure Hotels Continental itself is
+// listed as a hotel in the marketplace, with its 7 room types,
+// so guests can find and book it from the "Hotels" marketplace
+// page just like any other partner hotel.
+// ═══════════════════════════════════════════
+var HC_HOTEL_ID = "hotels-continental";
+var ROOM_TYPE_NAMES = {Single:"Classic Single",Double:"Comfort Double",VIP:"VIP Prestige Suite",Deluxe:"Deluxe Suite",Executive:"Executive Room",Family:"Family Suite",Honeymoon:"Honeymoon Suite"};
+var ROOM_TYPE_DESCS = {
+  Single:"Perfect for solo travellers. Queen bed, en-suite bathroom, work desk and WiFi.",
+  Double:"Ideal for couples. Twin beds, lounge area, mini-fridge and premium linen.",
+  VIP:"Pinnacle of luxury. King bed, private lounge, jacuzzi and complimentary breakfast.",
+  Deluxe:"Premium furnishings, city view, king bed, flat-screen TV and rain shower.",
+  Executive:"For business travellers. Ergonomic workstation, high-speed WiFi and safe.",
+  Family:"Two bedrooms, kitchenette, living area and kids-friendly amenities.",
+  Honeymoon:"Rose decor, champagne on arrival, jacuzzi and private balcony."
+};
+function ensureHotelsContinentalListing() {
+  var ref = db.collection("hotels").doc(HC_HOTEL_ID);
+  ref.get().then(function(doc) {
+    if (!doc.exists) {
+      ref.set({
+        name: "Hotels Continental", location: "Lagos, Nigeria",
+        description: "Where Lagos's finest hospitality meets modern comfort.",
+        status: "Active", walletBalance: 0, totalEarned: 0, isPrimary: true,
+        ownerName: "Hotels Continental", ownerEmail: "HotelsContinental@gmail.com",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true }).catch(function(){});
+    }
+    ref.collection("rooms").limit(1).get().then(function(snap) {
+      if (!snap.empty) return;
+      var batch = db.batch();
+      ROOM_TYPE_LIST.forEach(function(type) {
+        var rd = ref.collection("rooms").doc(type);
+        batch.set(rd, {
+          name: ROOM_TYPE_NAMES[type] || type,
+          price: PRICES[type] || 0,
+          description: ROOM_TYPE_DESCS[type] || "",
+          imageURL: ROOM_IMGS[type] || "",
+          roomNumbers: DEFAULT_ROOM_INVENTORY[type] || []
+        }, { merge: true });
+      });
+      batch.commit().catch(function(e){ console.warn("seed HC marketplace rooms failed", e); });
+    }).catch(function(){});
+  }).catch(function(e){ console.warn("ensureHotelsContinentalListing failed", e); });
+}
+ensureHotelsContinentalListing();
 
 function datesOverlap(aStart, aEnd, bStart, bEnd) {
   // date strings are YYYY-MM-DD so lexical comparison = chronological
@@ -4743,6 +4914,8 @@ function accRenderWishlist(body) {
 var _mpHotels = [];
 var _mpCurrentHotel = null;
 var _mpCurrentRoom = null;
+var _hbPayMethod = "paystack";
+var _hbReceiptData = null;
 
 function loadMarketplaceHotels() {
   document.getElementById("mp-list").innerHTML = '<div class="empty">Loading hotels...</div>';
@@ -4812,7 +4985,36 @@ function openHotelBooking(roomId) {
   }
   document.getElementById("hb-cin").onchange = recalc;
   document.getElementById("hb-cout").onchange = recalc;
+  _hbReceiptData = null;
+  document.getElementById("hb-receipt-file").value = "";
+  document.getElementById("hb-receipt-preview").style.display = "none";
+  document.getElementById("hb-ereceipt").classList.remove("show");
+  hbSelectPayMethod("paystack");
   SP("hotelbook");
+}
+function hbSelectPayMethod(method) {
+  _hbPayMethod = method;
+  var ps = document.getElementById("hb-pm-paystack"), mn = document.getElementById("hb-pm-manual");
+  ps.style.borderColor = method === "paystack" ? "var(--gold)" : "var(--border)";
+  ps.style.background = method === "paystack" ? "var(--gold-dim)" : "var(--surface2)";
+  mn.style.borderColor = method === "manual" ? "var(--gold)" : "var(--border)";
+  mn.style.background = method === "manual" ? "var(--gold-dim)" : "var(--surface2)";
+  document.getElementById("hb-manual-section").style.display = method === "manual" ? "block" : "none";
+  document.getElementById("hb-bank-details").innerHTML =
+    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Bank</span><span style="font-weight:600">Opay</span></div>' +
+    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Number</span><span style="font-weight:600;font-family:monospace">8150898386</span></div>' +
+    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Name</span><span style="font-weight:600">Oladeji Opeyemi Ridwan</span></div>';
+  document.getElementById("hbsub").textContent = method === "manual" ? "Submit Booking Request" : "Pay & Confirm Booking";
+}
+function hbReceiptChange(input) {
+  var file = input.files[0];
+  if (!file) return;
+  compressImageToLimit(file, function(dataUrl) {
+    _hbReceiptData = dataUrl;
+    document.getElementById("hb-receipt-img").src = dataUrl;
+    document.getElementById("hb-receipt-preview").style.display = "block";
+    document.getElementById("hb-ereceipt").classList.remove("show");
+  }, { maxBytes: 500000, maxDim: 1000, minDim: 300, onError: function() { T("Error", "Could not process that receipt image."); } });
 }
 function hotelBookInitiatePayment() {
   var name = document.getElementById("hb-name").value.trim();
@@ -4828,10 +5030,16 @@ function hotelBookInitiatePayment() {
   ve("hb-ee", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
   ve("hb-eci", !!cin && cin >= td);
   ve("hb-eco", !!cout && cout > cin);
+  ve("hb-ereceipt", _hbPayMethod !== "manual" || !!_hbReceiptData);
   if (!ok || !_mpCurrentRoom || !_mpCurrentHotel) return;
 
   var nights = Math.max(1, Math.round((new Date(cout) - new Date(cin)) / 86400000));
   var total = nights * _mpCurrentRoom.price;
+
+  if (_hbPayMethod === "manual") {
+    submitManualHotelBooking(total, name, phone, email, cin, cout);
+    return;
+  }
 
   findAvailableHotelRoomNumber(_mpCurrentHotel.id, _mpCurrentRoom.id, cin, cout).then(function(roomNum) {
     if (roomNum === null) { T("Fully Booked", "Sorry, this room type is fully booked for those dates.", 6000); return; }
@@ -4847,6 +5055,28 @@ function hotelBookInitiatePayment() {
     });
     handler.openIframe();
   }).catch(function() { T("Error", "Could not check room availability."); });
+}
+function submitManualHotelBooking(total, name, phone, email, cin, cout) {
+  var hotelShare = Math.round(total * 0.8);
+  var platformShare = total - hotelShare;
+  db.collection("hotelBookings").add({
+    hotelId: _mpCurrentHotel.id, hotelName: _mpCurrentHotel.name,
+    roomId: _mpCurrentRoom.id, roomType: _mpCurrentRoom.name, roomNumber: "",
+    name: name, phone: phone, email: email, checkIn: cin, checkOut: cout,
+    amount: total, hotelShare: hotelShare, platformShare: platformShare,
+    status: "Pending", paymentStatus: "unpaid", paymentMethod: "manual",
+    receiptURL: _hbReceiptData || "",
+    accessCode: "", codeStatus: "inactive",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    document.getElementById("hb-form").style.display = "none";
+    document.getElementById("hb-success").style.display = "block";
+    document.getElementById("hb-success-msg").innerHTML = "Your booking request at <strong>" + esc(_mpCurrentHotel.name) + "</strong> has been submitted. We'll confirm once your bank transfer is verified by our team, then send your access code.";
+    T("Request Submitted", "Awaiting admin approval of your bank transfer.");
+  }).catch(function(e) {
+    T("Error", "Could not submit your booking request. Please try again.");
+    console.error(e);
+  });
 }
 function findAvailableHotelRoomNumber(hotelId, roomId, checkIn, checkOut) {
   return db.collection("hotels").doc(hotelId).collection("rooms").doc(roomId).get().then(function(rdoc) {
@@ -4874,7 +5104,7 @@ function finalizeHotelBooking(payRef, total, name, phone, email, cin, cout) {
       roomId: _mpCurrentRoom.id, roomType: _mpCurrentRoom.name, roomNumber: roomNum || "",
       name: name, phone: phone, email: email, checkIn: cin, checkOut: cout,
       amount: total, hotelShare: hotelShare, platformShare: platformShare,
-      status: "Approved", paymentStatus: "paid", paymentRef: payRef,
+      status: "Approved", paymentStatus: "paid", paymentRef: payRef, paymentMethod: "paystack",
       accessCode: code, codeStatus: "active", codeExpiry: firebase.firestore.Timestamp.fromDate(exp),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(function() {
@@ -4940,7 +5170,7 @@ function hdRenderRooms() {
       '</div>' +
       '<div style="font-weight:700">' + esc(r.name) + '</div>' +
       '<div style="color:var(--gold);font-weight:700;margin:.3rem 0">&#8358;' + (r.price || 0).toLocaleString() + '/night</div>' +
-      '<div style="font-size:.74rem;color:var(--muted);margin-bottom:.6rem">' + (r.roomNumbers || []).length + ' room number(s) added</div>' +
+      '<div style="font-size:.74rem;color:var(--muted);margin-bottom:.6rem">' + ((r.roomNumbers || []).length ? (r.roomNumbers.length + ' room number(s): ' + r.roomNumbers.map(esc).join(', ')) : 'No room numbers added yet') + '</div>' +
       '<div style="display:flex;gap:.4rem"><button class="btn btn-o btn-sm" onclick="hdEditRoom(\'' + r.id + '\')">Edit</button><button class="btn btn-o btn-sm" onclick="hdDeleteRoom(\'' + r.id + '\')">Delete</button></div>' +
     '</div>';
   }).join("");
@@ -4953,6 +5183,7 @@ function hdEditRoom(id) {
   document.getElementById("hdr-name").value = r.name || "";
   document.getElementById("hdr-price").value = r.price || "";
   document.getElementById("hdr-desc").value = r.description || "";
+  document.getElementById("hdr-roomnums").value = (r.roomNumbers || []).join(", ");
   document.getElementById("hdr-cancel").style.display = "inline-block";
   window.scrollTo(0, 0);
 }
@@ -4962,6 +5193,7 @@ function hdCancelEditRoom() {
   document.getElementById("hdr-name").value = "";
   document.getElementById("hdr-price").value = "";
   document.getElementById("hdr-desc").value = "";
+  document.getElementById("hdr-roomnums").value = "";
   document.getElementById("hdr-photo").value = "";
   document.getElementById("hdr-cancel").style.display = "none";
 }
@@ -4969,15 +5201,16 @@ function hdSaveRoom() {
   var name = document.getElementById("hdr-name").value.trim();
   var price = parseInt(document.getElementById("hdr-price").value, 10);
   var desc = document.getElementById("hdr-desc").value.trim();
+  var roomNumbersRaw = document.getElementById("hdr-roomnums").value.trim();
+  var roomNumbers = roomNumbersRaw ? roomNumbersRaw.split(",").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; }) : [];
   var file = document.getElementById("hdr-photo").files[0];
   if (!name || !price) { T("Missing Info", "Enter a room name and price."); return; }
   function save(imageURL) {
-    var data = { name: name, price: price, description: desc };
+    var data = { name: name, price: price, description: desc, roomNumbers: roomNumbers };
     if (imageURL) data.imageURL = imageURL;
     var ref = _hdEditingRoomId
       ? db.collection("hotels").doc(_hotelSession).collection("rooms").doc(_hdEditingRoomId)
       : db.collection("hotels").doc(_hotelSession).collection("rooms").doc();
-    if (!_hdEditingRoomId) data.roomNumbers = [];
     ref.set(data, { merge: true }).then(function() {
       T("Saved", name + " has been saved.");
       hdCancelEditRoom();
