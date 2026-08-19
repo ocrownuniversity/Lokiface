@@ -128,6 +128,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .fg input,.fg select,.fg textarea{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.72rem .88rem;color:var(--text);font-family:'Jost',sans-serif;font-size:.86rem;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
 .fg textarea{resize:vertical;min-height:80px}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:2.6rem !important}
+.pw-eye{position:absolute;right:.7rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;padding:.2rem;line-height:1;display:flex;align-items:center;justify-content:center}
+.pw-eye:hover{color:var(--gold)}
 .eferr{font-size:.72rem;color:var(--red);margin-top:.28rem;display:none}
 .eferr.show{display:block}
 .aside{display:flex;flex-direction:column;gap:1rem}
@@ -674,7 +678,8 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       </div>
       <div id="acc-login-form">
         <div class="fg"><label>Email</label><input type="email" id="acc-li-email" placeholder="you@email.com"/></div>
-        <div class="fg"><label>Password</label><input type="password" id="acc-li-pass" placeholder="Your password" onkeypress="if(event.key==='Enter')accLogin()"/></div>
+        <div class="fg pw-wrap"><label>Password</label><input type="password" id="acc-li-pass" placeholder="Your password" onkeypress="if(event.key==='Enter')accLogin()"/><button type="button" class="pw-eye" onclick="togglePw('acc-li-pass',this)">&#128065;</button></div>
+        <div style="text-align:right;margin:-.5rem 0 .8rem"><a href="javascript:void(0)" onclick="SP('forgotpass')" style="font-size:.75rem;color:var(--gold);font-weight:600">Forgot Password?</a></div>
         <div class="eferr" id="acc-li-err">Incorrect email or password.</div>
         <button class="fsub" onclick="accLogin()">Sign In</button>
       </div>
@@ -682,7 +687,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         <div class="fg"><label>Full Name</label><input type="text" id="acc-su-name" placeholder="e.g. Adewale Okonkwo"/></div>
         <div class="fg"><label>Email</label><input type="email" id="acc-su-email" placeholder="you@email.com"/></div>
         <div class="fg"><label>Phone Number</label><input type="tel" id="acc-su-phone" placeholder="e.g. 08012345678"/></div>
-        <div class="fg"><label>Password</label><input type="password" id="acc-su-pass" placeholder="Min. 6 characters"/></div>
+        <div class="fg pw-wrap"><label>Password</label><input type="password" id="acc-su-pass" placeholder="Min. 6 characters"/><button type="button" class="pw-eye" onclick="togglePw('acc-su-pass',this)">&#128065;</button></div>
         <div class="eferr" id="acc-su-err">Please check your details and try again.</div>
         <button class="fsub" onclick="accSignup()">Create Account</button>
       </div>
@@ -715,6 +720,62 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   </div>
 
   <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
+</div>
+
+<!-- FORGOT PASSWORD -->
+<div class="page" id="page-forgotpass">
+  <div class="hxout">
+    <div class="phero">
+      <div class="ptag">Account Recovery</div>
+      <h1 class="ptitle">Reset Your Password</h1>
+      <p class="psub">Enter the email address on your account and we'll send you a link to reset your password.</p>
+    </div>
+    <div class="lcard">
+      <div id="fp-form">
+        <div class="fg"><label>Email</label><input type="email" id="fp-email" placeholder="you@email.com" onkeypress="if(event.key==='Enter')sendPasswordReset()"/></div>
+        <div class="eferr" id="fp-err">Please enter a valid email address.</div>
+        <button class="fsub" id="fp-btn" onclick="sendPasswordReset()">Send Reset Link</button>
+        <button class="sagain" onclick="SP('account')" style="margin-top:.8rem">&#8592; Back to Sign In</button>
+      </div>
+      <div class="sstate" id="fp-success">
+        <div class="sring">&#10003;</div>
+        <div class="sttl">Check Your Email</div>
+        <p class="smsg">If an account exists for that email, a password reset link has been sent. Click the link in that email to set a new password.</p>
+        <button class="sagain" onclick="SP('account')">Back to Sign In</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD (opened via email link) -->
+<div class="page" id="page-resetpass">
+  <div class="hxout">
+    <div class="phero">
+      <div class="ptag">Account Recovery</div>
+      <h1 class="ptitle">Set a New Password</h1>
+      <p class="psub" id="rp-email-sub">Choose a new password for your account.</p>
+    </div>
+    <div class="lcard">
+      <div id="rp-form">
+        <div class="fg pw-wrap"><label>New Password</label><input type="password" id="rp-pass" placeholder="Min. 6 characters"/><button type="button" class="pw-eye" onclick="togglePw('rp-pass',this)">&#128065;</button></div>
+        <div class="fg pw-wrap"><label>Confirm New Password</label><input type="password" id="rp-pass2" placeholder="Re-enter password" onkeypress="if(event.key==='Enter')confirmNewPassword()"/><button type="button" class="pw-eye" onclick="togglePw('rp-pass2',this)">&#128065;</button></div>
+        <div class="eferr" id="rp-err">Passwords must match and be at least 6 characters.</div>
+        <button class="fsub" id="rp-btn" onclick="confirmNewPassword()">Set New Password</button>
+      </div>
+      <div class="sstate" id="rp-invalid" style="display:none">
+        <div class="sring" style="background:var(--red-bg);color:var(--red)">&#10007;</div>
+        <div class="sttl">Link Expired</div>
+        <p class="smsg">This password reset link is invalid or has expired. Please request a new one.</p>
+        <button class="sagain" onclick="SP('forgotpass')">Request New Link</button>
+      </div>
+      <div class="sstate" id="rp-success" style="display:none">
+        <div class="sring">&#10003;</div>
+        <div class="sttl">Password Updated!</div>
+        <p class="smsg">Your password has been changed. You can now sign in with your new password.</p>
+        <button class="sagain" onclick="SP('account')">Go to Sign In</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- REGISTER HOTEL -->
@@ -777,8 +838,8 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
               <label style="display:block;font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem">&#128273; Set Your Dashboard Password</label>
               <div style="font-size:.7rem;color:var(--muted);margin-bottom:.6rem">You'll use this email &amp; password to log in to your Hotel Dashboard once approved.</div>
               <div class="frow">
-                <div class="fg"><label>Password</label><input type="password" id="hr-pass" placeholder="Min. 6 characters"/><div class="eferr" id="hr-e-pass">Password must be at least 6 characters.</div></div>
-                <div class="fg"><label>Confirm Password</label><input type="password" id="hr-pass2" placeholder="Re-enter password"/><div class="eferr" id="hr-e-pass2">Passwords do not match.</div></div>
+                <div class="fg pw-wrap"><label>Password</label><input type="password" id="hr-pass" placeholder="Min. 6 characters"/><button type="button" class="pw-eye" onclick="togglePw('hr-pass',this)">&#128065;</button><div class="eferr" id="hr-e-pass">Password must be at least 6 characters.</div></div>
+                <div class="fg pw-wrap"><label>Confirm Password</label><input type="password" id="hr-pass2" placeholder="Re-enter password"/><button type="button" class="pw-eye" onclick="togglePw('hr-pass2',this)">&#128065;</button><div class="eferr" id="hr-e-pass2">Passwords do not match.</div></div>
               </div>
             </div>
 
@@ -1506,6 +1567,14 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 </div>
 
 <!-- Hotel Modal -->
+<!-- Booking Detail / Receipt Modal -->
+<div class=&quot;modal-ov&quot; id=&quot;booking-modal&quot;>
+  <div class=&quot;modal&quot; style=&quot;max-width:480px&quot;>
+    <div class=&quot;modal-title&quot;>Booking Details <button class=&quot;modal-close&quot; onclick=&quot;closeModal('booking-modal')&quot;>&amp;#10005;</button></div>
+    <div id=&quot;bk-modal-body&quot;></div>
+  </div>
+</div>
+
 <div class=&quot;modal-ov&quot; id=&quot;hotel-modal&quot;>
   <div class=&quot;modal&quot;>
     <div class=&quot;modal-title&quot;>Add Hotel <button class=&quot;modal-close&quot; onclick=&quot;closeModal('hotel-modal')&quot;>&amp;#10005;</button></div>
@@ -2290,12 +2359,15 @@ function bkDate(b) { return b.createdAt &amp;&amp; b.createdAt.toDate ? b.create
 /* ============ DASHBOARD ============ */
 var _chartDashB, _chartDashR;
 function renderDashboard() {
-  var totalRevenue = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; ? b.amountPaid : 0); }, 0);
+  var totalRevenue = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; ? (Number(b.amountPaid)||0) : 0); }, 0);
+  var today = new Date();
+  var todayRevenue = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; &amp;&amp; isSameDay(bkDate(b), today) ? (Number(b.amountPaid)||0) : 0); }, 0);
   var pending = _allBookings.filter(function(b){ return b.status===&quot;Pending&quot;; }).length;
   document.getElementById(&quot;dash-stats&quot;).innerHTML =
     statCard(&quot;&amp;#127974;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Hotels&quot;, _allHotels.length) +
     statCard(&quot;&amp;#128197;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Bookings&quot;, _allBookings.length) +
     statCard(&quot;&amp;#128176;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Total Revenue&quot;, NGN(totalRevenue)) +
+    statCard(&quot;&amp;#9752;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Today's Revenue&quot;, NGN(todayRevenue)) +
     statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Bookings&quot;, pending) +
     statCard(&quot;&amp;#128101;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Total Users&quot;, _allUsers.length);
 
@@ -2305,7 +2377,7 @@ function renderDashboard() {
     days.push(d.toLocaleDateString(&quot;en-GB&quot;,{day:&quot;2-digit&quot;,month:&quot;short&quot;}));
     var dayBk = _allBookings.filter(function(b){ return isSameDay(bkDate(b), d); });
     bCounts.push(dayBk.length);
-    rSums.push(dayBk.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot;?b.amountPaid:0); }, 0));
+    rSums.push(dayBk.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot;?(Number(b.amountPaid)||0):0); }, 0));
   }
   if (_chartDashB) _chartDashB.destroy();
   _chartDashB = new Chart(document.getElementById(&quot;dash-chart-bookings&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:bCounts, borderColor:&quot;#2f5fdb&quot;, backgroundColor:&quot;rgba(47,95,219,.1)&quot;, fill:true, tension:.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}});
@@ -2342,7 +2414,7 @@ function renderHotelsStats() {
     statCard(&quot;&amp;#128683;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Blocked&quot;, blocked);
 }
 function hotelRevenue(hotelId) {
-  return _allBookings.filter(function(b){ return b.hotelId===hotelId &amp;&amp; b.paymentStatus===&quot;paid&quot;; }).reduce(function(s,b){ return s+b.amountPaid; }, 0);
+  return _allBookings.filter(function(b){ return b.hotelId===hotelId &amp;&amp; b.paymentStatus===&quot;paid&quot;; }).reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0);
 }
 function hotelBookingCount(hotelId) {
   return _allBookings.filter(function(b){ return b.hotelId===hotelId; }).length;
@@ -2427,10 +2499,48 @@ function renderBookingsList() {
   document.getElementById(&quot;bk-pager&quot;).innerHTML = totalPages>1 ? pager : &quot;&quot;;
 }
 function bkActions(b) {
-  var out = &quot;&quot;;
+  var out = '<button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;openBookingDetail(\''+b.id+'\')&quot;>View</button> ';
   if (b.status === &quot;Pending&quot;) out += '<button class=&quot;btn btn-sm btn-p&quot; onclick=&quot;setBookingStatus(\''+b.id+'\',\'Approved\')&quot;>Approve</button> <button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;setBookingStatus(\''+b.id+'\',\'Rejected\')&quot;>Reject</button>';
   if (b.status === &quot;Approved&quot;) out += '<button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;setBookingStatus(\''+b.id+'\',\'CheckedOut\')&quot;>Check Out</button>';
-  return out || &quot;-&quot;;
+  return out;
+}
+function openBookingDetail(id) {
+  var b = _allBookings.find(function(x){ return x.id===id; });
+  if (!b) return;
+  var isImg = b.receiptImage &amp;&amp; /^data:image/.test(b.receiptImage);
+  var receiptBlock = &quot;&quot;;
+  if (b.receiptImage) {
+    receiptBlock = '<div class=&quot;card-title&quot; style=&quot;margin-top:1rem&quot;>Payment Receipt</div>' +
+      (isImg
+        ? '<img src=&quot;'+b.receiptImage+'&quot; style=&quot;width:100%;border-radius:10px;border:1px solid var(--border);cursor:pointer&quot; onclick=&quot;window.open(this.src,\'_blank\')&quot;/>'
+        : '<a href=&quot;'+b.receiptImage+'&quot; target=&quot;_blank&quot; class=&quot;btn btn-o&quot; style=&quot;display:inline-block&quot;>&amp;#128196; View Uploaded Receipt</a>') +
+      '<div style=&quot;font-size:.7rem;color:var(--muted2);margin-top:.4rem&quot;>Click the image to open it full-size in a new tab.</div>';
+  } else if (b.paymentMethod === &quot;manual&quot;) {
+    receiptBlock = '<div class=&quot;card-title&quot; style=&quot;margin-top:1rem&quot;>Payment Receipt</div><div class=&quot;empty&quot; style=&quot;padding:1rem&quot;>No receipt was uploaded for this booking.</div>';
+  }
+  var actions = &quot;&quot;;
+  if (b.status === &quot;Pending&quot;) {
+    actions = '<div class=&quot;hv-actions&quot; style=&quot;margin-top:1rem&quot;>'+
+      '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--green)&quot; onclick=&quot;setBookingStatus(\''+id+'\',\'Approved\');closeModal(\'booking-modal\')&quot;>&amp;#9989; Approve Booking</button>'+
+      '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--red)&quot; onclick=&quot;setBookingStatus(\''+id+'\',\'Rejected\');closeModal(\'booking-modal\')&quot;>&amp;#10060; Reject Booking</button>'+
+    '</div>';
+  }
+  document.getElementById(&quot;bk-modal-body&quot;).innerHTML =
+    '<div class=&quot;fgrid2&quot;>'+
+    '<div><div class=&quot;lr-sub&quot;>Guest</div><div class=&quot;lr-name&quot;>'+esc(b.name)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Email</div><div class=&quot;lr-name&quot;>'+esc(b.email)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Phone</div><div class=&quot;lr-name&quot;>'+esc(b.phone||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Hotel</div><div class=&quot;lr-name&quot;>'+esc(b.hotelName||&quot;Hotels Continental&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Room Type</div><div class=&quot;lr-name&quot;>'+esc(b.roomType||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Room Number</div><div class=&quot;lr-name&quot;>'+esc(b.roomNumber||&quot;Not yet assigned&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Check-In</div><div class=&quot;lr-name&quot;>'+esc(b.checkIn||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Check-Out</div><div class=&quot;lr-name&quot;>'+esc(b.checkOut||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Amount</div><div class=&quot;lr-name&quot;>'+NGN(b.amountPaid)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Payment Method</div><div class=&quot;lr-name&quot;>'+esc(b.paymentMethod||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Status</div><div>'+pill(b.status)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Access Code</div><div class=&quot;lr-name&quot;>'+esc(b.accessCode||&quot;-&quot;)+'</div></div>'+
+    '</div>'+receiptBlock+actions;
+  openModalEl(&quot;booking-modal&quot;);
 }
 function setBookingStatus(id, status) {
   var b = _allBookings.find(function(x){ return x.id===id; });
@@ -2593,7 +2703,7 @@ var _chartRepB, _chartRepR, _chartRepStatus, _chartRepPay, _chartRepMonthly;
 function renderReports() {
   var totalBookings = _allBookings.length;
   var paidBookings = _allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot;; });
-  var gross = paidBookings.reduce(function(s,b){ return s+b.amountPaid; }, 0);
+  var gross = paidBookings.reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0);
   var rejected = _allBookings.filter(function(b){ return b.status===&quot;Rejected&quot;; }).length;
   var cancelRate = totalBookings ? ((rejected/totalBookings)*100).toFixed(2) : &quot;0.00&quot;;
   var aov = paidBookings.length ? Math.round(gross/paidBookings.length) : 0;
@@ -2610,7 +2720,7 @@ function renderReports() {
     days.push(d.toLocaleDateString(&quot;en-GB&quot;,{day:&quot;2-digit&quot;,month:&quot;short&quot;}));
     var dayBk = _allBookings.filter(function(b){ return isSameDay(bkDate(b), d); });
     bCounts.push(dayBk.length);
-    rSums.push(dayBk.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot;?b.amountPaid:0); }, 0));
+    rSums.push(dayBk.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot;?(Number(b.amountPaid)||0):0); }, 0));
   }
   if (_chartRepB) _chartRepB.destroy();
   _chartRepB = new Chart(document.getElementById(&quot;rep-chart-bookings&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:bCounts, borderColor:&quot;#2f5fdb&quot;, backgroundColor:&quot;rgba(47,95,219,.08)&quot;, fill:true, tension:.4, pointRadius:2}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}});
@@ -2625,7 +2735,7 @@ function renderReports() {
   _chartRepStatus = new Chart(document.getElementById(&quot;rep-chart-status&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Pending&quot;,&quot;Approved&quot;,&quot;Rejected&quot;,&quot;Checked Out&quot;], datasets:[{data:[pend,appr,rej,co], backgroundColor:[&quot;#f59e0b&quot;,&quot;#16a34a&quot;,&quot;#dc2626&quot;,&quot;#0b2545&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, cutout:&quot;60%&quot;}});
 
   var byMethod = {};
-  paidBookings.forEach(function(b){ var m=b.paymentMethod||&quot;other&quot;; byMethod[m]=(byMethod[m]||0)+b.amountPaid; });
+  paidBookings.forEach(function(b){ var m=b.paymentMethod||&quot;other&quot;; byMethod[m]=(byMethod[m]||0)+(Number(b.amountPaid)||0); });
   var mLabels = Object.keys(byMethod), mVals = mLabels.map(function(k){ return byMethod[k]; });
   if (_chartRepPay) _chartRepPay.destroy();
   _chartRepPay = new Chart(document.getElementById(&quot;rep-chart-pay&quot;), {type:&quot;doughnut&quot;, data:{labels:mLabels.length?mLabels:[&quot;No data&quot;], datasets:[{data:mVals.length?mVals:[1], backgroundColor:[&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;,&quot;#0ea5e9&quot;,&quot;#f59e0b&quot;,&quot;#9aa3b2&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, cutout:&quot;60%&quot;}});
@@ -2644,7 +2754,7 @@ function renderReports() {
   _allBookings.forEach(function(b){
     if (b.paymentStatus!==&quot;paid&quot;) return;
     var d = bkDate(b);
-    if (d.getFullYear()===year) monthRev[d.getMonth()] += b.amountPaid;
+    if (d.getFullYear()===year) monthRev[d.getMonth()] += (Number(b.amountPaid)||0);
   });
   if (_chartRepMonthly) _chartRepMonthly.destroy();
   _chartRepMonthly = new Chart(document.getElementById(&quot;rep-chart-monthly&quot;), {type:&quot;bar&quot;, data:{labels:months, datasets:[{data:monthRev, backgroundColor:&quot;#2f5fdb&quot;, borderRadius:4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}}}}});
@@ -2663,9 +2773,9 @@ var _payPage = 1, _payPerPage = 8;
 var _chartPayOverview, _chartPayMethods, _chartPayStatus;
 function renderPayments() {
   var paid = _allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot;; });
-  var pending = _allBookings.filter(function(b){ return b.paymentStatus===&quot;pending&quot;; });
-  var totalPaid = paid.reduce(function(s,b){ return s+b.amountPaid; }, 0);
-  var totalPending = pending.reduce(function(s,b){ return s+b.amountPaid; }, 0);
+  var pending = _allBookings.filter(function(b){ return b.paymentStatus===&quot;pending&quot; || b.paymentStatus===&quot;pending_verification&quot;; });
+  var totalPaid = paid.reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0);
+  var totalPending = pending.reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0);
   document.getElementById(&quot;pay-stats&quot;).innerHTML =
     statCard(&quot;&amp;#128179;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Payments&quot;, NGN(totalPaid+totalPending)) +
     statCard(&quot;&amp;#9989;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Successful Payments&quot;, NGN(totalPaid)) +
@@ -2675,7 +2785,7 @@ function renderPayments() {
   for (var i=13;i>=0;i--) {
     var d = daysAgo(i);
     days.push(d.toLocaleDateString(&quot;en-GB&quot;,{day:&quot;2-digit&quot;,month:&quot;short&quot;}));
-    sums.push(_allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot; &amp;&amp; isSameDay(bkDate(b), d); }).reduce(function(s,b){ return s+b.amountPaid; }, 0));
+    sums.push(_allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot; &amp;&amp; isSameDay(bkDate(b), d); }).reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0));
   }
   if (_chartPayOverview) _chartPayOverview.destroy();
   _chartPayOverview = new Chart(document.getElementById(&quot;pay-chart-overview&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:sums, borderColor:&quot;#2f5fdb&quot;, backgroundColor:&quot;rgba(47,95,219,.08)&quot;, fill:true, tension:.4, pointRadius:2}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}}}}});
@@ -3393,8 +3503,14 @@ window.addEventListener("popstate", function(e) {
 
 // Load page from URL hash on first load
 (function() {
+  // Password-reset links from Firebase arrive as ?mode=resetPassword&oobCode=XXXX
+  var params = new URLSearchParams(window.location.search);
+  if (params.get("mode") === "resetPassword" && params.get("oobCode")) {
+    handlePasswordResetLink(params.get("oobCode"));
+    return;
+  }
   var hash = window.location.hash.replace("#", "");
-  var validPages = ["home", "booking", "access", "history", "admin", "account", "registerhotel", "hotels", "hoteldetail", "hotelbook", "hoteldash"];
+  var validPages = ["home", "booking", "access", "history", "admin", "account", "registerhotel", "hotels", "hoteldetail", "hotelbook", "hoteldash", "forgotpass", "resetpass"];
   if (hash && validPages.indexOf(hash) > -1) {
     SP(hash, false);
   } else {
@@ -4328,6 +4444,87 @@ function accLogin() {
 function accLogout() {
   auth.signOut();
   SP("home");
+}
+
+// ── PASSWORD SHOW/HIDE TOGGLE ──
+function togglePw(inputId, btn) {
+  var input = document.getElementById(inputId);
+  if (!input) return;
+  var hidden = input.type === "password";
+  input.type = hidden ? "text" : "password";
+  btn.innerHTML = hidden ? "&#128064;" : "&#128065;";
+}
+
+// ── FORGOT / RESET PASSWORD ──
+function sendPasswordReset() {
+  var email = document.getElementById("fp-email").value.trim();
+  var err = document.getElementById("fp-err");
+  err.classList.remove("show");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    err.textContent = "Please enter a valid email address.";
+    err.classList.add("show");
+    return;
+  }
+  var btn = document.getElementById("fp-btn");
+  btn.disabled = true; btn.textContent = "Sending...";
+  var actionCodeSettings = {
+    url: window.location.origin + window.location.pathname,
+    handleCodeInApp: true
+  };
+  auth.sendPasswordResetEmail(email, actionCodeSettings).then(function() {
+    document.getElementById("fp-form").style.display = "none";
+    document.getElementById("fp-success").style.display = "block";
+  }).catch(function(e) {
+    // Don't reveal whether the email exists; show the same success state
+    // unless it's a clearly malformed address.
+    if (e && e.code === "auth/invalid-email") {
+      err.textContent = "Please enter a valid email address.";
+      err.classList.add("show");
+    } else {
+      document.getElementById("fp-form").style.display = "none";
+      document.getElementById("fp-success").style.display = "block";
+    }
+  }).finally(function() {
+    btn.disabled = false; btn.textContent = "Send Reset Link";
+  });
+}
+var _resetOobCode = null;
+function handlePasswordResetLink(oobCode) {
+  SP("resetpass", false);
+  history.replaceState({page: "resetpass"}, "", "#resetpass");
+  document.getElementById("rp-form").style.display = "none";
+  document.getElementById("rp-invalid").style.display = "none";
+  document.getElementById("rp-success").style.display = "none";
+  auth.verifyPasswordResetCode(oobCode).then(function(email) {
+    _resetOobCode = oobCode;
+    document.getElementById("rp-email-sub").textContent = "Choose a new password for " + email + ".";
+    document.getElementById("rp-form").style.display = "block";
+  }).catch(function() {
+    document.getElementById("rp-invalid").style.display = "block";
+  });
+}
+function confirmNewPassword() {
+  var pass = document.getElementById("rp-pass").value;
+  var pass2 = document.getElementById("rp-pass2").value;
+  var err = document.getElementById("rp-err");
+  err.classList.remove("show");
+  if (pass.length < 6 || pass !== pass2) {
+    err.classList.add("show");
+    return;
+  }
+  if (!_resetOobCode) { document.getElementById("rp-invalid").style.display = "block"; document.getElementById("rp-form").style.display = "none"; return; }
+  var btn = document.getElementById("rp-btn");
+  btn.disabled = true; btn.textContent = "Updating...";
+  auth.confirmPasswordReset(_resetOobCode, pass).then(function() {
+    document.getElementById("rp-form").style.display = "none";
+    document.getElementById("rp-success").style.display = "block";
+    _resetOobCode = null;
+  }).catch(function() {
+    document.getElementById("rp-invalid").style.display = "block";
+    document.getElementById("rp-form").style.display = "none";
+  }).finally(function() {
+    btn.disabled = false; btn.textContent = "Set New Password";
+  });
 }
 
 function accRenderHeader() {
