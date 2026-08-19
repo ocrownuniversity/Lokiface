@@ -322,7 +322,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     <button class="ni" id="ni-booking" onclick="SP('booking')">Book Now</button>
     <button class="ni" id="ni-access" onclick="SP('access')">Room Access</button>
     <button class="ni" id="ni-history" onclick="SP('history')">My Booking</button>
-    <button class="ni" id="ni-account" onclick="SP('account')">Account</button>
+    <button class="ni" id="ni-account" onclick="SP('account')">Sign In / Register</button>
     <button class="ni" id="ni-registerhotel" onclick="SP('registerhotel')">Register Hotel</button>
     <button class="ni" id="ni-admin" onclick="SP('admin')">Admin</button>
     <button class="ni cta" onclick="SP('booking')">Reserve</button>
@@ -336,7 +336,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   <button class="ni" onclick="SP('booking');toggleNav()">Book Now</button>
   <button class="ni" onclick="SP('access');toggleNav()">Room Access</button>
   <button class="ni" onclick="SP('history');toggleNav()">My Booking</button>
-  <button class="ni" onclick="SP('account');toggleNav()">Account</button>
+  <button class="ni" id="ni-account-m" onclick="SP('account');toggleNav()">Sign In / Register</button>
   <button class="ni" onclick="SP('registerhotel');toggleNav()">Register Hotel</button>
   <button class="ni" onclick="SP('admin');toggleNav()">Admin</button>
 </div>
@@ -353,6 +353,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       <div class="hbtns">
         <button class="btn bg" onclick="SP('booking')">Reserve Your Suite</button>
         <button class="btn bo" onclick="document.getElementById('rsec').scrollIntoView({behavior:'smooth'})">Explore Rooms</button>
+        <button class="btn bo" onclick="SP('account')">Sign Up / Log In</button>
       </div>
       <div class="hstats">
         <div><div class="hsn">7</div><div class="hsl">Room Types</div></div>
@@ -809,6 +810,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 <script src=&quot;https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js&quot;></script>
 <script src=&quot;https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js&quot;></script>
 <script src=&quot;https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js&quot;></script>
+<script src=&quot;https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js&quot;></script>
 <style>
 :root{
   --navy:#0d1b4a;--navy2:#132a6b;--orange:#f7941d;
@@ -1078,6 +1080,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;sb-item&quot; data-page=&quot;reports&quot; onclick=&quot;goPage('reports')&quot;><span class=&quot;ic&quot;>&amp;#128200;</span>Reports</div>
       <div class=&quot;sb-item&quot; data-page=&quot;reviews&quot; onclick=&quot;goPage('reviews')&quot;><span class=&quot;ic&quot;>&amp;#11088;</span>Reviews</div>
       <div class=&quot;sb-item&quot; id=&quot;sb-subadmin&quot; data-page=&quot;subadmins&quot; onclick=&quot;goPage('subadmins')&quot; style=&quot;display:none&quot;><span class=&quot;ic&quot;>&amp;#128272;</span>Sub-Admins</div>
+      <div class=&quot;sb-item&quot; data-page=&quot;rooms&quot; onclick=&quot;goPage('rooms')&quot;><span class=&quot;ic&quot;>&amp;#128716;</span>Rooms</div>
       <div class=&quot;sb-item&quot; data-page=&quot;settings&quot; onclick=&quot;goPage('settings')&quot;><span class=&quot;ic&quot;>&amp;#9881;</span>Settings</div>
     </div>
     <div class=&quot;sb-foot&quot;><button class=&quot;sb-logout&quot; onclick=&quot;adminLogout()&quot;>&amp;#128682; Log Out</button></div>
@@ -1214,6 +1217,13 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
         <div class=&quot;card&quot;><div class=&quot;card-title&quot;>Promotion Types Distribution</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;pr-chart-types&quot;></canvas></div></div>
       </div>
       <div class=&quot;card&quot;><div class=&quot;card-title&quot;>Top Performing Promotions</div><div id=&quot;pr-top&quot;></div></div>
+    </div>
+
+    <!-- ============ ROOMS ============ -->
+    <div class=&quot;apage&quot; id=&quot;page-rooms&quot;>
+      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Rooms</div><div class=&quot;ph-sub&quot;>Manage the pool of physical room numbers for each room type. New bookings are auto-assigned the next free number from this list.</div></div>
+      <div class=&quot;stat-grid&quot; id=&quot;rooms-stats&quot;></div>
+      <div id=&quot;rooms-list&quot;></div>
     </div>
 
     <!-- ============ SETTINGS ============ -->
@@ -1440,6 +1450,136 @@ var FIREBASE_CONFIG = {
 firebase.initializeApp(FIREBASE_CONFIG);
 var db = firebase.firestore();
 var auth = firebase.auth();
+emailjs.init(&quot;r7qlEfPQs7hyHnOHR&quot;);
+var EJS_SVC = &quot;service_munqxoi&quot;;
+var EJS_TPL = &quot;template_nm4cjm9&quot;;
+
+// ROOM INVENTORY &amp; AUTO-ASSIGNMENT
+// The pool of physical room numbers per room type is stored in Firestore
+// (settings/roomInventory) and edited from the Rooms page below, so it
+// stays in sync with the public booking site in real time.
+var DEFAULT_ROOM_INVENTORY = {
+  Single:    [&quot;101&quot;,&quot;102&quot;,&quot;103&quot;,&quot;104&quot;,&quot;105&quot;,&quot;106&quot;,&quot;107&quot;,&quot;108&quot;],
+  Double:    [&quot;201&quot;,&quot;202&quot;,&quot;203&quot;,&quot;204&quot;,&quot;205&quot;,&quot;206&quot;,&quot;207&quot;,&quot;208&quot;],
+  VIP:       [&quot;301&quot;,&quot;302&quot;,&quot;303&quot;,&quot;304&quot;,&quot;305&quot;],
+  Deluxe:    [&quot;401&quot;,&quot;402&quot;,&quot;403&quot;,&quot;404&quot;,&quot;405&quot;,&quot;406&quot;],
+  Executive: [&quot;501&quot;,&quot;502&quot;,&quot;503&quot;,&quot;504&quot;,&quot;505&quot;],
+  Family:    [&quot;601&quot;,&quot;602&quot;,&quot;603&quot;,&quot;604&quot;,&quot;605&quot;],
+  Honeymoon: [&quot;701&quot;,&quot;702&quot;,&quot;703&quot;,&quot;704&quot;]
+};
+var ROOM_TYPE_LIST = Object.keys(DEFAULT_ROOM_INVENTORY);
+var ROOM_INVENTORY = JSON.parse(JSON.stringify(DEFAULT_ROOM_INVENTORY));
+db.collection(&quot;settings&quot;).doc(&quot;roomInventory&quot;).onSnapshot(function(doc) {
+  if (doc.exists) {
+    var data = doc.data();
+    ROOM_TYPE_LIST.forEach(function(type) {
+      ROOM_INVENTORY[type] = Array.isArray(data[type]) ? data[type].slice() : (ROOM_INVENTORY[type] || []);
+    });
+  } else {
+    db.collection(&quot;settings&quot;).doc(&quot;roomInventory&quot;).set(DEFAULT_ROOM_INVENTORY).catch(function(){});
+  }
+  if (document.querySelector('.sb-item[data-page=&quot;rooms&quot;].on') || (document.getElementById(&quot;page-rooms&quot;) &amp;&amp; document.getElementById(&quot;page-rooms&quot;).classList.contains(&quot;active&quot;))) {
+    renderRooms();
+  }
+}, function(e) { console.warn(&quot;roomInventory listener:&quot;, e); });
+function datesOverlap(aStart, aEnd, bStart, bEnd) { return aStart < bEnd &amp;&amp; bStart < aEnd; }
+function findAvailableRoomNumber(roomType, checkIn, checkOut, excludeBookingId) {
+  var pool = ROOM_INVENTORY[roomType] || [];
+  if (!pool.length) return Promise.resolve(null);
+  return db.collection(&quot;bookings&quot;).where(&quot;roomType&quot;, &quot;==&quot;, roomType).where(&quot;status&quot;, &quot;==&quot;, &quot;Approved&quot;).get().then(function(snap) {
+    var taken = {};
+    snap.forEach(function(doc) {
+      if (excludeBookingId &amp;&amp; doc.id === excludeBookingId) return;
+      var b = doc.data();
+      if (b.roomNumber &amp;&amp; b.checkIn &amp;&amp; b.checkOut &amp;&amp; datesOverlap(checkIn, checkOut, b.checkIn, b.checkOut)) taken[b.roomNumber] = true;
+    });
+    for (var i = 0; i < pool.length; i++) { if (!taken[pool[i]]) return pool[i]; }
+    return null;
+  });
+}
+function generateUniqueAccessCode() {
+  var code = String(Math.floor(100000 + Math.random() * 900000));
+  return db.collection(&quot;bookings&quot;).where(&quot;accessCode&quot;, &quot;==&quot;, code).where(&quot;codeStatus&quot;, &quot;==&quot;, &quot;active&quot;).get().then(function(snap) {
+    return snap.empty ? code : generateUniqueAccessCode();
+  });
+}
+
+// ── ROOMS PAGE ──
+function occupiedRoomNumbersToday() {
+  var today = new Date().toISOString().split(&quot;T&quot;)[0];
+  var out = {};
+  _allBookings.forEach(function(b) {
+    if (b.status === &quot;Approved&quot; &amp;&amp; b.roomNumber &amp;&amp; b.checkIn &amp;&amp; b.checkOut &amp;&amp; b.checkIn <= today &amp;&amp; today < b.checkOut) {
+      out[b.roomNumber] = true;
+    }
+  });
+  return out;
+}
+function renderRooms() {
+  var wrap = document.getElementById(&quot;rooms-list&quot;);
+  if (!wrap) return;
+  var occ = (typeof _allBookings !== &quot;undefined&quot;) ? occupiedRoomNumbersToday() : {};
+  var totalRooms = 0, totalOccupied = 0;
+  var html = &quot;&quot;;
+  ROOM_TYPE_LIST.forEach(function(type) {
+    var nums = ROOM_INVENTORY[type] || [];
+    totalRooms += nums.length;
+    html += '<div class=&quot;card&quot; style=&quot;margin-bottom:1rem&quot;>' +
+      '<div class=&quot;card-title&quot; style=&quot;display:flex;align-items:center;justify-content:space-between&quot;>' +
+        '<span>' + esc(type) + ' <span style=&quot;font-weight:400;color:var(--muted2);font-size:.82rem&quot;>(' + nums.length + ' room' + (nums.length===1?'':'s') + ')</span></span>' +
+      '</div>' +
+      '<div style=&quot;display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0&quot;>' +
+      (nums.length ? nums.map(function(n) {
+        var isOcc = !!occ[n];
+        totalOccupied += isOcc ? 1 : 0;
+        return '<span style=&quot;display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .5rem .35rem .75rem;border-radius:8px;font-size:.8rem;font-weight:600;background:' + (isOcc ? 'var(--red-bg)' : 'var(--green-bg)') + ';color:' + (isOcc ? 'var(--red)' : 'var(--green)') + ';border:1px solid ' + (isOcc ? 'var(--red-bd)' : 'var(--green-bd)') + '&quot;>' +
+          esc(n) + (isOcc ? ' &amp;middot; occupied' : '') +
+          '<button title=&quot;Remove room ' + esc(n) + '&quot; onclick=&quot;removeRoomNumber(\'' + type.replace(/'/g,&quot;\\'&quot;) + '\',\'' + n.replace(/'/g,&quot;\\'&quot;) + '\')&quot; style=&quot;background:none;border:none;cursor:pointer;color:inherit;font-size:.85rem;line-height:1;padding:0 0 0 .1rem&quot;>&amp;#10005;</button>' +
+        '</span>';
+      }).join(&quot;&quot;) : '<span style=&quot;color:var(--muted2);font-size:.82rem&quot;>No rooms added yet for this type.</span>') +
+      '</div>' +
+      '<div style=&quot;display:flex;gap:.5rem&quot;>' +
+        '<input type=&quot;text&quot; placeholder=&quot;e.g. 109&quot; id=&quot;rt-input-' + type + '&quot; style=&quot;flex:1;padding:.5rem .7rem;border:1px solid var(--blue-bd);border-radius:8px;font-size:.85rem&quot; onkeypress=&quot;if(event.key===\'Enter\')addRoomNumber(\'' + type.replace(/'/g,&quot;\\'&quot;) + '\')&quot;/>' +
+        '<button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;addRoomNumber(\'' + type.replace(/'/g,&quot;\\'&quot;) + '\')&quot;>&amp;#43; Add Room</button>' +
+      '</div>' +
+    '</div>';
+  });
+  wrap.innerHTML = html;
+  document.getElementById(&quot;rooms-stats&quot;).innerHTML =
+    statCard(&quot;&amp;#128716;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Rooms&quot;, totalRooms) +
+    statCard(&quot;&amp;#128274;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Occupied Today&quot;, totalOccupied) +
+    statCard(&quot;&amp;#9989;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Free Today&quot;, totalRooms - totalOccupied) +
+    statCard(&quot;&amp;#127974;&quot;, &quot;var(--orange)&quot;, &quot;rgba(247,148,29,.1)&quot;, &quot;Room Types&quot;, ROOM_TYPE_LIST.length);
+}
+function addRoomNumber(type) {
+  var input = document.getElementById(&quot;rt-input-&quot; + type);
+  var num = (input.value || &quot;&quot;).trim();
+  if (!num) { T(&quot;Missing Room Number&quot;, &quot;Enter a room number first.&quot;); return; }
+  var pool = ROOM_INVENTORY[type] || [];
+  if (pool.indexOf(num) > -1) { T(&quot;Already Exists&quot;, &quot;Room &quot; + num + &quot; is already in &quot; + type + &quot;.&quot;); return; }
+  var dupType = ROOM_TYPE_LIST.find(function(t) { return t !== type &amp;&amp; (ROOM_INVENTORY[t] || []).indexOf(num) > -1; });
+  if (dupType) { T(&quot;Already Used&quot;, &quot;Room &quot; + num + &quot; already belongs to &quot; + dupType + &quot;.&quot;); return; }
+  var updated = pool.concat([num]);
+  db.collection(&quot;settings&quot;).doc(&quot;roomInventory&quot;).set(
+    (function(){ var o = {}; o[type] = updated; return o; })(), { merge: true }
+  ).then(function() {
+    ROOM_INVENTORY[type] = updated;
+    input.value = &quot;&quot;;
+    renderRooms();
+    T(&quot;Room Added&quot;, &quot;Room &quot; + num + &quot; added to &quot; + type + &quot;.&quot;);
+  }).catch(function() { T(&quot;Error&quot;, &quot;Could not add room. Check Firestore rules.&quot;); });
+}
+function removeRoomNumber(type, num) {
+  var pool = ROOM_INVENTORY[type] || [];
+  var updated = pool.filter(function(n) { return n !== num; });
+  db.collection(&quot;settings&quot;).doc(&quot;roomInventory&quot;).set(
+    (function(){ var o = {}; o[type] = updated; return o; })(), { merge: true }
+  ).then(function() {
+    ROOM_INVENTORY[type] = updated;
+    renderRooms();
+    T(&quot;Room Removed&quot;, &quot;Room &quot; + num + &quot; removed from &quot; + type + &quot;.&quot;);
+  }).catch(function() { T(&quot;Error&quot;, &quot;Could not remove room. Check Firestore rules.&quot;); });
+}
 // This is only used to tell a super admin apart from a staff/sub-admin
 // after Firebase Authentication has already verified the password.
 // It grants nothing by itself.
@@ -1576,28 +1716,68 @@ function setAdminAvatar(url) {
   document.getElementById(&quot;tb-avatar&quot;).innerHTML = '<img src=&quot;'+url+'&quot;/>';
   document.getElementById(&quot;ad-avatar&quot;).innerHTML = '<img src=&quot;'+url+'&quot;/>';
 }
-function uploadAdminPhoto(input) {
-  var file = input.files &amp;&amp; input.files[0];
-  if (!file || !_adminEmail) return;
+// Universal image compressor (mirrors the one used on the public site).
+// Iteratively shrinks dimensions/quality until the result fits under
+// maxBytes, no matter how large the original photo is.
+function compressImageToLimit(file, callback, options) {
+  options = options || {};
+  var maxBytes = options.maxBytes || 300000;
+  var startDim = options.maxDim || 400;
+  var minDim = options.minDim || 120;
+  var square = !!options.square;
+  var onError = options.onError || null;
   var reader = new FileReader();
   reader.onload = function(e) {
     var img = new Image();
     img.onload = function() {
-      var size = 200;
-      var canvas = document.createElement(&quot;canvas&quot;);
-      canvas.width = size; canvas.height = size;
-      var ctx = canvas.getContext(&quot;2d&quot;);
-      var s = Math.min(img.width, img.height);
-      ctx.drawImage(img, (img.width-s)/2, (img.height-s)/2, s, s, 0, 0, size, size);
-      var dataUrl = canvas.toDataURL(&quot;image/jpeg&quot;, 0.82);
-      db.collection(&quot;adminProfiles&quot;).doc(_adminEmail).set({ photoURL: dataUrl, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, {merge:true}).then(function(){
-        setAdminAvatar(dataUrl);
-        T(&quot;Photo Updated&quot;, &quot;Your profile photo has been changed.&quot;);
-      }).catch(function(){ T(&quot;Error&quot;, &quot;Could not save photo.&quot;); });
+      var dim = startDim;
+      var qualities = [0.85, 0.72, 0.6, 0.48, 0.35, 0.25, 0.15, 0.08];
+      var best = null;
+      function renderAt(dimension) {
+        var canvas = document.createElement(&quot;canvas&quot;);
+        var ctx;
+        if (square) {
+          var s = Math.min(img.width, img.height);
+          canvas.width = dimension; canvas.height = dimension;
+          ctx = canvas.getContext(&quot;2d&quot;);
+          ctx.drawImage(img, (img.width-s)/2, (img.height-s)/2, s, s, 0, 0, dimension, dimension);
+        } else {
+          var w = img.width, h = img.height;
+          if (w > dimension) { h = Math.round(h * dimension / w); w = dimension; }
+          if (h > dimension) { w = Math.round(w * dimension / h); h = dimension; }
+          canvas.width = w; canvas.height = h;
+          ctx = canvas.getContext(&quot;2d&quot;);
+          ctx.drawImage(img, 0, 0, w, h);
+        }
+        return canvas;
+      }
+      while (true) {
+        var canvas = renderAt(dim);
+        for (var i = 0; i < qualities.length; i++) {
+          var b64 = canvas.toDataURL(&quot;image/jpeg&quot;, qualities[i]);
+          best = b64;
+          if (b64.length <= maxBytes) { callback(b64); return; }
+        }
+        if (dim <= minDim) break;
+        dim = Math.max(minDim, Math.round(dim * 0.75));
+      }
+      if (best) { callback(best); } else if (onError) { onError(&quot;Could not process this image.&quot;); }
     };
+    img.onerror = function() { if (onError) onError(&quot;Could not read that image.&quot;); };
     img.src = e.target.result;
   };
+  reader.onerror = function() { if (onError) onError(&quot;Could not read that file.&quot;); };
   reader.readAsDataURL(file);
+}
+function uploadAdminPhoto(input) {
+  var file = input.files &amp;&amp; input.files[0];
+  if (!file || !_adminEmail) return;
+  compressImageToLimit(file, function(dataUrl) {
+    db.collection(&quot;adminProfiles&quot;).doc(_adminEmail).set({ photoURL: dataUrl, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, {merge:true}).then(function(){
+      setAdminAvatar(dataUrl);
+      T(&quot;Photo Updated&quot;, &quot;Your profile photo has been changed.&quot;);
+    }).catch(function(){ T(&quot;Error&quot;, &quot;Could not save photo.&quot;); });
+  }, { maxBytes: 300000, maxDim: 400, minDim: 120, square: true, onError: function(){ T(&quot;Error&quot;, &quot;Could not process that photo.&quot;); } });
 }
 
 function adminLogout() {
@@ -1628,6 +1808,7 @@ function goPage(page) {
   if (target) target.classList.add(&quot;active&quot;);
   document.querySelectorAll(&quot;.sb-item&quot;).forEach(function(el){ el.classList.toggle(&quot;on&quot;, el.dataset.page === page); });
   document.querySelectorAll(&quot;.bnav-item&quot;).forEach(function(el){ el.classList.toggle(&quot;on&quot;, el.dataset.page === page); });
+  if (page === &quot;rooms&quot;) renderRooms();
   closeDrawers();
   window.scrollTo(0,0);
 }
@@ -1827,6 +2008,7 @@ function renderAll() {
   renderPromotions();
   renderSettings();
   renderReviews();
+  renderRooms();
   var badge = document.getElementById(&quot;notif-badge&quot;);
   var pending = _allBookings.filter(function(b){ return b.status === &quot;Pending&quot;; }).length;
   badge.textContent = pending;
@@ -1993,8 +2175,39 @@ function bkActions(b) {
   return out || &quot;-&quot;;
 }
 function setBookingStatus(id, status) {
+  var b = _allBookings.find(function(x){ return x.id===id; });
+  if (status === &quot;Approved&quot; &amp;&amp; b &amp;&amp; !b.roomNumber) {
+    // Auto-assign a real room number + access code the moment a
+    // pending (e.g. bank-transfer) booking is approved.
+    findAvailableRoomNumber(b.roomType, b.checkIn, b.checkOut, id).then(function(room) {
+      if (!room) {
+        T(&quot;No Rooms Available&quot;, &quot;All &quot;+b.roomType+&quot; rooms are already booked for those dates. Reassign the guest to another room type or dates before approving.&quot;, 8000);
+        return;
+      }
+      return generateUniqueAccessCode().then(function(code) {
+        var exp = new Date(b.checkOut + &quot;T23:59:59&quot;);
+        return db.collection(&quot;bookings&quot;).doc(id).update({
+          status: &quot;Approved&quot;, roomNumber: room, accessCode: code,
+          codeStatus: &quot;active&quot;, codeExpiry: firebase.firestore.Timestamp.fromDate(exp),
+          paymentStatus: &quot;paid&quot;
+        }).then(function(){
+          b.status = &quot;Approved&quot;; b.roomNumber = room; b.accessCode = code; b.codeStatus = &quot;active&quot;; b.paymentStatus = &quot;paid&quot;;
+          renderBookingsList(); renderBookingsStats(); renderDashboard(); renderReports(); renderPayments();
+          T(&quot;Approved — Room &quot;+room, &quot;Access code &quot;+code+&quot; generated for &quot;+b.email+&quot;.&quot;);
+          if (typeof emailjs !== &quot;undefined&quot; &amp;&amp; b.email) {
+            emailjs.send(EJS_SVC, EJS_TPL, {
+              to_name: b.name, to_email: b.email, room_type: b.roomType, room_number: room,
+              check_in: b.checkIn, check_out: b.checkOut, access_code: code,
+              hotel_name: &quot;Hotels Continental&quot;, hotel_phone: &quot;09123213212&quot;,
+              hotel_email: &quot;HotelsContinental@gmail.com&quot;, hotel_address: &quot;Lagos, Nigeria&quot;
+            }).catch(function(e){ console.warn(&quot;EmailJS:&quot;, e); });
+          }
+        });
+      });
+    }).catch(function(){ T(&quot;Error&quot;, &quot;Could not approve this booking.&quot;); });
+    return;
+  }
   db.collection(&quot;bookings&quot;).doc(id).update({status:status}).then(function(){
-    var b = _allBookings.find(function(x){ return x.id===id; });
     if (b) { b.status = status; if (status===&quot;Approved&quot;) b.paymentStatus=&quot;paid&quot;; }
     renderBookingsList(); renderBookingsStats(); renderDashboard(); renderReports(); renderPayments();
     T(&quot;Updated&quot;, &quot;Booking marked as &quot;+status+&quot;.&quot;);
@@ -2769,7 +2982,7 @@ setTimeout(revealLoginScreen, 4000);
 "></iframe>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -2796,6 +3009,72 @@ var _cS = null;
 var _cT = null;
 var PRICES = {Single:18000,Double:28000,VIP:55000,Deluxe:38000,Executive:32000,Family:48000,Honeymoon:65000};
 var ROOM_IMGS = {Single:"",Double:"",VIP:"",Deluxe:"",Executive:"",Family:"",Honeymoon:""};
+
+// ═══════════════════════════════════════════
+// ROOM INVENTORY & AUTO-ASSIGNMENT
+// Each room type has a pool of physical room numbers, managed live from
+// the admin panel's "Rooms" page (stored in settings/roomInventory).
+// When a booking is confirmed, the next free number for that room type
+// (checked against overlapping Approved bookings) is assigned
+// automatically, along with a unique 6-digit access code.
+// ═══════════════════════════════════════════
+var DEFAULT_ROOM_INVENTORY = {
+  Single:    ["101","102","103","104","105","106","107","108"],
+  Double:    ["201","202","203","204","205","206","207","208"],
+  VIP:       ["301","302","303","304","305"],
+  Deluxe:    ["401","402","403","404","405","406"],
+  Executive: ["501","502","503","504","505"],
+  Family:    ["601","602","603","604","605"],
+  Honeymoon: ["701","702","703","704"]
+};
+var ROOM_TYPE_LIST = Object.keys(DEFAULT_ROOM_INVENTORY);
+var ROOM_INVENTORY = JSON.parse(JSON.stringify(DEFAULT_ROOM_INVENTORY));
+db.collection("settings").doc("roomInventory").onSnapshot(function(doc) {
+  if (doc.exists) {
+    var data = doc.data();
+    ROOM_TYPE_LIST.forEach(function(type) {
+      ROOM_INVENTORY[type] = Array.isArray(data[type]) ? data[type].slice() : (ROOM_INVENTORY[type] || []);
+    });
+  } else {
+    db.collection("settings").doc("roomInventory").set(DEFAULT_ROOM_INVENTORY).catch(function(){});
+  }
+}, function(e) { console.warn("roomInventory listener:", e); });
+
+function datesOverlap(aStart, aEnd, bStart, bEnd) {
+  // date strings are YYYY-MM-DD so lexical comparison = chronological
+  return aStart < bEnd && bStart < aEnd;
+}
+
+// Returns a Promise resolving to the next free room number for a
+// room type/date range, or null if the room type is fully booked.
+function findAvailableRoomNumber(roomType, checkIn, checkOut, excludeBookingId) {
+  var pool = ROOM_INVENTORY[roomType] || [];
+  if (!pool.length) return Promise.resolve(null);
+  return db.collection("bookings").where("roomType", "==", roomType).where("status", "==", "Approved").get().then(function(snap) {
+    var taken = {};
+    snap.forEach(function(doc) {
+      if (excludeBookingId && doc.id === excludeBookingId) return;
+      var b = doc.data();
+      if (b.roomNumber && b.checkIn && b.checkOut && datesOverlap(checkIn, checkOut, b.checkIn, b.checkOut)) {
+        taken[b.roomNumber] = true;
+      }
+    });
+    for (var i = 0; i < pool.length; i++) {
+      if (!taken[pool[i]]) return pool[i];
+    }
+    return null;
+  });
+}
+
+// Returns a Promise resolving to a 6-digit access code not currently
+// active on any other booking (near-certain uniqueness, checked anyway).
+function generateUniqueAccessCode() {
+  var code = String(Math.floor(100000 + Math.random() * 900000));
+  return db.collection("bookings").where("accessCode", "==", code).where("codeStatus", "==", "active").get().then(function(snap) {
+    if (snap.empty) return code;
+    return generateUniqueAccessCode();
+  });
+}
 
 // LOADER
 function hideLoader() {
@@ -3247,62 +3526,88 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 // Compress image using canvas - returns base64 string under 500KB
-function compressImage(file, callback) {
+// Universal image compressor. Iteratively shrinks dimensions and/or JPEG
+// quality until the result fits under maxBytes, no matter how large the
+// original photo is (works for a 50KB phone screenshot or a 20MB DSLR photo).
+// Always calls back with a result that fits (falls back to the smallest/
+// lowest-quality render it could produce if truly extreme).
+function compressImageToLimit(file, callback, options) {
+  options = options || {};
+  var maxBytes = options.maxBytes || 700000;   // ~700KB base64 budget (Firestore doc field safe)
+  var startDim = options.maxDim || 900;        // longest side to start from
+  var minDim = options.minDim || 200;          // never shrink below this
+  var square = !!options.square;               // center-crop to a square (for avatars)
+  var onError = options.onError || null;
+
   var reader = new FileReader();
   reader.onload = function(e) {
     var img = new Image();
     img.onload = function() {
-      var canvas = document.createElement("canvas");
-      var maxW = 800; var maxH = 800;
-      var w = img.width; var h = img.height;
-      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-      if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
-      canvas.width = w; canvas.height = h;
-      var ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, w, h);
-      // Try quality 0.7 first, reduce if still too large
-      var quality = 0.7;
-      var b64 = canvas.toDataURL("image/jpeg", quality);
-      // If still > 700KB, compress more
-      if (b64.length > 700000) { b64 = canvas.toDataURL("image/jpeg", 0.4); }
-      if (b64.length > 700000) { b64 = canvas.toDataURL("image/jpeg", 0.2); }
-      callback(b64);
+      var dim = startDim;
+      var qualities = [0.85, 0.72, 0.6, 0.48, 0.35, 0.25, 0.15, 0.08];
+      var best = null;
+
+      function renderAt(dimension) {
+        var canvas = document.createElement("canvas");
+        var ctx;
+        if (square) {
+          var s = Math.min(img.width, img.height);
+          canvas.width = dimension; canvas.height = dimension;
+          ctx = canvas.getContext("2d");
+          ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, dimension, dimension);
+        } else {
+          var w = img.width, h = img.height;
+          if (w > dimension) { h = Math.round(h * dimension / w); w = dimension; }
+          if (h > dimension) { w = Math.round(w * dimension / h); h = dimension; }
+          canvas.width = w; canvas.height = h;
+          ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+        }
+        return canvas;
+      }
+
+      // Shrink dimensions in steps; at each dimension, try decreasing quality.
+      while (true) {
+        var canvas = renderAt(dim);
+        for (var i = 0; i < qualities.length; i++) {
+          var b64 = canvas.toDataURL("image/jpeg", qualities[i]);
+          best = b64;
+          if (b64.length <= maxBytes) { callback(b64); return; }
+        }
+        if (dim <= minDim) break;
+        dim = Math.max(minDim, Math.round(dim * 0.75));
+      }
+      // Extreme fallback: could not get under maxBytes even at the smallest
+      // size/quality (essentially never happens for real photos). Use the
+      // smallest render we produced rather than failing outright.
+      if (best) { callback(best); }
+      else if (onError) { onError("Could not process this image. Please try a different file."); }
+    };
+    img.onerror = function() {
+      if (onError) onError("Could not read that image. Please try a different file.");
     };
     img.src = e.target.result;
+  };
+  reader.onerror = function() {
+    if (onError) onError("Could not read that file.");
   };
   reader.readAsDataURL(file);
 }
 
+// Backward-compatible wrapper used by profile avatars and payment receipts.
+function compressImage(file, callback) {
+  compressImageToLimit(file, callback, { maxBytes: 700000, maxDim: 800, minDim: 200 });
+}
+
 /* ============ HOTEL REGISTRATION (public partner application) ============ */
-// Reads a document file (image or PDF) into a data URL, compressing images
-// and rejecting oversized PDFs (Firestore documents are capped at ~1MB).
+// Reads a document file (image or PDF) into a data URL. Images are always
+// compressed down to fit under Firestore's field-size limit, no matter how
+// large the original photo is. PDFs can't be compressed, so oversized PDFs
+// are rejected with a clear message instead.
 function docFileToDataURL(file, callback, onError) {
-  var maxDocBytes = 900000; // ~900KB raw budget per document field
+  var maxDocBytes = 900000; // ~900KB budget per document field
   if (/^image\//.test(file.type)) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var img = new Image();
-      img.onload = function() {
-        var canvas = document.createElement("canvas");
-        var maxW = 1100; var maxH = 1100;
-        var w = img.width; var h = img.height;
-        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-        if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
-        canvas.width = w; canvas.height = h;
-        var ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, w, h);
-        var quality = 0.75;
-        var b64 = canvas.toDataURL("image/jpeg", quality);
-        if (b64.length > maxDocBytes) b64 = canvas.toDataURL("image/jpeg", 0.5);
-        if (b64.length > maxDocBytes) b64 = canvas.toDataURL("image/jpeg", 0.3);
-        if (b64.length > maxDocBytes) { onError("Image is too large even after compression. Please use a smaller photo."); return; }
-        callback(b64);
-      };
-      img.onerror = function() { onError("Could not read that image. Please try a different file."); };
-      img.src = e.target.result;
-    };
-    reader.onerror = function() { onError("Could not read that file."); };
-    reader.readAsDataURL(file);
+    compressImageToLimit(file, callback, { maxBytes: maxDocBytes, maxDim: 1400, minDim: 300, onError: onError });
   } else if (file.type === "application/pdf") {
     if (file.size > maxDocBytes) { onError("This PDF is too large (max ~0.9MB). Please upload a smaller file or a photo instead."); return; }
     var r2 = new FileReader();
@@ -3544,6 +3849,13 @@ function initiatePayment() {
       T("Booking Declined","Sorry, this email is not eligible to make bookings.");
       return;
     }
+    return findAvailableRoomNumber(room, cin, cout);
+  }).then(function(availableRoom) {
+    if (availableRoom === undefined) return; // blacklisted, already handled above
+    if (availableRoom === null) {
+      T("Fully Booked", "Sorry, all " + room + " rooms are booked for those dates. Please try different dates or another room type.", 6000);
+      return;
+    }
 
     // Open Paystack
     var handler = PaystackPop.setup({
@@ -3578,26 +3890,56 @@ function initiatePayment() {
 function submitAndAutoApprove(payRef, paidAmt, name, phone, email, room, cin, cout) {
   var promoCode = _appliedPromo ? _appliedPromo.code : "";
   var promoDisc = _appliedPromo ? _appliedPromo.pct : 0;
-  var code = String(Math.floor(100000 + Math.random() * 900000));
   var exp = new Date(cout + "T23:59:59");
 
-  db.collection("bookings").add({
-    name:name, phone:phone, email:email, roomType:room,
-    checkIn:cin, checkOut:cout, status:"Approved",
-    roomNumber:"", accessCode:code, codeStatus:"active",
-    codeExpiry:firebase.firestore.Timestamp.fromDate(exp),
-    promoCode:promoCode, promoDiscount:promoDisc,
-    paymentMethod:"paystack", paymentStatus:"paid",
-    paymentRef:payRef, amountPaid:paidAmt, receiptImage:"",
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function() {
-    document.getElementById("bform").style.display = "none";
-    document.getElementById("bsuccess").style.display = "block";
-    document.getElementById("bsuccess").querySelector(".sttl").textContent = "Payment Confirmed!";
-    document.getElementById("bsuccess").querySelector(".smsg").innerHTML = "Your booking is <strong>automatically approved!</strong><br/><br/>Your 6-digit access code has been sent to your email.";
-    T("Approved!", "Access code sent to " + email);
-    _appliedPromo = null;
-    sendEmail({name:name, email:email, roomType:room, roomNumber:"See Reception", checkIn:cin, checkOut:cout, code:code});
+  // Re-check availability at the moment of confirmation (guards against a
+  // room being taken by someone else while this payment was in progress)
+  // and generate a guaranteed-unique access code, then assign both.
+  Promise.all([findAvailableRoomNumber(room, cin, cout), generateUniqueAccessCode()]).then(function(results) {
+    var assignedRoom = results[0];
+    var code = results[1];
+
+    if (!assignedRoom) {
+      // No physical room left for this type/date range even though payment
+      // succeeded: still record the booking so staff can manually resolve it.
+      db.collection("bookings").add({
+        name:name, phone:phone, email:email, roomType:room,
+        checkIn:cin, checkOut:cout, status:"Pending",
+        roomNumber:"", accessCode:"", codeStatus:"",
+        codeExpiry:null, needsManualRoom:true,
+        promoCode:promoCode, promoDiscount:promoDisc,
+        paymentMethod:"paystack", paymentStatus:"paid",
+        paymentRef:payRef, amountPaid:paidAmt, receiptImage:"",
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      T("Payment Received", "All " + room + " rooms are momentarily full — our team will assign your room shortly and email you the access code.", 8000);
+      document.getElementById("bform").style.display = "none";
+      document.getElementById("bsuccess").style.display = "block";
+      _appliedPromo = null;
+      return;
+    }
+
+    db.collection("bookings").add({
+      name:name, phone:phone, email:email, roomType:room,
+      checkIn:cin, checkOut:cout, status:"Approved",
+      roomNumber:assignedRoom, accessCode:code, codeStatus:"active",
+      codeExpiry:firebase.firestore.Timestamp.fromDate(exp),
+      promoCode:promoCode, promoDiscount:promoDisc,
+      paymentMethod:"paystack", paymentStatus:"paid",
+      paymentRef:payRef, amountPaid:paidAmt, receiptImage:"",
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      document.getElementById("bform").style.display = "none";
+      document.getElementById("bsuccess").style.display = "block";
+      document.getElementById("bsuccess").querySelector(".sttl").textContent = "Payment Confirmed!";
+      document.getElementById("bsuccess").querySelector(".smsg").innerHTML = "Your booking is <strong>automatically approved!</strong><br/><br/>Room <strong>" + assignedRoom + "</strong> has been assigned and your 6-digit access code has been sent to your email.";
+      T("Approved! Room " + assignedRoom, "Access code sent to " + email);
+      _appliedPromo = null;
+      sendEmail({name:name, email:email, roomType:room, roomNumber:assignedRoom, checkIn:cin, checkOut:cout, code:code});
+    }).catch(function(e) {
+      T("Error", "Payment received but booking failed. Contact us with ref: " + payRef, 8000);
+      console.error(e);
+    });
   }).catch(function(e) {
     T("Error", "Payment received but booking failed. Contact us with ref: " + payRef, 8000);
     console.error(e);
@@ -3638,6 +3980,8 @@ auth.onAuthStateChanged(function(user) {
     document.getElementById("acc-guest").style.display = "block";
     document.getElementById("acc-app").style.display = "none";
     document.getElementById("acc-sub").style.display = "none";
+    var navA = document.getElementById("ni-account"); if (navA) navA.textContent = "Sign In / Register";
+    var navAm = document.getElementById("ni-account-m"); if (navAm) navAm.textContent = "Sign In / Register";
     accSetTab("login");
   }
 });
@@ -3707,6 +4051,9 @@ function accRenderHeader() {
   } else {
     av.textContent = (p.name || "U").trim().charAt(0).toUpperCase();
   }
+  var firstName = (p.name || "Account").trim().split(" ")[0];
+  var navA = document.getElementById("ni-account"); if (navA) navA.textContent = firstName;
+  var navAm = document.getElementById("ni-account-m"); if (navAm) navAm.textContent = firstName;
   accShowMenu();
 }
 
@@ -3841,14 +4188,14 @@ function accRenderProfile(body) {
 function accUploadPhoto(input) {
   var file = input.files && input.files[0];
   if (!file || !_accUser) return;
-  compressImage(file, function(b64) {
+  compressImageToLimit(file, function(b64) {
     db.collection("users").doc(_accUser.uid).set({ photoURL: b64 }, { merge: true }).then(function() {
       _accProfile.photoURL = b64;
       accRenderProfile(document.getElementById("acc-sub-body"));
       accRenderHeader();
       T("Photo Updated", "Your profile photo has been changed.");
     }).catch(function() { T("Error", "Could not upload photo."); });
-  });
+  }, { maxBytes: 400000, maxDim: 500, minDim: 150, square: true, onError: function(){ T("Error", "Could not process that photo."); } });
 }
 
 function accSaveProfile() {
