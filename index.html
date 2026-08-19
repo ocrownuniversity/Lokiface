@@ -323,6 +323,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     <button class="ni" id="ni-access" onclick="SP('access')">Room Access</button>
     <button class="ni" id="ni-history" onclick="SP('history')">My Booking</button>
     <button class="ni" id="ni-account" onclick="SP('account')">Account</button>
+    <button class="ni" id="ni-registerhotel" onclick="SP('registerhotel')">Register Hotel</button>
     <button class="ni" id="ni-admin" onclick="SP('admin')">Admin</button>
     <button class="ni cta" onclick="SP('booking')">Reserve</button>
   </div>
@@ -336,6 +337,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   <button class="ni" onclick="SP('access');toggleNav()">Room Access</button>
   <button class="ni" onclick="SP('history');toggleNav()">My Booking</button>
   <button class="ni" onclick="SP('account');toggleNav()">Account</button>
+  <button class="ni" onclick="SP('registerhotel');toggleNav()">Register Hotel</button>
   <button class="ni" onclick="SP('admin');toggleNav()">Admin</button>
 </div>
 
@@ -695,6 +697,105 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
 </div>
 
+<!-- REGISTER HOTEL -->
+<div class="page" id="page-registerhotel">
+  <div class="bpw">
+    <div class="phero">
+      <div class="ptag">Become a Partner</div>
+      <h1 class="ptitle">Register Your Hotel</h1>
+      <p class="psub">List your hotel on Hotels Continental. Submit your details and required documents below -- our team will review and verify your application before it goes live.</p>
+    </div>
+    <div class="bgrid2">
+      <div>
+        <div class="fc">
+          <div class="fst">Hotel &amp; Owner Details</div>
+          <div id="hrform">
+            <div class="fg"><label>Hotel Name</label><input type="text" id="hr-hotelname" placeholder="e.g. Sunset Grand Hotel"/><div class="eferr" id="hr-e-hotelname">Please enter the hotel name.</div></div>
+            <div class="frow">
+              <div class="fg"><label>Owner / Manager Full Name</label><input type="text" id="hr-ownername" placeholder="e.g. Adewale Okonkwo"/><div class="eferr" id="hr-e-ownername">Please enter your full name.</div></div>
+              <div class="fg"><label>Phone Number</label><input type="tel" id="hr-phone" placeholder="e.g. 08012345678"/><div class="eferr" id="hr-e-phone">Enter a valid phone number.</div></div>
+            </div>
+            <div class="fg"><label>Email Address</label><input type="email" id="hr-email" placeholder="you@hotel.com"/><div class="eferr" id="hr-e-email">Enter a valid email address.</div></div>
+            <div class="fg"><label>Hotel Address</label><input type="text" id="hr-address" placeholder="Street address"/><div class="eferr" id="hr-e-address">Please enter the hotel address.</div></div>
+            <div class="frow">
+              <div class="fg"><label>City / State</label><input type="text" id="hr-city" placeholder="e.g. Lagos"/><div class="eferr" id="hr-e-city">Please enter a city.</div></div>
+              <div class="fg">
+                <label>Country</label>
+                <select id="hr-country">
+                  <option>Nigeria</option>
+                  <option>Ghana</option>
+                  <option>Kenya</option>
+                  <option>South Africa</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="fg"><label>Number of Rooms</label><input type="number" id="hr-rooms" min="1" placeholder="e.g. 24"/></div>
+            <div class="fg"><label>Short Description (optional)</label><textarea id="hr-desc" rows="3" placeholder="Tell us a little about your hotel" style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:.62rem .85rem;font-family:'Jost',sans-serif;font-size:.82rem;color:var(--text);outline:none;resize:vertical"></textarea></div>
+
+            <div class="fg" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-top:.5rem">
+              <label style="display:block;font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem">&#128274; Verification Documents</label>
+
+              <div style="margin-bottom:1rem">
+                <label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:.35rem">Government-Issued ID <span style="color:var(--red)">*</span></label>
+                <div style="font-size:.7rem;color:var(--muted);margin-bottom:.4rem">National ID, Driver's License, Passport or Voter's Card of the owner/manager.</div>
+                <input type="file" id="hr-govid-file" accept="image/*,.pdf" class="img-input" onchange="hrPreviewFile(this,'hr-govid-preview')"/>
+                <div class="eferr" id="hr-e-govid">Please upload a valid government ID.</div>
+                <div id="hr-govid-preview" style="margin-top:.5rem;display:none"></div>
+              </div>
+
+              <div>
+                <label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:.35rem">Business Registration Document <span style="color:var(--red)">*</span></label>
+                <div style="font-size:.7rem;color:var(--muted);margin-bottom:.4rem">CAC certificate or equivalent business registration document.</div>
+                <input type="file" id="hr-bizdoc-file" accept="image/*,.pdf" class="img-input" onchange="hrPreviewFile(this,'hr-bizdoc-preview')"/>
+                <div class="eferr" id="hr-e-bizdoc">Please upload your business registration document.</div>
+                <div id="hr-bizdoc-preview" style="margin-top:.5rem;display:none"></div>
+              </div>
+            </div>
+
+            <button class="fsub" id="hrsub" onclick="submitHotelRegistration()" style="margin-top:1rem">&#127974; Submit Application</button>
+          </div>
+          <div class="sstate" id="hrsuccess">
+            <div class="sring">&#10003;</div>
+            <div class="sttl">Application Submitted!</div>
+            <p class="smsg">Thank you for applying to list your hotel with us.<br/><br/>Our team will review your details and documents, and reach out by email once your hotel is verified.</p>
+            <button class="sagain" onclick="resetHotelRegistration()">Submit Another Application</button>
+          </div>
+        </div>
+      </div>
+      <div class="aside">
+        <div class="acard">
+          <div class="atitle">&#9819; Why Partner With Us?</div>
+          <ul class="flist">
+            <li>Reach guests actively booking online</li>
+            <li>Secure digital room access for your guests</li>
+            <li>Simple booking &amp; payment management</li>
+            <li>Dedicated partner support</li>
+            <li>Transparent payouts</li>
+          </ul>
+        </div>
+        <div class="acard">
+          <div class="atitle">&#128274; What Happens Next?</div>
+          <div class="cl">
+            <div class="cline"><div class="cico">1&#65039;&#8419;</div><span>Submit your hotel details and documents</span></div>
+            <div class="cline"><div class="cico">2&#65039;&#8419;</div><span>Our team reviews your application</span></div>
+            <div class="cline"><div class="cico">3&#65039;&#8419;</div><span>We verify your documents</span></div>
+            <div class="cline"><div class="cico">4&#65039;&#8419;</div><span>Your hotel goes live on the platform</span></div>
+          </div>
+        </div>
+        <div class="acard">
+          <div class="atitle">&#128222; Need Help?</div>
+          <div class="cl">
+            <div class="cline"><div class="cico">&#128172;</div><a href="https://wa.me/2349123213212" target="_blank">WhatsApp: 09123213212</a></div>
+            <div class="cline"><div class="cico">&#9993;</div><a href="mailto:HotelsContinental@gmail.com">HotelsContinental@gmail.com</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
+</div>
+
 <!-- ADMIN -->
 <div class="page" id="page-admin" style="padding-top:0">
   <iframe id="admin-frame" title="Hotels Continental Admin" style="display:block;width:100%;border:none;height:calc(100vh - 62px);background:#f4f6fb" srcdoc="<!DOCTYPE html>
@@ -970,6 +1071,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;sb-item&quot; data-page=&quot;bookings&quot; onclick=&quot;goPage('bookings')&quot;><span class=&quot;ic&quot;>&amp;#128197;</span>Bookings</div>
       <div class=&quot;sb-item&quot; data-page=&quot;users&quot; onclick=&quot;goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span>Users</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotelverification&quot; onclick=&quot;goPage('hotelverification')&quot;><span class=&quot;ic&quot;>&amp;#9989;</span>Hotel Verification</div>
+      <div class=&quot;sb-item&quot; data-page=&quot;hotelregs&quot; onclick=&quot;goPage('hotelregs')&quot;><span class=&quot;ic&quot;>&amp;#128196;</span>Hotel Registrations<span class=&quot;abadge&quot; id=&quot;hr-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;display:none;align-items:center;justify-content:center;padding:0 .3rem&quot;></span></div>
       <div class=&quot;sb-item&quot; data-page=&quot;payments&quot; onclick=&quot;goPage('payments')&quot;><span class=&quot;ic&quot;>&amp;#128179;</span>Payments</div>
       <div class=&quot;sb-item&quot; data-page=&quot;payouts&quot; onclick=&quot;goPage('payouts')&quot;><span class=&quot;ic&quot;>&amp;#128176;</span>Payouts</div>
       <div class=&quot;sb-item&quot; data-page=&quot;promotions&quot; onclick=&quot;goPage('promotions')&quot;><span class=&quot;ic&quot;>&amp;#127881;</span>Promotions</div>
@@ -999,6 +1101,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotels')&quot;><span class=&quot;ic&quot;>&amp;#127974;</span>Manage Hotels<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span>Manage Users<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelverification')&quot;><span class=&quot;ic&quot;>&amp;#9989;</span>Hotel Verification<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelregs')&quot;><span class=&quot;ic&quot;>&amp;#128196;</span>Hotel Registrations<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('payments')&quot;><span class=&quot;ic&quot;>&amp;#128179;</span>Payments &amp;amp; Wallet<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('payouts')&quot;><span class=&quot;ic&quot;>&amp;#128176;</span>Payouts<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('promotions')&quot;><span class=&quot;ic&quot;>&amp;#127881;</span>Promotions<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
@@ -1070,6 +1173,20 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     <div class=&quot;apage&quot; id=&quot;page-hvdetail&quot;>
       <div class=&quot;ph&quot;><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage('hotelverification')&quot;>&amp;#8592; Back to Verification</button></div>
       <div class=&quot;card&quot; id=&quot;hv-detail-wrap&quot;></div>
+    </div>
+
+    <!-- ============ HOTEL REGISTRATIONS (new self-serve applications) ============ -->
+    <div class=&quot;apage&quot; id=&quot;page-hotelregs&quot;>
+      <div class=&quot;ph&quot;><div class=&quot;ph-row&quot;><div><div class=&quot;ph-title&quot;>Hotel Registrations</div><div class=&quot;ph-sub&quot;>New hotel partner applications submitted from the public website, with uploaded Government ID and Business Registration documents.</div></div></div></div>
+      <div class=&quot;stat-grid&quot; id=&quot;hr-stats&quot;></div>
+      <div class=&quot;tabs&quot; id=&quot;hr-tabs&quot;></div>
+      <div class=&quot;card&quot;><div id=&quot;hr-list&quot;></div></div>
+    </div>
+
+    <!-- ============ HOTEL REGISTRATION DETAIL ============ -->
+    <div class=&quot;apage&quot; id=&quot;page-hrdetail&quot;>
+      <div class=&quot;ph&quot;><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage('hotelregs')&quot;>&amp;#8592; Back to Registrations</button></div>
+      <div class=&quot;card&quot; id=&quot;hr-detail-wrap&quot;></div>
     </div>
 
     <!-- ============ PAYOUTS ============ -->
@@ -1346,6 +1463,11 @@ var _hvCurrentId = null;
 var _poTab = &quot;&quot;;
 var _prTab = &quot;&quot;;
 
+var _allHotelRegs = [];
+var _hotelRegById = {};
+var _hrTab = &quot;Pending&quot;;
+var _hrCurrentId = null;
+
 var NGN = function(n){ return &quot;\u20A6&quot; + Math.round(n||0).toLocaleString(); };
 
 function T(title, msg, dur) {
@@ -1514,7 +1636,7 @@ function goPage(page) {
 function loadAll() {
   document.getElementById(&quot;loader&quot;).style.display = &quot;flex&quot;;
   ensureDefaultHotel().then(function(){
-    return Promise.all([loadHotels(), loadBookings(), loadUsers(), loadSubAdmins(), loadPayouts(), loadPromotions(), loadSettings(), loadReviews()]);
+    return Promise.all([loadHotels(), loadBookings(), loadUsers(), loadSubAdmins(), loadPayouts(), loadPromotions(), loadSettings(), loadReviews(), loadHotelRegs()]);
   }).then(function(){
     syncUsersFromBookings();
     ensureHVFields();
@@ -1700,6 +1822,7 @@ function renderAll() {
   renderPayments();
   renderSubAdmins();
   renderHV();
+  renderHR();
   renderPayouts();
   renderPromotions();
   renderSettings();
@@ -1710,6 +1833,9 @@ function renderAll() {
   badge.style.display = pending ? &quot;flex&quot; : &quot;none&quot;;
   var rev = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; ? b.amountPaid : 0); }, 0);
   document.getElementById(&quot;ad-wallet-val&quot;).textContent = NGN(rev);
+  var hrBadge = document.getElementById(&quot;hr-sidebar-badge&quot;);
+  var hrPending = _allHotelRegs.filter(function(r){ return r.status === &quot;Pending&quot;; }).length;
+  if (hrBadge) { hrBadge.textContent = hrPending; hrBadge.style.display = hrPending ? &quot;flex&quot; : &quot;none&quot;; }
 }
 
 function fmtDate(ts) {
@@ -2262,6 +2388,128 @@ function setHVStatus(id, status) {
   }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update hotel verification status.&quot;); });
 }
 
+/* ============ HOTEL REGISTRATIONS (public self-serve applications) ============ */
+var HR_PILL = { Pending:&quot;pill-amber&quot;, Approved:&quot;pill-green&quot;, Rejected:&quot;pill-red&quot; };
+function loadHotelRegs() {
+  return db.collection(&quot;hotelRegistrations&quot;).get().then(function(snap){
+    _allHotelRegs = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; });
+    _allHotelRegs.sort(function(a,b){ return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
+    _hotelRegById = {};
+    _allHotelRegs.forEach(function(r){ _hotelRegById[r.id] = r; });
+  }).catch(function(){ _allHotelRegs = []; _hotelRegById = {}; });
+}
+function hrCounts() {
+  var c = { total:_allHotelRegs.length, pending:0, approved:0, rejected:0 };
+  _allHotelRegs.forEach(function(r){
+    if (r.status === &quot;Approved&quot;) c.approved++;
+    else if (r.status === &quot;Rejected&quot;) c.rejected++;
+    else c.pending++;
+  });
+  return c;
+}
+function renderHR() {
+  if (!document.getElementById(&quot;hr-stats&quot;)) return;
+  var c = hrCounts();
+  document.getElementById(&quot;hr-stats&quot;).innerHTML =
+    statCard(&quot;&amp;#128196;&quot;,&quot;var(--blue)&quot;,&quot;var(--blue-dim)&quot;,&quot;Total Applications&quot;, c.total) +
+    statCard(&quot;&amp;#9203;&quot;,&quot;var(--amber)&quot;,&quot;var(--amber-bg)&quot;,&quot;Awaiting Review&quot;, c.pending) +
+    statCard(&quot;&amp;#9989;&quot;,&quot;var(--green)&quot;,&quot;var(--green-bg)&quot;,&quot;Approved&quot;, c.approved) +
+    statCard(&quot;&amp;#10060;&quot;,&quot;var(--red)&quot;,&quot;var(--red-bg)&quot;,&quot;Rejected&quot;, c.rejected);
+  var tabs = [
+    {key:&quot;Pending&quot;, label:&quot;Awaiting Review (&quot;+c.pending+&quot;)&quot;},
+    {key:&quot;Approved&quot;, label:&quot;Approved (&quot;+c.approved+&quot;)&quot;},
+    {key:&quot;Rejected&quot;, label:&quot;Rejected (&quot;+c.rejected+&quot;)&quot;},
+    {key:&quot;&quot;, label:&quot;All (&quot;+c.total+&quot;)&quot;}
+  ];
+  document.getElementById(&quot;hr-tabs&quot;).innerHTML = tabs.map(function(t){
+    return '<button class=&quot;tab-btn'+(t.key===_hrTab?' on':'')+'&quot; onclick=&quot;setHRTab(\''+t.key+'\')&quot;>'+t.label+'</button>';
+  }).join(&quot;&quot;);
+  var list = _allHotelRegs.filter(function(r){ return !_hrTab || r.status === _hrTab || (!r.status &amp;&amp; _hrTab === &quot;Pending&quot;); });
+  var html = &quot;&quot;;
+  list.forEach(function(r){
+    html += '<div class=&quot;hv-card&quot; onclick=&quot;openHRDetail(\''+r.id+'\')&quot;>'+
+      '<div class=&quot;hv-card-top&quot;><div class=&quot;hv-thumb&quot;>&amp;#127974;</div><div style=&quot;flex:1&quot;>'+
+      '<div class=&quot;lr-name&quot;>'+esc(r.hotelName)+'</div>'+
+      '<div class=&quot;lr-sub&quot;>'+esc(r.ownerName||&quot;-&quot;)+' &amp;middot; '+esc(r.email||&quot;-&quot;)+'</div>'+
+      '<div class=&quot;lr-sub&quot;>'+esc(r.city||&quot;-&quot;)+', '+esc(r.country||&quot;Nigeria&quot;)+' &amp;middot; '+esc(r.phone||&quot;-&quot;)+'</div>'+
+      '</div><span class=&quot;pill '+(HR_PILL[r.status]||&quot;pill-amber&quot;)+'&quot;>'+esc(r.status||&quot;Pending&quot;)+'</span></div>'+
+      '</div>';
+  });
+  document.getElementById(&quot;hr-list&quot;).innerHTML = list.length ? html : '<div class=&quot;empty&quot;>No hotel registration applications in this category.</div>';
+}
+function setHRTab(key) { _hrTab = key; renderHR(); }
+function hrDocRow(label, url, name) {
+  if (!url) return '<div class=&quot;doc-row&quot;><span class=&quot;ic&quot;>&amp;#128196;</span>'+esc(label)+'<span style=&quot;margin-left:auto;color:var(--red);font-size:.72rem&quot;>Not uploaded</span></div>';
+  var isImg = /^data:image/.test(url);
+  var preview = isImg ? '<img src=&quot;'+url+'&quot; style=&quot;width:44px;height:44px;object-fit:cover;border-radius:6px;margin-right:.6rem;border:1px solid var(--border)&quot;/>' : '<span class=&quot;ic&quot;>&amp;#128196;</span>';
+  return '<div class=&quot;doc-row&quot; style=&quot;cursor:pointer&quot; onclick=&quot;hrViewDoc(\''+label.replace(/'/g,&quot;&quot;)+'\')&quot;>'+preview+'<div style=&quot;flex:1&quot;><div>'+esc(label)+'</div><div style=&quot;font-size:.7rem;color:var(--muted2)&quot;>'+esc(name||&quot;Uploaded file&quot;)+'</div></div><span style=&quot;color:var(--blue);font-size:.72rem;font-weight:700&quot;>View &amp;#8250;</span></div>';
+}
+function hrViewDoc(label) {
+  var r = _hotelRegById[_hrCurrentId]; if (!r) return;
+  var url = label === &quot;Government ID&quot; ? r.govIdURL : r.bizDocURL;
+  if (!url) return;
+  var w = window.open(&quot;&quot;);
+  if (w) { w.document.write('<title>'+label+'</title><body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;>'+ (/^data:image/.test(url) ? '<img src=&quot;'+url+'&quot; style=&quot;max-width:100%;max-height:100vh&quot;/>' : '<iframe src=&quot;'+url+'&quot; style=&quot;width:100vw;height:100vh;border:none&quot;></iframe>') +'</body>'); }
+}
+function openHRDetail(id) {
+  _hrCurrentId = id;
+  var r = _hotelRegById[id];
+  if (!r) return;
+  var docs = hrDocRow(&quot;Government ID&quot;, r.govIdURL, r.govIdName) + hrDocRow(&quot;Business Registration Document&quot;, r.bizDocURL, r.bizDocName);
+  var actions = &quot;&quot;;
+  if (!r.status || r.status === &quot;Pending&quot;) {
+    actions = '<div class=&quot;hv-actions&quot;>'+
+      '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--green)&quot; onclick=&quot;approveHotelReg(\''+id+'\')&quot;>&amp;#9989; Approve &amp;amp; Create Hotel</button>'+
+      '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--red)&quot; onclick=&quot;rejectHotelReg(\''+id+'\')&quot;>&amp;#10060; Reject</button>'+
+      '</div>';
+  } else {
+    actions = '<div class=&quot;hv-actions&quot;><span class=&quot;pill '+(HR_PILL[r.status]||&quot;pill-amber&quot;)+'&quot;>'+esc(r.status)+'</span></div>';
+  }
+  document.getElementById(&quot;hr-detail-wrap&quot;).innerHTML =
+    '<div class=&quot;hv-card-top&quot; style=&quot;margin-bottom:1rem&quot;><div class=&quot;hv-thumb&quot; style=&quot;width:64px;height:64px;font-size:1.6rem&quot;>&amp;#127974;</div><div style=&quot;flex:1&quot;>'+
+    '<div style=&quot;font-weight:800;font-size:1.1rem&quot;>'+esc(r.hotelName)+'</div>'+
+    '<span class=&quot;pill '+(HR_PILL[r.status]||&quot;pill-amber&quot;)+'&quot;>'+esc(r.status||&quot;Pending&quot;)+'</span></div></div>'+
+    '<div class=&quot;fgrid2&quot;>'+
+    '<div><div class=&quot;lr-sub&quot;>Owner / Manager Name</div><div class=&quot;lr-name&quot;>'+esc(r.ownerName||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Email</div><div class=&quot;lr-name&quot;>'+esc(r.email||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Phone</div><div class=&quot;lr-name&quot;>'+esc(r.phone||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Number of Rooms</div><div class=&quot;lr-name&quot;>'+esc(r.rooms||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Address</div><div class=&quot;lr-name&quot;>'+esc(r.address||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>City / Country</div><div class=&quot;lr-name&quot;>'+esc(r.city||&quot;-&quot;)+', '+esc(r.country||&quot;Nigeria&quot;)+'</div></div>'+
+    '</div>'+
+    (r.description ? '<div style=&quot;margin-top:1rem&quot;><div class=&quot;lr-sub&quot;>Description</div><div class=&quot;lr-name&quot; style=&quot;font-weight:400&quot;>'+esc(r.description)+'</div></div>' : '') +
+    '<div class=&quot;card-title&quot; style=&quot;margin-top:1.2rem&quot;>Submitted Documents</div>'+docs+actions;
+  goPage(&quot;hrdetail&quot;);
+}
+function approveHotelReg(id) {
+  var r = _hotelRegById[id]; if (!r) return;
+  db.collection(&quot;hotels&quot;).add({
+    name: r.hotelName, location: (r.city||&quot;&quot;)+&quot;, &quot;+(r.country||&quot;Nigeria&quot;), status:&quot;Active&quot;,
+    ownerName: r.ownerName||&quot;&quot;, ownerEmail: r.email||&quot;&quot;, country: r.country||&quot;Nigeria&quot;,
+    verificationStatus:&quot;Verified&quot;, govIdURL: r.govIdURL||&quot;&quot;, bizDocURL: r.bizDocURL||&quot;&quot;,
+    docsSubmitted: [&quot;Business Registration&quot;,&quot;Government ID&quot;],
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    return db.collection(&quot;hotelRegistrations&quot;).doc(id).update({ status:&quot;Approved&quot; });
+  }).then(function(){
+    r.status = &quot;Approved&quot;;
+    return Promise.all([loadHotels(), loadHotelRegs()]);
+  }).then(function(){
+    ensureHVFields(); renderAll();
+    T(&quot;Hotel Approved&quot;, r.hotelName+&quot; is now live on the platform.&quot;);
+    if (document.getElementById(&quot;page-hrdetail&quot;).classList.contains(&quot;active&quot;)) openHRDetail(id);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not approve this hotel registration.&quot;); });
+}
+function rejectHotelReg(id) {
+  var r = _hotelRegById[id]; if (!r) return;
+  db.collection(&quot;hotelRegistrations&quot;).doc(id).update({ status:&quot;Rejected&quot; }).then(function(){
+    r.status = &quot;Rejected&quot;;
+    renderHR();
+    T(&quot;Application Rejected&quot;, r.hotelName+&quot;'s registration was rejected.&quot;);
+    if (document.getElementById(&quot;page-hrdetail&quot;).classList.contains(&quot;active&quot;)) openHRDetail(id);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update this application.&quot;); });
+}
+
 /* ============ PAYOUTS ============ */
 var PO_PILL = { Successful:&quot;pill-green&quot;, Pending:&quot;pill-amber&quot;, Failed:&quot;pill-red&quot; };
 function renderPayouts() {
@@ -2606,7 +2854,7 @@ window.addEventListener("popstate", function(e) {
 // Load page from URL hash on first load
 (function() {
   var hash = window.location.hash.replace("#", "");
-  var validPages = ["home", "booking", "access", "history", "admin"];
+  var validPages = ["home", "booking", "access", "history", "admin", "account", "registerhotel"];
   if (hash && validPages.indexOf(hash) > -1) {
     SP(hash, false);
   } else {
@@ -3023,6 +3271,142 @@ function compressImage(file, callback) {
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+/* ============ HOTEL REGISTRATION (public partner application) ============ */
+// Reads a document file (image or PDF) into a data URL, compressing images
+// and rejecting oversized PDFs (Firestore documents are capped at ~1MB).
+function docFileToDataURL(file, callback, onError) {
+  var maxDocBytes = 900000; // ~900KB raw budget per document field
+  if (/^image\//.test(file.type)) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement("canvas");
+        var maxW = 1100; var maxH = 1100;
+        var w = img.width; var h = img.height;
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+        if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        var quality = 0.75;
+        var b64 = canvas.toDataURL("image/jpeg", quality);
+        if (b64.length > maxDocBytes) b64 = canvas.toDataURL("image/jpeg", 0.5);
+        if (b64.length > maxDocBytes) b64 = canvas.toDataURL("image/jpeg", 0.3);
+        if (b64.length > maxDocBytes) { onError("Image is too large even after compression. Please use a smaller photo."); return; }
+        callback(b64);
+      };
+      img.onerror = function() { onError("Could not read that image. Please try a different file."); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function() { onError("Could not read that file."); };
+    reader.readAsDataURL(file);
+  } else if (file.type === "application/pdf") {
+    if (file.size > maxDocBytes) { onError("This PDF is too large (max ~0.9MB). Please upload a smaller file or a photo instead."); return; }
+    var r2 = new FileReader();
+    r2.onload = function(e) { callback(e.target.result); };
+    r2.onerror = function() { onError("Could not read that PDF."); };
+    r2.readAsDataURL(file);
+  } else {
+    onError("Please upload an image (JPG/PNG) or a PDF file.");
+  }
+}
+
+function hrPreviewFile(input, previewId) {
+  var file = input.files && input.files[0];
+  var box = document.getElementById(previewId);
+  if (!file) { box.style.display = "none"; box.innerHTML = ""; return; }
+  var errId = input.id === "hr-govid-file" ? "hr-e-govid" : "hr-e-bizdoc";
+  document.getElementById(errId).classList.remove("show");
+  if (/^image\//.test(file.type)) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      box.style.display = "block";
+      box.innerHTML = '<img src="' + e.target.result + '" style="width:100%;max-height:180px;object-fit:contain;border-radius:8px;border:1px solid var(--border);background:var(--surface)"/>' +
+        '<div style="font-size:.72rem;color:var(--muted);margin-top:.3rem">' + esc(file.name) + '</div>';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    box.style.display = "block";
+    box.innerHTML = '<div style="display:flex;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;font-size:.8rem"><span>&#128196;</span>' + esc(file.name) + '</div>';
+  }
+}
+
+function esc(s) { return (s == null ? "" : String(s)).replace(/[&<>"']/g, function(c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+function submitHotelRegistration() {
+  var hotelName = document.getElementById("hr-hotelname").value.trim();
+  var ownerName = document.getElementById("hr-ownername").value.trim();
+  var phone = document.getElementById("hr-phone").value.trim();
+  var email = document.getElementById("hr-email").value.trim();
+  var address = document.getElementById("hr-address").value.trim();
+  var city = document.getElementById("hr-city").value.trim();
+  var country = document.getElementById("hr-country").value;
+  var rooms = document.getElementById("hr-rooms").value.trim();
+  var description = document.getElementById("hr-desc").value.trim();
+  var govFile = document.getElementById("hr-govid-file").files[0];
+  var bizFile = document.getElementById("hr-bizdoc-file").files[0];
+
+  ["hr-e-hotelname","hr-e-ownername","hr-e-phone","hr-e-email","hr-e-address","hr-e-city","hr-e-govid","hr-e-bizdoc"].forEach(function(id) {
+    document.getElementById(id).classList.remove("show");
+  });
+
+  var valid = true;
+  if (!hotelName) { document.getElementById("hr-e-hotelname").classList.add("show"); valid = false; }
+  if (!ownerName) { document.getElementById("hr-e-ownername").classList.add("show"); valid = false; }
+  if (!/^[0-9+][0-9\s+-]{6,}$/.test(phone)) { document.getElementById("hr-e-phone").classList.add("show"); valid = false; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { document.getElementById("hr-e-email").classList.add("show"); valid = false; }
+  if (!address) { document.getElementById("hr-e-address").classList.add("show"); valid = false; }
+  if (!city) { document.getElementById("hr-e-city").classList.add("show"); valid = false; }
+  if (!govFile) { document.getElementById("hr-e-govid").classList.add("show"); valid = false; }
+  if (!bizFile) { document.getElementById("hr-e-bizdoc").classList.add("show"); valid = false; }
+  if (!valid) { T("Missing Information", "Please complete all required fields and upload both documents."); return; }
+
+  var btn = document.getElementById("hrsub");
+  btn.disabled = true; btn.textContent = "Submitting...";
+
+  docFileToDataURL(govFile, function(govDataUrl) {
+    docFileToDataURL(bizFile, function(bizDataUrl) {
+      db.collection("hotelRegistrations").add({
+        hotelName: hotelName, ownerName: ownerName, phone: phone, email: email,
+        address: address, city: city, country: country, rooms: rooms, description: description,
+        govIdURL: govDataUrl, govIdName: govFile.name,
+        bizDocURL: bizDataUrl, bizDocName: bizFile.name,
+        status: "Pending",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        document.getElementById("hrform").style.display = "none";
+        document.getElementById("hrsuccess").style.display = "block";
+        btn.disabled = false; btn.textContent = "\uD83C\uDFE8 Submit Application";
+      }).catch(function() {
+        T("Submission Failed", "Could not submit your application. Please try again.");
+        btn.disabled = false; btn.textContent = "\uD83C\uDFE8 Submit Application";
+      });
+    }, function(errMsg) {
+      T("Business Document Issue", errMsg);
+      btn.disabled = false; btn.textContent = "\uD83C\uDFE8 Submit Application";
+    });
+  }, function(errMsg) {
+    T("Government ID Issue", errMsg);
+    btn.disabled = false; btn.textContent = "\uD83C\uDFE8 Submit Application";
+  });
+}
+
+function resetHotelRegistration() {
+  ["hr-hotelname","hr-ownername","hr-phone","hr-email","hr-address","hr-city","hr-rooms","hr-desc"].forEach(function(id) {
+    document.getElementById(id).value = "";
+  });
+  document.getElementById("hr-country").selectedIndex = 0;
+  document.getElementById("hr-govid-file").value = "";
+  document.getElementById("hr-bizdoc-file").value = "";
+  document.getElementById("hr-govid-preview").style.display = "none";
+  document.getElementById("hr-govid-preview").innerHTML = "";
+  document.getElementById("hr-bizdoc-preview").style.display = "none";
+  document.getElementById("hr-bizdoc-preview").innerHTML = "";
+  document.getElementById("hrsuccess").style.display = "none";
+  document.getElementById("hrform").style.display = "block";
 }
 
 function handlePayment() {
