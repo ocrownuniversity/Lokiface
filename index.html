@@ -406,50 +406,6 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     <div style="text-align:center;margin-top:1.6rem"><button class="btn bo" onclick="SP('hotels')">View All Partner Hotels &#8250;</button></div>
   </div>
 
-  <div id="rsec"></div>
-  <div class="sec">
-    <div class="seye">Hotels Continental &middot; Flagship Property</div>
-    <h2 class="stitle">Choose Your Perfect Suite</h2>
-    <p style="text-align:center;color:var(--muted);max-width:560px;margin:.9rem auto 1.6rem;font-size:.92rem">Our own signature hotel in Lagos — book instantly with real-time room availability.</p>
-    <div class="rgrid" id="rooms-grid">
-      <div class="rc" onclick="SP('booking')">
-        <div class="rt" style="background:linear-gradient(135deg,#dde6f0,#d4c8b8)"><div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem" id="rt-Single">&#x1F6CF;</div><div class="rt-overlay"></div><div class="rrib">Single</div><button class="wl-heart" id="wl-Single" onclick="event.stopPropagation();toggleWishlist('Single')">&#9825;</button></div>
-        <div class="rb"><div class="rn">Classic Single</div><div class="rd">Perfect for solo travellers. Queen bed, en-suite bathroom, work desk and WiFi.</div>
-        <div class="rft"><div class="rp">&#x20A6;18,000<small>/night</small></div><button class="rbk" onclick="event.stopPropagation();SP('booking')">Book Now</button></div></div>
-      </div>
-      <div class="rc" onclick="SP('booking')">
-        <div class="rt" style="background:linear-gradient(135deg,#d8e8d8,#b8d4b8)"><div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem" id="rt-Double">&#x1F6CF;&#x1F6CF;</div><div class="rt-overlay"></div><div class="rrib">Double</div><button class="wl-heart" id="wl-Double" onclick="event.stopPropagation();toggleWishlist('Double')">&#9825;</button></div>
-        <div class="rb"><div class="rn">Comfort Double</div><div class="rd">Ideal for couples. Twin beds, lounge area, mini-fridge and premium linen.</div>
-        <div class="rft"><div class="rp">&#x20A6;28,000<small>/night</small></div><button class="rbk" onclick="event.stopPropagation();SP('booking')">Book Now</button></div></div>
-      </div>
-      <div class="rc" onclick="SP('booking')">
-        <div class="rt" style="background:linear-gradient(135deg,#e8d8b0,#d4bc7c)"><div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem" id="rt-VIP">&#x1F451;</div><div class="rt-overlay"></div><div class="rrib">VIP</div><button class="wl-heart" id="wl-VIP" onclick="event.stopPropagation();toggleWishlist('VIP')">&#9825;</button></div>
-        <div class="rb"><div class="rn">VIP Prestige Suite</div><div class="rd">Pinnacle of luxury. King bed, private lounge, jacuzzi and complimentary breakfast.</div>
-        <div class="rft"><div class="rp">&#x20A6;55,000<small>/night</small></div><button class="rbk" onclick="event.stopPropagation();SP('booking')">Book Now</button></div></div>
-      </div>
-      <div class="rc" onclick="SP('booking')">
-        <div class="rt" style="background:linear-gradient(135deg,#cfd9f0,#a5bce5)"><div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem" id="rt-Deluxe">&#x2B50;</div><div class="rt-overlay"></div><div class="rrib">Deluxe</div><button class="wl-heart" id="wl-Deluxe" onclick="event.stopPropagation();toggleWishlist('Deluxe')">&#9825;</button></div>
-        <div class="rb"><div class="rn">Deluxe Suite</div><div class="rd">Premium furnishings, city view, king bed, flat-screen TV and rain shower.</div>
-        <div class="rft"><div class="rp">&#x20A6;38,000<small>/night</small></div><button class="rbk" onclick="event.stopPropagation();SP('booking')">Book Now</button></div></div>
-      </div>
-      <div class="rc" onclick="SP('booking')">
-        <div class="rt" style="background:linear-gradient(135deg,#dbd0f0,#b8a5e0)"><div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem" id="rt-Executive">&#x1F4BC;</div><div class="rt-overlay"></div><div class="rrib">Executive</div><button class="wl-heart" id="wl-Executive" onclick="event.stopPropagation();toggleWishlist('Executive')">&#9825;</button></div>
-        <div class="rb"><div class="rn">Executive Room</div><div class="rd">For business travellers. Ergonomic workstation, high-speed WiFi and safe.</div>
-        <div class="rft"><div class="rp">&#x20A6;32,000<small>/night</small></div><button class="rbk" onclick="event.stopPropagation();SP('booking')">Book Now</button></div></div>
-      </div>
-      <div class="rc" onclick="SP('booking')">
-        <div class="rt" style="background:linear-gradient(135deg,#f5e8d0,#e8d0a5)"><div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem" id="rt-Family">&#x1F46A;</div><div class="rt-overlay"></div><div class="rrib">Family</div><button class="wl-heart" id="wl-Family" onclick="event.stopPropagation();toggleWishlist('Family')">&#9825;</button></div>
-        <div class="rb"><div class="rn">Family Suite</div><div class="rd">Two bedrooms, kitchenette, living area and kids-friendly amenities.</div>
-        <div class="rft"><div class="rp">&#x20A6;48,000<small>/night</small></div><button class="rbk" onclick="event.stopPropagation();SP('booking')">Book Now</button></div></div>
-      </div>
-      <div class="rc" onclick="SP('booking')">
-        <div class="rt" style="background:linear-gradient(135deg,#f5d0e5,#e8a5c5)"><div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem" id="rt-Honeymoon">&#x1F491;</div><div class="rt-overlay"></div><div class="rrib">Honeymoon</div><button class="wl-heart" id="wl-Honeymoon" onclick="event.stopPropagation();toggleWishlist('Honeymoon')">&#9825;</button></div>
-        <div class="rb"><div class="rn">Honeymoon Suite</div><div class="rd">Rose decor, champagne on arrival, jacuzzi and private balcony.</div>
-        <div class="rft"><div class="rp">&#x20A6;65,000<small>/night</small></div><button class="rbk" onclick="event.stopPropagation();SP('booking')">Book Now</button></div></div>
-      </div>
-    </div>
-  </div>
-
   <div style="background:var(--surface2);padding:1px 0">
     <div class="sec">
       <div class="seye">Guest Experiences</div>
@@ -968,7 +924,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         </div>
         <div class="fg">
           <label>Payment Method</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.3rem">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-top:.3rem">
             <div id="hb-pm-paystack" onclick="hbSelectPayMethod('paystack')" style="border:2px solid var(--gold);border-radius:10px;padding:.85rem;text-align:center;cursor:pointer;background:var(--gold-dim);transition:all .2s">
               <div style="font-size:1.3rem">&#128179;</div>
               <div style="font-size:.78rem;font-weight:600;color:var(--gold);margin-top:.3rem">Pay with Paystack</div>
@@ -979,7 +935,16 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
               <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-top:.3rem">Bank Transfer</div>
               <div style="font-size:.65rem;color:var(--muted)">Upload receipt &middot; Needs approval</div>
             </div>
+            <div id="hb-pm-wallet" onclick="hbSelectPayMethod('wallet')" style="border:2px solid var(--border);border-radius:10px;padding:.85rem;text-align:center;cursor:pointer;background:var(--surface2);transition:all .2s">
+              <div style="font-size:1.3rem">&#128176;</div>
+              <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-top:.3rem">Pay from Wallet</div>
+              <div style="font-size:.65rem;color:var(--muted)" id="hb-wallet-bal-hint">Instant &middot; Sign in required</div>
+            </div>
           </div>
+        </div>
+        <div id="hb-wallet-section" style="display:none;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem">
+          <div style="display:flex;justify-content:space-between;font-size:.85rem"><span style="color:var(--muted)">Your Wallet Balance</span><strong id="hb-wallet-balance" style="color:var(--gold)">&#8358;0</strong></div>
+          <div class="eferr" id="hb-ewallet">You need to sign in or fund your wallet to pay this way.</div>
         </div>
         <div id="hb-manual-section" style="display:none;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem">
           <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:.75rem">&#127968; Bank Transfer Details</div>
@@ -1050,6 +1015,10 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         <div class="fc" style="margin:1.1rem 0">
           <div class="fst" style="margin-bottom:.8rem">Request Withdrawal</div>
           <div class="fg"><label>Amount (&#8358;)</label><input type="number" id="hdw-amount" placeholder="Amount to withdraw"/></div>
+          <div class="fg"><label>Bank Name</label><input type="text" id="hdw-bank" placeholder="e.g. GTBank, Access Bank, Zenith Bank"/></div>
+          <div class="fg"><label>Account Number</label><input type="text" id="hdw-accnum" placeholder="10-digit account number" maxlength="10" inputmode="numeric"/></div>
+          <div class="fg"><label>Account Name</label><input type="text" id="hdw-accname" placeholder="Name on the bank account"/></div>
+          <p style="font-size:.72rem;color:var(--muted);margin:-.3rem 0 .9rem;line-height:1.5">This must be your hotel's official company account &mdash; the account name should match your registered hotel name (<strong id="hdw-hotelname-hint">your hotel</strong>) so the admin can verify it's really you before releasing funds.</p>
           <button class="fsub" onclick="hdRequestWithdrawal()">Request Withdrawal</button>
         </div>
         <div class="card"><div class="card-title">Withdrawal History</div><div id="hd-withdrawals-list"></div></div>
@@ -1538,7 +1507,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 
     <!-- ============ HOTEL WITHDRAWALS ============ -->
     <div class=&quot;apage&quot; id=&quot;page-withdrawals&quot;>
-      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Hotel Withdrawals</div><div class=&quot;ph-sub&quot;>Review and settle withdrawal requests from partner hotels. Approving marks a request as paid; rejecting refunds the amount back to the hotel's wallet.</div></div>
+      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Withdrawals</div><div class=&quot;ph-sub&quot;>Review and settle withdrawal requests from partner hotels and customer wallets. Approving marks a request as paid; rejecting refunds the amount back to the wallet.</div></div>
       <div class=&quot;stat-grid&quot; id=&quot;wd-stats&quot;></div>
       <div class=&quot;tabs&quot; id=&quot;wd-tabs&quot; style=&quot;display:flex;gap:.3rem;border-bottom:1px solid var(--border);margin:1rem 0&quot;></div>
       <div id=&quot;wd-list&quot;></div>
@@ -1880,6 +1849,21 @@ setTimeout(function(){
   if (login &amp;&amp; login.style.display !== &quot;flex&quot;) login.style.display = &quot;flex&quot;;
 }, 5000);
 
+// Applies the uploaded company logo (Settings &gt; Company Profile) to every
+// icon-style logo slot in this admin app. Falls back to the existing
+// hardcoded icon/emoji if no logo has been uploaded yet, so this is safe
+// to call before login too.
+function applyAdminBranding(settingsObj) {
+  var logo = settingsObj &amp;&amp; settingsObj.company &amp;&amp; settingsObj.company[&quot;company-logo&quot;];
+  if (!logo) return;
+  var lg = document.querySelector(&quot;.lg-logo&quot;);
+  if (lg) lg.innerHTML = '&lt;img src=&quot;' + logo + '&quot; style=&quot;width:100%;height:100%;object-fit:cover;border-radius:14px&quot;/&gt;';
+  var tbIco = document.querySelector(&quot;.tb-logo-ico&quot;);
+  if (tbIco &amp;&amp; tbIco.tagName !== &quot;IMG&quot;) {
+    tbIco.outerHTML = '&lt;img class=&quot;tb-logo-ico&quot; src=&quot;' + logo + '&quot; style=&quot;width:26px;height:26px;border-radius:6px;object-fit:cover&quot;/&gt;';
+  }
+}
+
 /* ============ FIREBASE ============ */
 var FIREBASE_CONFIG = {
   apiKey: &quot;AIzaSyCPyNhUxVqf4nl2FwgoKT26kedQr8L0E_g&quot;,
@@ -1895,6 +1879,9 @@ var auth = firebase.auth();
 emailjs.init(&quot;r7qlEfPQs7hyHnOHR&quot;);
 var EJS_SVC = &quot;service_munqxoi&quot;;
 var EJS_TPL = &quot;template_nm4cjm9&quot;;
+db.collection(&quot;config&quot;).doc(&quot;settings&quot;).get().then(function(doc){
+  applyAdminBranding(doc.exists ? doc.data() : {});
+}).catch(function(){});
 
 // ── ROOMS PAGE (multi-hotel) ──
 // Each hotel manages its own room types in hotels/{hotelId}/rooms/{roomId},
@@ -2125,33 +2112,46 @@ function renderWithdrawals() {
         '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--green)&quot; onclick=&quot;approveWithdrawal(\''+w.id+'\')&quot;>&amp;#9989; Approve &amp;amp; Mark Paid</button>'+
         '<button class=&quot;btn btn-p&quot; style=&quot;background:var(--red)&quot; onclick=&quot;rejectWithdrawal(\''+w.id+'\')&quot;>&amp;#10060; Reject &amp;amp; Refund</button>'+
       '</div>' : '';
+    var bankBlock = '<div style=&quot;font-size:.8rem;color:var(--text);margin-top:.6rem;padding:.6rem .7rem;background:var(--surface2);border-radius:8px;line-height:1.6&quot;>'+
+      '<div><strong>Bank:</strong> '+esc(w.bankName||&quot;-&quot;)+'</div>'+
+      '<div><strong>Account Number:</strong> '+esc(w.accountNumber||&quot;-&quot;)+'</div>'+
+      '<div><strong>Account Name:</strong> '+esc(w.accountName||&quot;-&quot;)+'</div>'+
+    '</div>';
+    var wName = w.type === &quot;user&quot; ? (w.name || w.email || &quot;Customer&quot;) : (w.hotelName || &quot;Hotel&quot;);
+    var wTag = w.type === &quot;user&quot; ? &quot;Customer Wallet&quot; : &quot;Hotel&quot;;
     return '<div class=&quot;card&quot;><div style=&quot;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.6rem&quot;>'+
-      '<div><div style=&quot;font-weight:700&quot;>'+esc(w.hotelName||&quot;Hotel&quot;)+'</div>'+
+      '<div><div style=&quot;font-weight:700&quot;>'+esc(wName)+' <span style=&quot;font-size:.65rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em&quot;>&middot; '+wTag+'</span></div>'+
       '<div style=&quot;font-size:.78rem;color:var(--muted2)&quot;>Requested '+(w.requestedAt ? new Date(w.requestedAt.toMillis()).toLocaleDateString() : &quot;-&quot;)+'</div></div>'+
       '<div style=&quot;text-align:right&quot;><div style=&quot;font-weight:800;font-size:1.1rem&quot;>&amp;#8358;'+(w.amount||0).toLocaleString()+'</div>'+
       '<span class=&quot;pill '+(w.status===&quot;Approved&quot;?&quot;pill-green&quot;:w.status===&quot;Rejected&quot;?&quot;pill-red&quot;:&quot;pill-amber&quot;)+'&quot;>'+esc(w.status)+'</span></div>'+
-      '</div>'+actions+'</div>';
+      '</div>'+bankBlock+actions+'</div>';
   }).join(&quot;&quot;) : '<div class=&quot;empty&quot;>No withdrawal requests in this category.</div>';
 }
 function setWdTab(key) { _wdTab = key; renderWithdrawals(); }
 function approveWithdrawal(id) {
   var w = _allWithdrawals.find(function(x){ return x.id===id; }); if (!w) return;
+  var wName = w.type === &quot;user&quot; ? (w.name || w.email || &quot;customer&quot;) : w.hotelName;
+  var col = w.type === &quot;user&quot; ? &quot;users&quot; : &quot;hotels&quot;;
+  var docId = w.type === &quot;user&quot; ? w.uid : w.hotelId;
   db.collection(&quot;withdrawals&quot;).doc(id).update({ status:&quot;Approved&quot;, resolvedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(function() {
-    return db.collection(&quot;hotels&quot;).doc(w.hotelId).update({ totalWithdrawn: firebase.firestore.FieldValue.increment(w.amount) });
+    return db.collection(col).doc(docId).update({ totalWithdrawn: firebase.firestore.FieldValue.increment(w.amount) });
   }).then(function() {
     w.status = &quot;Approved&quot;;
     renderWithdrawals();
-    T(&quot;Withdrawal Approved&quot;, &quot;&amp;#8358;&quot;+w.amount.toLocaleString()+&quot; marked as paid to &quot;+w.hotelName+&quot;.&quot;);
+    T(&quot;Withdrawal Approved&quot;, &quot;&amp;#8358;&quot;+w.amount.toLocaleString()+&quot; marked as paid to &quot;+wName+&quot;.&quot;);
   }).catch(function() { T(&quot;Error&quot;, &quot;Could not approve this withdrawal.&quot;); });
 }
 function rejectWithdrawal(id) {
   var w = _allWithdrawals.find(function(x){ return x.id===id; }); if (!w) return;
+  var wName = w.type === &quot;user&quot; ? (w.name || w.email || &quot;customer&quot;) : w.hotelName;
+  var col = w.type === &quot;user&quot; ? &quot;users&quot; : &quot;hotels&quot;;
+  var docId = w.type === &quot;user&quot; ? w.uid : w.hotelId;
   db.collection(&quot;withdrawals&quot;).doc(id).update({ status:&quot;Rejected&quot;, resolvedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(function() {
-    return db.collection(&quot;hotels&quot;).doc(w.hotelId).update({ walletBalance: firebase.firestore.FieldValue.increment(w.amount) });
+    return db.collection(col).doc(docId).update({ walletBalance: firebase.firestore.FieldValue.increment(w.amount) });
   }).then(function() {
     w.status = &quot;Rejected&quot;;
     renderWithdrawals();
-    T(&quot;Withdrawal Rejected&quot;, &quot;&amp;#8358;&quot;+w.amount.toLocaleString()+&quot; refunded to &quot;+w.hotelName+&quot;'s wallet.&quot;);
+    T(&quot;Withdrawal Rejected&quot;, &quot;&amp;#8358;&quot;+w.amount.toLocaleString()+&quot; refunded to &quot;+wName+&quot;'s wallet.&quot;);
   }).catch(function() { T(&quot;Error&quot;, &quot;Could not reject this withdrawal.&quot;); });
 }
 
@@ -2471,6 +2471,7 @@ function loadAll() {
     syncUsersFromBookings();
     ensureHVFields();
     renderAll();
+    applyAdminBranding(_settings);
     document.getElementById(&quot;loader&quot;).style.opacity = &quot;0&quot;;
     setTimeout(function(){ document.getElementById(&quot;loader&quot;).style.display = &quot;none&quot;; }, 400);
   }).catch(function(e){
@@ -3791,6 +3792,7 @@ function uploadCompanyLogo(input) {
     _settings.company[&quot;company-logo&quot;] = dataUrl;
     db.collection(&quot;config&quot;).doc(&quot;settings&quot;).set({ company: _settings.company }, {merge:true}).then(function(){
       document.getElementById(&quot;st-logo-preview&quot;).innerHTML = '<img src=&quot;'+dataUrl+'&quot;/>';
+      applyAdminBranding(_settings);
       T(&quot;Logo Updated&quot;, &quot;Your company logo has been changed.&quot;);
     }).catch(function(){ T(&quot;Error&quot;, &quot;Could not save logo.&quot;); });
   }, { maxBytes: 250000, maxDim: 500, minDim: 120, square: true, onError: function(){ T(&quot;Error&quot;, &quot;Could not process that logo image.&quot;); } });
@@ -4071,6 +4073,22 @@ function hideLoader() {
 }
 window.onload = function() { setTimeout(hideLoader, 800); loadSavedImages(); };
 setTimeout(hideLoader, 2000);
+
+// Applies the uploaded company logo (Admin > Settings > Company Profile) to
+// the public site's icon-style logo slots (nav brand + loader mark). Falls
+// back to the existing default icon if no logo has been uploaded yet.
+function applyPublicBranding(logo) {
+  if (!logo) return;
+  document.querySelectorAll(".nlm").forEach(function(el) {
+    el.innerHTML = '<img src="' + logo + '" style="width:100%;height:100%;object-fit:cover;border-radius:9px"/>';
+  });
+  var lc = document.querySelector("#loader .lc");
+  if (lc) lc.innerHTML = '<img src="' + logo + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
+}
+db.collection("config").doc("settings").get().then(function(doc) {
+  var logo = doc.exists && doc.data().company && doc.data().company["company-logo"];
+  applyPublicBranding(logo);
+}).catch(function() {});
 
 // RIPPLE
 function addRipple(e) {
@@ -5394,7 +5412,8 @@ function accRenderPayments(body) {
   Promise.all([
     db.collection("users").doc(uid).get(),
     db.collection("walletFundings").where("uid", "==", uid).get(),
-    db.collection("bookings").where("email", "==", email).get()
+    db.collection("bookings").where("email", "==", email).get(),
+    db.collection("withdrawals").where("uid", "==", uid).where("type", "==", "user").get()
   ]).then(function(results) {
     var udoc = results[0];
     var bal = (udoc.exists && udoc.data().walletBalance) || 0;
@@ -5406,12 +5425,18 @@ function accRenderPayments(body) {
     var payDocs = results[2].docs.map(function(d) { return d.data(); }).filter(function(b) { return b.paymentStatus === "paid"; });
     var totalSpent = payDocs.reduce(function(s, b) { return s + (b.amountPaid || 0); }, 0);
 
+    var withdrawals = results[3].docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+    withdrawals.sort(function(a, b) { return (b.requestedAt ? b.requestedAt.toMillis() : 0) - (a.requestedAt ? a.requestedAt.toMillis() : 0); });
+
     var html = '<div class="lcard" style="background:linear-gradient(135deg,var(--ink),#132b52);color:#fff;border:none">' +
       '<div style="font-size:.7rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em">Wallet Balance</div>' +
       '<div style="font-family:\'Playfair Display\',serif;font-size:2.1rem;color:var(--gold2);margin:.2rem 0 .9rem">&#8358;' + Math.round(bal).toLocaleString() + '</div>' +
-      '<button class="btn bg" style="width:100%" onclick="accToggleFundWallet()" id="fw-toggle-btn">&#43; Fund Wallet</button>' +
-      '</div>' +
-      '<div id="fw-panel" style="display:none">' + fwPanelHTML() + '</div>';
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">' +
+      '<button class="btn bg" onclick="accToggleFundWallet()" id="fw-toggle-btn">&#43; Fund Wallet</button>' +
+      '<button class="btn bo" style="color:var(--gold2);border-color:rgba(255,255,255,.3)" onclick="accToggleWithdraw()" id="wd-toggle-btn">&#128176; Withdraw</button>' +
+      '</div></div>' +
+      '<div id="fw-panel" style="display:none">' + fwPanelHTML() + '</div>' +
+      '<div id="wd-panel" style="display:none">' + wdPanelHTML() + '</div>';
 
     if (fundings.length) {
       html += '<div class="fst" style="margin-top:.4rem">Wallet Transactions</div>';
@@ -5422,6 +5447,18 @@ function accRenderPayments(body) {
           '<span class="badge" style="background:transparent;border:1px solid ' + stColor + ';color:' + stColor + '">' + st + '</span></div>' +
           '<div class="bmv">&#8358;' + Math.round(f.amount || 0).toLocaleString() + '</div>' +
           '<div class="rev-room">' + (f.createdAt ? new Date(f.createdAt.toMillis()).toLocaleDateString() : "-") + (f.status === "pending" ? " &middot; awaiting admin approval" : "") + '</div></div>';
+      }).join("");
+    }
+
+    if (withdrawals.length) {
+      html += '<div class="fst" style="margin-top:1.2rem">Withdrawal Requests</div>';
+      html += withdrawals.map(function(w) {
+        var st = w.status === "Approved" ? "Paid" : w.status === "Rejected" ? "Rejected" : "Pending";
+        var stColor = w.status === "Approved" ? "var(--green)" : w.status === "Rejected" ? "var(--red)" : "#b5820a";
+        return '<div class="bkc"><div class="bkh"><div class="bkn">Withdrawal &middot; ' + esc(w.bankName || "-") + '</div>' +
+          '<span class="badge" style="background:transparent;border:1px solid ' + stColor + ';color:' + stColor + '">' + st + '</span></div>' +
+          '<div class="bmv">&#8358;' + Math.round(w.amount || 0).toLocaleString() + '</div>' +
+          '<div class="rev-room">' + (w.requestedAt ? new Date(w.requestedAt.toMillis()).toLocaleDateString() : "-") + (w.status === "Rejected" ? " &middot; refunded to wallet" : w.status === "Pending" ? " &middot; awaiting admin approval" : "") + '</div></div>';
       }).join("");
     }
 
@@ -5569,6 +5606,65 @@ function accSubmitFundWallet() {
   }
 }
 
+// ── CUSTOMER WALLET WITHDRAWALS ──
+// Same request format as hotel withdrawals: amount + bank name + account
+// number + account name, submitted to the shared "withdrawals" collection
+// (type:"user") for admin review. Approving marks it paid; rejecting
+// refunds the amount back to the user's wallet.
+function wdPanelHTML() {
+  return '<div class="lcard">' +
+    '<div class="fst" style="font-size:1rem">Withdraw from Wallet</div>' +
+    '<div class="fg"><label>Amount (&#8358;)</label><input type="number" id="wd-amount" min="100" step="1" placeholder="e.g. 5000" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.7rem;font-family:Jost,sans-serif;font-size:.88rem;color:var(--text);margin-top:.3rem"/><div class="eferr" id="wd-eamt">Enter a valid amount within your wallet balance.</div></div>' +
+    '<div class="fg"><label>Bank Name</label><input type="text" id="wd-bank" placeholder="e.g. GTBank" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.7rem;font-family:Jost,sans-serif;font-size:.88rem;color:var(--text);margin-top:.3rem"/><div class="eferr" id="wd-ebank">Enter your bank name.</div></div>' +
+    '<div class="fg"><label>Account Number</label><input type="text" id="wd-accnum" maxlength="10" placeholder="10-digit account number" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.7rem;font-family:Jost,sans-serif;font-size:.88rem;color:var(--text);margin-top:.3rem"/><div class="eferr" id="wd-eaccnum">Enter a valid 10-digit account number.</div></div>' +
+    '<div class="fg"><label>Account Name</label><input type="text" id="wd-accname" placeholder="Name on the account" style="width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.7rem;font-family:Jost,sans-serif;font-size:.88rem;color:var(--text);margin-top:.3rem"/><div class="eferr" id="wd-eaccname">Enter the account name.</div></div>' +
+    '<button class="fsub" id="wd-sub" onclick="accSubmitWithdrawal()">&#128176; Request Withdrawal</button>' +
+    '</div>';
+}
+function accToggleWithdraw() {
+  var p = document.getElementById("wd-panel");
+  var open = p.style.display !== "none";
+  p.style.display = open ? "none" : "block";
+  var fp = document.getElementById("fw-panel");
+  if (!open && fp) fp.style.display = "none";
+}
+function accSubmitWithdrawal() {
+  var amount = parseInt(document.getElementById("wd-amount").value, 10);
+  var bank = document.getElementById("wd-bank").value.trim();
+  var accNum = document.getElementById("wd-accnum").value.trim();
+  var accName = document.getElementById("wd-accname").value.trim();
+  var bal = (_accProfile && _accProfile.walletBalance) || 0;
+  var ok = true;
+  function ve(id, pass) { var e = document.getElementById(id); if (pass) e.classList.remove("show"); else { e.classList.add("show"); ok = false; } }
+  ve("wd-eamt", !!amount && amount > 0 && amount <= bal);
+  ve("wd-ebank", !!bank);
+  ve("wd-eaccnum", /^[0-9]{10}$/.test(accNum));
+  ve("wd-eaccname", !!accName);
+  if (!ok) return;
+
+  var uid = _accUser ? _accUser.uid : "";
+  var email = (_accProfile && _accProfile.email) || "";
+  var name = (_accProfile && _accProfile.name) || "";
+  if (!uid) { T("Sign In Required", "Please sign in to withdraw from your wallet."); return; }
+
+  var btn = document.getElementById("wd-sub");
+  btn.disabled = true; btn.textContent = "Submitting...";
+  db.collection("withdrawals").add({
+    type: "user", uid: uid, name: name, email: email, amount: amount, status: "Pending",
+    bankName: bank, accountNumber: accNum, accountName: accName,
+    requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    return db.collection("users").doc(uid).update({ walletBalance: firebase.firestore.FieldValue.increment(-amount) });
+  }).then(function() {
+    if (_accProfile) _accProfile.walletBalance = bal - amount;
+    T("Withdrawal Requested", "Your request has been sent to the admin for approval.");
+    accOpenSub("payments");
+  }).catch(function() {
+    btn.disabled = false; btn.innerHTML = "&#128176; Request Withdrawal";
+    T("Error", "Could not submit withdrawal request.", 6000);
+  });
+}
+
 function accRenderInbox(body) {
   var uid = _accUser ? _accUser.uid : "";
   db.collection("messages").where("uid", "==", uid).get().then(function(snap) {
@@ -5694,6 +5790,7 @@ var _mpHotels = [];
 var _mpCurrentHotel = null;
 var _mpCurrentRoom = null;
 var _hbPayMethod = "paystack";
+var _hbWalletBalRaw = 0;
 var _hbReceiptData = null;
 
 function loadMarketplaceHotels() {
@@ -5791,21 +5888,45 @@ function openHotelBooking(roomId) {
   document.getElementById("hb-receipt-preview").style.display = "none";
   document.getElementById("hb-ereceipt").classList.remove("show");
   hbSelectPayMethod("paystack");
+  hbRefreshWalletBalance();
   SP("hotelbook");
 }
 function hbSelectPayMethod(method) {
   _hbPayMethod = method;
-  var ps = document.getElementById("hb-pm-paystack"), mn = document.getElementById("hb-pm-manual");
+  var ps = document.getElementById("hb-pm-paystack"), mn = document.getElementById("hb-pm-manual"), wl = document.getElementById("hb-pm-wallet");
   ps.style.borderColor = method === "paystack" ? "var(--gold)" : "var(--border)";
   ps.style.background = method === "paystack" ? "var(--gold-dim)" : "var(--surface2)";
   mn.style.borderColor = method === "manual" ? "var(--gold)" : "var(--border)";
   mn.style.background = method === "manual" ? "var(--gold-dim)" : "var(--surface2)";
+  wl.style.borderColor = method === "wallet" ? "var(--gold)" : "var(--border)";
+  wl.style.background = method === "wallet" ? "var(--gold-dim)" : "var(--surface2)";
   document.getElementById("hb-manual-section").style.display = method === "manual" ? "block" : "none";
+  document.getElementById("hb-wallet-section").style.display = method === "wallet" ? "block" : "none";
   document.getElementById("hb-bank-details").innerHTML =
     '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Bank</span><span style="font-weight:600">Opay</span></div>' +
     '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Number</span><span style="font-weight:600;font-family:monospace">8150898386</span></div>' +
     '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Name</span><span style="font-weight:600">Oladeji Opeyemi Ridwan</span></div>';
-  document.getElementById("hbsub").textContent = method === "manual" ? "Submit Booking Request" : "Pay & Confirm Booking";
+  if (method === "wallet") hbRefreshWalletBalance();
+  document.getElementById("hbsub").textContent = method === "manual" ? "Submit Booking Request" : method === "wallet" ? "Pay from Wallet & Confirm" : "Pay & Confirm Booking";
+}
+function hbRefreshWalletBalance() {
+  var uid = _accUser ? _accUser.uid : "";
+  var balEl = document.getElementById("hb-wallet-balance");
+  var hintEl = document.getElementById("hb-wallet-bal-hint");
+  var errEl = document.getElementById("hb-ewallet");
+  if (!uid) {
+    _hbWalletBalRaw = 0;
+    if (balEl) balEl.textContent = "\u20a60";
+    if (hintEl) hintEl.textContent = "Instant \u00b7 Sign in required";
+    if (errEl) { errEl.textContent = "Please sign in to pay from your wallet."; errEl.classList.add("show"); }
+    return;
+  }
+  db.collection("users").doc(uid).get().then(function(doc) {
+    _hbWalletBalRaw = (doc.exists && doc.data().walletBalance) || 0;
+    if (balEl) balEl.textContent = "\u20a6" + Math.round(_hbWalletBalRaw).toLocaleString();
+    if (hintEl) hintEl.textContent = "Instant \u00b7 Balance \u20a6" + Math.round(_hbWalletBalRaw).toLocaleString();
+    if (errEl) errEl.classList.remove("show");
+  });
 }
 function hbReceiptChange(input) {
   var file = input.files[0];
@@ -5839,6 +5960,11 @@ function hotelBookInitiatePayment() {
 
   if (_hbPayMethod === "manual") {
     submitManualHotelBooking(total, name, phone, email, cin, cout);
+    return;
+  }
+
+  if (_hbPayMethod === "wallet") {
+    payHotelBookingFromWallet(total, name, phone, email, cin, cout);
     return;
   }
 
@@ -5876,6 +6002,66 @@ function submitManualHotelBooking(total, name, phone, email, cin, cout) {
     T("Request Submitted", "Awaiting admin approval of your bank transfer.");
   }).catch(function(e) {
     T("Error", "Could not submit your booking request. Please try again.");
+    console.error(e);
+  });
+}
+function payHotelBookingFromWallet(total, name, phone, email, cin, cout) {
+  var uid = _accUser ? _accUser.uid : "";
+  var errEl = document.getElementById("hb-ewallet");
+  if (!uid) { errEl.textContent = "Please sign in to pay from your wallet."; errEl.classList.add("show"); T("Sign In Required", "Please sign in to pay from your wallet."); return; }
+  var btn = document.getElementById("hbsub");
+  db.collection("users").doc(uid).get().then(function(doc) {
+    var bal = (doc.exists && doc.data().walletBalance) || 0;
+    if (bal < total) {
+      errEl.textContent = "Insufficient wallet balance. Fund your wallet and try again.";
+      errEl.classList.add("show");
+      T("Insufficient Balance", "Your wallet balance is too low for this booking. Fund your wallet from your account first.", 6000);
+      return;
+    }
+    errEl.classList.remove("show");
+    btn.disabled = true; btn.textContent = "Processing...";
+    return findAvailableHotelRoomNumber(_mpCurrentHotel.id, _mpCurrentRoom.id, cin, cout).then(function(roomNum) {
+      if (roomNum === null) {
+        btn.disabled = false; btn.textContent = "Pay from Wallet & Confirm";
+        T("Fully Booked", "Sorry, this room type is fully booked for those dates.", 6000);
+        return;
+      }
+      var payRef = "WALLET_" + Date.now();
+      return db.collection("users").doc(uid).update({ walletBalance: firebase.firestore.FieldValue.increment(-total) })
+        .then(function() { return finalizeWalletHotelBooking(payRef, total, name, phone, email, cin, cout, roomNum); })
+        .catch(function() {
+          btn.disabled = false; btn.textContent = "Pay from Wallet & Confirm";
+          T("Error", "Could not debit your wallet. Please try again.", 6000);
+        });
+    });
+  }).catch(function() { T("Error", "Could not check your wallet balance."); });
+}
+function finalizeWalletHotelBooking(payRef, total, name, phone, email, cin, cout, roomNum) {
+  var hotelShare = Math.round(total * 0.8);
+  var platformShare = total - hotelShare;
+  var exp = new Date(cout + "T23:59:59");
+  var code = String(Math.floor(100000 + Math.random() * 900000));
+  return db.collection("hotelBookings").add({
+    hotelId: _mpCurrentHotel.id, hotelName: _mpCurrentHotel.name,
+    roomId: _mpCurrentRoom.id, roomType: _mpCurrentRoom.name, roomNumber: roomNum || "",
+    name: name, phone: phone, email: email, checkIn: cin, checkOut: cout,
+    amount: total, hotelShare: hotelShare, platformShare: platformShare,
+    status: "Approved", paymentStatus: "paid", paymentRef: payRef, paymentMethod: "wallet",
+    accessCode: code, codeStatus: "active", codeExpiry: firebase.firestore.Timestamp.fromDate(exp),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    return db.collection("hotels").doc(_mpCurrentHotel.id).update({
+      walletBalance: firebase.firestore.FieldValue.increment(hotelShare),
+      totalEarned: firebase.firestore.FieldValue.increment(hotelShare)
+    });
+  }).then(function() {
+    document.getElementById("hb-form").style.display = "none";
+    document.getElementById("hb-success").style.display = "block";
+    document.getElementById("hb-success-msg").innerHTML = "Your booking at <strong>" + esc(_mpCurrentHotel.name) + "</strong> is confirmed and paid from your wallet. A 6-digit access code has been sent to your email.";
+    T("Booking Confirmed!", "Paid from wallet. Enjoy your stay at " + _mpCurrentHotel.name + ".");
+    maybeGrantReferralReward(email);
+  }).catch(function(e) {
+    T("Error", "Wallet was debited but booking failed. Contact support with ref: " + payRef, 8000);
     console.error(e);
   });
 }
@@ -6069,28 +6255,46 @@ function hdLoadWithdrawals() {
 }
 function hdRenderWallet() {
   var h = _hotelProfile || {};
+  var hint = document.getElementById("hdw-hotelname-hint");
+  if (hint) hint.textContent = h.name || "your hotel";
   document.getElementById("hd-wallet-stats").innerHTML =
     statCardMain("&#128176;", "var(--gold)", "var(--gold-dim)", "Available Balance", "\u20a6" + (h.walletBalance || 0).toLocaleString()) +
     statCardMain("&#128179;", "var(--blue)", "var(--blue-bg)", "Total Withdrawn", "\u20a6" + (h.totalWithdrawn || 0).toLocaleString()) +
     statCardMain("&#9203;", "var(--red)", "var(--red-bg)", "Pending Requests", _hdWithdrawals.filter(function(w) { return w.status === "Pending"; }).length);
   document.getElementById("hd-withdrawals-list").innerHTML = _hdWithdrawals.length ? _hdWithdrawals.map(function(w) {
     var color = w.status === "Approved" ? "var(--green)" : w.status === "Rejected" ? "var(--red)" : "var(--muted)";
-    return '<div style="display:flex;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border)"><span>\u20a6' + w.amount.toLocaleString() + '</span><span style="color:' + color + ';font-weight:700;font-size:.78rem">' + esc(w.status) + '</span></div>';
+    var bankLine = w.bankName ? '<div style="font-size:.74rem;color:var(--muted);margin-top:.25rem">' + esc(w.bankName) + ' &middot; ' + esc(w.accountNumber || "-") + ' &middot; ' + esc(w.accountName || "-") + '</div>' : '';
+    return '<div style="padding:.6rem 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem"><span>\u20a6' + w.amount.toLocaleString() + '</span><span style="color:' + color + ';font-weight:700;font-size:.78rem">' + esc(w.status) + '</span></div>' + bankLine + '</div>';
   }).join("") : '<div class="empty">No withdrawal requests yet.</div>';
 }
 function hdRequestWithdrawal() {
   var amount = parseInt(document.getElementById("hdw-amount").value, 10);
+  var bank = document.getElementById("hdw-bank").value.trim();
+  var accNum = document.getElementById("hdw-accnum").value.trim();
+  var accName = document.getElementById("hdw-accname").value.trim();
   var h = _hotelProfile || {};
   if (!amount || amount <= 0) { T("Invalid Amount", "Enter a valid amount."); return; }
   if (amount > (h.walletBalance || 0)) { T("Insufficient Balance", "You can't withdraw more than your available balance."); return; }
+  if (!bank) { T("Missing Bank Name", "Enter the bank you want to withdraw to."); return; }
+  if (!/^[0-9]{10}$/.test(accNum)) { T("Invalid Account Number", "Enter a valid 10-digit account number."); return; }
+  if (!accName) { T("Missing Account Name", "Enter the account name on this bank account."); return; }
+  var hotelNameNorm = (h.name || "").trim().toLowerCase();
+  if (hotelNameNorm && accName.toLowerCase().indexOf(hotelNameNorm) === -1) {
+    T("Account Name Mismatch", "The account name must match your registered hotel name (\"" + h.name + "\"). Please use your official company account, not a personal one.", 7000);
+    return;
+  }
   db.collection("withdrawals").add({
     hotelId: _hotelSession, hotelName: h.name || "", amount: amount, status: "Pending",
+    bankName: bank, accountNumber: accNum, accountName: accName,
     requestedAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(function() {
     return db.collection("hotels").doc(_hotelSession).update({ walletBalance: firebase.firestore.FieldValue.increment(-amount) });
   }).then(function() {
     _hotelProfile.walletBalance = (h.walletBalance || 0) - amount;
     document.getElementById("hdw-amount").value = "";
+    document.getElementById("hdw-bank").value = "";
+    document.getElementById("hdw-accnum").value = "";
+    document.getElementById("hdw-accname").value = "";
     T("Withdrawal Requested", "Your request has been sent to the admin for approval.");
     hdLoadWithdrawals();
   }).catch(function() { T("Error", "Could not submit withdrawal request."); });
