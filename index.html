@@ -401,7 +401,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   <div class="sec">
     <div class="seye">Marketplace</div>
     <h2 class="stitle">Explore Our Partner Hotels</h2>
-    <p style="text-align:center;color:var(--muted);max-width:560px;margin:-1.6rem auto 1.6rem;font-size:.92rem">Browse hotels registered on our platform across Nigeria and book your stay directly — with instant confirmation and secure payment.</p>
+    <p style="text-align:center;color:var(--muted);max-width:560px;margin:.9rem auto 1.6rem;font-size:.92rem">Browse hotels registered on our platform across Nigeria and book your stay directly — with instant confirmation and secure payment.</p>
     <div id="home-mp-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.1rem"><div class="empty">Loading hotels...</div></div>
     <div style="text-align:center;margin-top:1.6rem"><button class="btn bo" onclick="SP('hotels')">View All Partner Hotels &#8250;</button></div>
   </div>
@@ -410,7 +410,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   <div class="sec">
     <div class="seye">Hotels Continental &middot; Flagship Property</div>
     <h2 class="stitle">Choose Your Perfect Suite</h2>
-    <p style="text-align:center;color:var(--muted);max-width:560px;margin:-1.6rem auto 1.6rem;font-size:.92rem">Our own signature hotel in Lagos — book instantly with real-time room availability.</p>
+    <p style="text-align:center;color:var(--muted);max-width:560px;margin:.9rem auto 1.6rem;font-size:.92rem">Our own signature hotel in Lagos — book instantly with real-time room availability.</p>
     <div class="rgrid" id="rooms-grid">
       <div class="rc" onclick="SP('booking')">
         <div class="rt" style="background:linear-gradient(135deg,#dde6f0,#d4c8b8)"><div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem" id="rt-Single">&#x1F6CF;</div><div class="rt-overlay"></div><div class="rrib">Single</div><button class="wl-heart" id="wl-Single" onclick="event.stopPropagation();toggleWishlist('Single')">&#9825;</button></div>
@@ -3216,9 +3216,9 @@ function addSubAdmin() {
   }).then(function(){
     // Add them to the sub-admin allow-list (checked at login, after Firebase
     // Authentication has already verified their password).
-    return db.collection(&quot;subadmins&quot;).add({ username:u, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
-  }).then(function(ref){
-    _allSubAdmins.push({ id:ref.id, username:u });
+    return db.collection(&quot;subadmins&quot;).doc(u).set({ username:u, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+  }).then(function(){
+    _allSubAdmins.push({ id:u, username:u });
     document.getElementById(&quot;sa-user&quot;).value = &quot;&quot;;
     document.getElementById(&quot;sa-pass&quot;).value = &quot;&quot;;
     renderSubAdmins();
