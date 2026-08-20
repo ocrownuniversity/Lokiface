@@ -312,13 +312,6 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 <div id="loader">
   <div class="lc">
     <div class="lr"></div>
-    <svg viewBox="0 0 40 30" fill="none" width="38">
-      <path d="M4 26L8 10L16 18L20 6L24 18L32 10L36 26H4Z" stroke="#5b9bf0" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
-      <circle cx="4" cy="10" r="2.5" fill="#5b9bf0"/>
-      <circle cx="20" cy="4" r="2.5" fill="#5b9bf0"/>
-      <circle cx="36" cy="10" r="2.5" fill="#5b9bf0"/>
-      <line x1="4" y1="28" x2="36" y2="28" stroke="#5b9bf0" stroke-width="1.5" stroke-linecap="round"/>
-    </svg>
   </div>
   <div class="ln">Hotels Continental</div>
   <div class="ls">Lagos · Nigeria</div>
@@ -335,15 +328,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 
 <nav>
   <button class="nbrand" onclick="SP('home')">
-    <div class="nlm">
-      <svg viewBox="0 0 28 22" fill="none" width="18">
-        <path d="M2 19L5.5 7L11.5 13.5L14 3L16.5 13.5L22.5 7L26 19H2Z" stroke="white" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
-        <circle cx="2" cy="7" r="2" fill="white"/>
-        <circle cx="14" cy="2" r="2" fill="white"/>
-        <circle cx="26" cy="7" r="2" fill="white"/>
-        <line x1="2" y1="21" x2="26" y2="21" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </div>
+    <div class="nlm"></div>
     <div>
       <div class="nbn">Hotels Continental</div>
       <div class="nbl">Lagos, Nigeria</div>
@@ -1337,7 +1322,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;sb-item&quot; data-page=&quot;reviews&quot; onclick=&quot;goPage('reviews')&quot;><span class=&quot;ic&quot;>&amp;#11088;</span>Reviews</div>
       <div class=&quot;sb-item&quot; id=&quot;sb-subadmin&quot; data-page=&quot;subadmins&quot; onclick=&quot;goPage('subadmins')&quot; style=&quot;display:none&quot;><span class=&quot;ic&quot;>&amp;#128272;</span>Sub-Admins</div>
       <div class=&quot;sb-item&quot; data-page=&quot;rooms&quot; onclick=&quot;goPage('rooms')&quot;><span class=&quot;ic&quot;>&amp;#128716;</span>Rooms</div>
-      <div class=&quot;sb-item&quot; data-page=&quot;withdrawals&quot; onclick=&quot;goPage('withdrawals')&quot;><span class=&quot;ic&quot;>&amp;#128179;</span>Hotel Withdrawals</div>
+      <div class=&quot;sb-item&quot; data-page=&quot;withdrawals&quot; onclick=&quot;goPage('withdrawals')&quot;><span class=&quot;ic&quot;>&amp;#128179;</span>Withdrawals</div>
       <div class=&quot;sb-item&quot; data-page=&quot;walletfundings&quot; onclick=&quot;goPage('walletfundings')&quot;><span class=&quot;ic&quot;>&amp;#128176;</span>Wallet Fundings</div>
       <div class=&quot;sb-item&quot; data-page=&quot;settings&quot; onclick=&quot;goPage('settings')&quot;><span class=&quot;ic&quot;>&amp;#9881;</span>Settings</div>
     </div>
@@ -1849,7 +1834,7 @@ setTimeout(function(){
   if (login &amp;&amp; login.style.display !== &quot;flex&quot;) login.style.display = &quot;flex&quot;;
 }, 5000);
 
-// Applies the uploaded company logo (Settings &gt; Company Profile) to every
+// Applies the uploaded company logo (Settings > Company Profile) to every
 // icon-style logo slot in this admin app. Falls back to the existing
 // hardcoded icon/emoji if no logo has been uploaded yet, so this is safe
 // to call before login too.
@@ -1857,10 +1842,10 @@ function applyAdminBranding(settingsObj) {
   var logo = settingsObj &amp;&amp; settingsObj.company &amp;&amp; settingsObj.company[&quot;company-logo&quot;];
   if (!logo) return;
   var lg = document.querySelector(&quot;.lg-logo&quot;);
-  if (lg) lg.innerHTML = '&lt;img src=&quot;' + logo + '&quot; style=&quot;width:100%;height:100%;object-fit:cover;border-radius:14px&quot;/&gt;';
+  if (lg) lg.innerHTML = '<img src=&quot;' + logo + '&quot; style=&quot;width:100%;height:100%;object-fit:cover;border-radius:14px&quot;/>';
   var tbIco = document.querySelector(&quot;.tb-logo-ico&quot;);
   if (tbIco &amp;&amp; tbIco.tagName !== &quot;IMG&quot;) {
-    tbIco.outerHTML = '&lt;img class=&quot;tb-logo-ico&quot; src=&quot;' + logo + '&quot; style=&quot;width:26px;height:26px;border-radius:6px;object-fit:cover&quot;/&gt;';
+    tbIco.outerHTML = '<img class=&quot;tb-logo-ico&quot; src=&quot;' + logo + '&quot; style=&quot;width:26px;height:26px;border-radius:6px;object-fit:cover&quot;/>';
   }
 }
 
@@ -2120,7 +2105,7 @@ function renderWithdrawals() {
     var wName = w.type === &quot;user&quot; ? (w.name || w.email || &quot;Customer&quot;) : (w.hotelName || &quot;Hotel&quot;);
     var wTag = w.type === &quot;user&quot; ? &quot;Customer Wallet&quot; : &quot;Hotel&quot;;
     return '<div class=&quot;card&quot;><div style=&quot;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.6rem&quot;>'+
-      '<div><div style=&quot;font-weight:700&quot;>'+esc(wName)+' <span style=&quot;font-size:.65rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em&quot;>&middot; '+wTag+'</span></div>'+
+      '<div><div style=&quot;font-weight:700&quot;>'+esc(wName)+' <span style=&quot;font-size:.65rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em&quot;>· '+wTag+'</span></div>'+
       '<div style=&quot;font-size:.78rem;color:var(--muted2)&quot;>Requested '+(w.requestedAt ? new Date(w.requestedAt.toMillis()).toLocaleDateString() : &quot;-&quot;)+'</div></div>'+
       '<div style=&quot;text-align:right&quot;><div style=&quot;font-weight:800;font-size:1.1rem&quot;>&amp;#8358;'+(w.amount||0).toLocaleString()+'</div>'+
       '<span class=&quot;pill '+(w.status===&quot;Approved&quot;?&quot;pill-green&quot;:w.status===&quot;Rejected&quot;?&quot;pill-red&quot;:&quot;pill-amber&quot;)+'&quot;>'+esc(w.status)+'</span></div>'+
@@ -2684,13 +2669,20 @@ function renderDashboard() {
   var today = new Date();
   var todayRevenue = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; &amp;&amp; isSameDay(bkDate(b), today) ? (Number(b.amountPaid)||0) : 0); }, 0);
   var pending = _allBookings.filter(function(b){ return b.status===&quot;Pending&quot;; }).length;
+  var pendingWithdrawals = (_allWithdrawals||[]).filter(function(w){ return w.status===&quot;Pending&quot;; });
+  var pendingWithdrawalTotal = pendingWithdrawals.reduce(function(s,w){ return s+(Number(w.amount)||0); }, 0);
+  var totalWithdrawn = (_allWithdrawals||[]).filter(function(w){ return w.status===&quot;Approved&quot;; }).reduce(function(s,w){ return s+(Number(w.amount)||0); }, 0);
+  var netRevenue = totalRevenue - totalWithdrawn;
   document.getElementById(&quot;dash-stats&quot;).innerHTML =
     statCard(&quot;&amp;#127974;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Hotels&quot;, _allHotels.length) +
     statCard(&quot;&amp;#128197;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Bookings&quot;, _allBookings.length) +
     statCard(&quot;&amp;#128176;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Total Revenue&quot;, NGN(totalRevenue)) +
     statCard(&quot;&amp;#9752;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Today's Revenue&quot;, NGN(todayRevenue)) +
     statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Bookings&quot;, pending) +
-    statCard(&quot;&amp;#128101;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Total Users&quot;, _allUsers.length);
+    statCard(&quot;&amp;#128101;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Total Users&quot;, _allUsers.length) +
+    statCard(&quot;&amp;#128179;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Pending Withdrawals&quot;, NGN(pendingWithdrawalTotal)+&quot; (&quot;+pendingWithdrawals.length+&quot;)&quot;) +
+    statCard(&quot;&amp;#128181;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Withdrawn&quot;, NGN(totalWithdrawn)) +
+    statCard(&quot;&amp;#128200;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Net Revenue&quot;, NGN(netRevenue));
 
   var days = [], bCounts = [], rSums = [];
   for (var i=6;i>=0;i--) {
@@ -4075,8 +4067,9 @@ window.onload = function() { setTimeout(hideLoader, 800); loadSavedImages(); };
 setTimeout(hideLoader, 2000);
 
 // Applies the uploaded company logo (Admin > Settings > Company Profile) to
-// the public site's icon-style logo slots (nav brand + loader mark). Falls
-// back to the existing default icon if no logo has been uploaded yet.
+// the public site's logo slots (nav brand + loader mark). These slots are
+// intentionally left empty in the HTML so no hardcoded/default icon ever
+// shows before the real uploaded logo loads.
 function applyPublicBranding(logo) {
   if (!logo) return;
   document.querySelectorAll(".nlm").forEach(function(el) {
