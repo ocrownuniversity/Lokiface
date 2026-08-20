@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Hotels Continental - Luxury Hotel in Lagos, Nigeria</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<!-- Open connections to Firebase early so the company-logo fetch (issued near
+     the bottom of the page) doesn't also have to pay DNS/TLS setup cost -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin/>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin/>
+<link rel="preconnect" href="https://fintech-d16e9.firebaseapp.com" crossorigin/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root{
@@ -349,6 +354,23 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     <span></span><span></span><span></span>
   </button>
 </nav>
+<script>
+// Show the company logo instantly on repeat visits using a cached copy from
+// localStorage, instead of waiting for the Firebase SDKs (loaded at the
+// bottom of the page) to download and the Firestore round-trip to finish.
+// The live fetch further down still runs and keeps this cache up to date.
+(function() {
+  try {
+    var cached = localStorage.getItem("hc-company-logo");
+    if (!cached) return;
+    document.querySelectorAll(".nlm").forEach(function(el) {
+      el.innerHTML = '<img src="' + cached + '" style="width:100%;height:100%;object-fit:cover;border-radius:9px"/>';
+    });
+    var lc = document.querySelector("#loader .lc");
+    if (lc) lc.innerHTML = '<img src="' + cached + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
+  } catch (e) {}
+})();
+</script>
 <div class="mnav" id="mnav">
   <button class="ni" onclick="SP('home');toggleNav()">Home</button>
   <button class="ni" onclick="SP('hotels');toggleNav()">Book Now</button>
@@ -1660,6 +1682,21 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
               <div class=&quot;bk-row&quot; style=&quot;border-bottom:none&quot;><div class=&quot;bk-ico&quot;>&amp;#128465;</div><div style=&quot;flex:1&quot;><div class=&quot;toggle-lbl&quot;>Clear Cache</div><div class=&quot;toggle-sub&quot;>Improve performance</div></div><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;T('Cache Cleared','Local cache has been cleared.')&quot;>Clear Now</button></div>
               <div style=&quot;background:var(--blue-dim);border:1px solid var(--blue-bd);border-radius:10px;padding:.8rem 1rem;margin-top:1rem;font-size:.76rem;color:var(--text)&quot;>&amp;#8505;&amp;#65039; Changes you make will be saved automatically. Always backup your data before making major changes.</div>
             </div>
+            <div class=&quot;card&quot; style=&quot;border:1px solid var(--red-bd)&quot;>
+              <div class=&quot;card-title&quot; style=&quot;color:var(--red)&quot;>&amp;#9888;&amp;#65039; Danger Zone &amp;middot; Clear Test Data</div>
+              <div style=&quot;font-size:.78rem;color:var(--muted);margin-bottom:.9rem&quot;>Use this after you're done testing to wipe demo data before going live. Pick what to delete, then confirm below. This cannot be undone &amp;mdash; export a backup first if you're not sure.</div>
+              <div id=&quot;cd-list&quot; style=&quot;display:flex;flex-direction:column;gap:.1rem;margin-bottom:.8rem&quot;></div>
+              <div style=&quot;display:flex;gap:.6rem;margin-bottom:.9rem&quot;>
+                <button class=&quot;btn btn-o btn-sm&quot; type=&quot;button&quot; onclick=&quot;cdSetAll(true)&quot;>Select All</button>
+                <button class=&quot;btn btn-o btn-sm&quot; type=&quot;button&quot; onclick=&quot;cdSetAll(false)&quot;>Select None</button>
+              </div>
+              <div style=&quot;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:10px;padding:.8rem .9rem;display:flex;flex-direction:column;gap:.6rem&quot;>
+                <div style=&quot;font-size:.78rem;color:var(--text)&quot;>Type <strong>DELETE</strong> below to confirm you understand this permanently removes the selected data for every hotel, user and booking on the platform.</div>
+                <input type=&quot;text&quot; id=&quot;cd-confirm-input&quot; placeholder=&quot;Type DELETE to confirm&quot; oninput=&quot;cdCheckConfirm()&quot; autocomplete=&quot;off&quot; style=&quot;max-width:260px&quot;/>
+                <button class=&quot;btn btn-p btn-sm&quot; id=&quot;cd-clear-btn&quot; style=&quot;background:var(--red);align-self:flex-start&quot; disabled onclick=&quot;clearTestData()&quot;>&amp;#128465; Clear Selected Data</button>
+                <div id=&quot;cd-progress&quot; style=&quot;font-size:.76rem;color:var(--muted)&quot;></div>
+              </div>
+            </div>
           </div>
           <div id=&quot;st-logs&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
             <div class=&quot;card&quot;>
@@ -2947,6 +2984,99 @@ function saveHotel() {
   }
 }
 
+/* ============ CLEAR TEST DATA (Danger Zone) ============ */
+// Each entry describes a top-level collection an admin may want to wipe after
+// testing. &quot;sub&quot; (optional) is a subcollection name that must be deleted out
+// from under every parent doc first, since Firestore never cascades deletes.
+var CD_COLLECTIONS = [
+  { key: &quot;hotelBookings&quot;, label: &quot;Bookings&quot;, sub_desc: &quot;All guest reservations (Marketplace + legacy)&quot; },
+  { key: &quot;hotels&quot;, label: &quot;Hotels &amp; Rooms&quot;, sub: &quot;rooms&quot;, sub_desc: &quot;Hotel listings and their room types (the default hotel is recreated automatically)&quot; },
+  { key: &quot;users&quot;, label: &quot;Users&quot;, sub_desc: &quot;Guest accounts and their wallet balances&quot; },
+  { key: &quot;reviews&quot;, label: &quot;Reviews&quot;, sub_desc: &quot;Guest reviews and ratings&quot; },
+  { key: &quot;withdrawals&quot;, label: &quot;Withdrawals&quot;, sub_desc: &quot;Hotel and customer wallet withdrawal requests&quot; },
+  { key: &quot;walletFundings&quot;, label: &quot;Wallet Fundings&quot;, sub_desc: &quot;Customer wallet funding requests&quot; },
+  { key: &quot;hotelRegistrations&quot;, label: &quot;Hotel Registrations&quot;, sub_desc: &quot;Pending/approved hotel partner applications&quot; },
+  { key: &quot;promotions&quot;, label: &quot;Promotions&quot;, sub_desc: &quot;Discount codes and promotional offers&quot; },
+  { key: &quot;payouts&quot;, label: &quot;Payouts&quot;, sub_desc: &quot;Legacy payout records&quot; },
+  { key: &quot;subadmins&quot;, label: &quot;Sub-Admins&quot;, sub_desc: &quot;Staff accounts with limited access (your own login is not affected)&quot; }
+];
+function renderClearDataList() {
+  var el = document.getElementById(&quot;cd-list&quot;);
+  if (!el) return;
+  el.innerHTML = CD_COLLECTIONS.map(function(c) {
+    return '<div class=&quot;toggle-row&quot;><div><div class=&quot;toggle-lbl&quot;>'+c.label+'</div><div class=&quot;toggle-sub&quot;>'+c.sub_desc+'</div></div>' +
+      '<label class=&quot;tgl&quot;><input type=&quot;checkbox&quot; class=&quot;cd-check&quot; data-key=&quot;'+c.key+'&quot;/><span class=&quot;tgl-slider&quot;></span></label></div>';
+  }).join(&quot;&quot;);
+}
+function cdSetAll(val) {
+  document.querySelectorAll(&quot;.cd-check&quot;).forEach(function(el){ el.checked = val; });
+}
+function cdCheckConfirm() {
+  var input = document.getElementById(&quot;cd-confirm-input&quot;);
+  var btn = document.getElementById(&quot;cd-clear-btn&quot;);
+  btn.disabled = (input.value.trim().toUpperCase() !== &quot;DELETE&quot;);
+}
+function cdDeleteCollection(name) {
+  return db.collection(name).get().then(function(snap) {
+    var docs = snap.docs;
+    var chunks = [];
+    for (var i = 0; i < docs.length; i += 450) chunks.push(docs.slice(i, i + 450));
+    return chunks.reduce(function(p, chunk) {
+      return p.then(function() {
+        var batch = db.batch();
+        chunk.forEach(function(d) { batch.delete(d.ref); });
+        return batch.commit();
+      });
+    }, Promise.resolve()).then(function(){ return docs; });
+  });
+}
+function cdDeleteHotelsAndRooms() {
+  return db.collection(&quot;hotels&quot;).get().then(function(snap) {
+    var hotelDocs = snap.docs;
+    return hotelDocs.reduce(function(p, hd) {
+      return p.then(function() {
+        return hd.ref.collection(&quot;rooms&quot;).get().then(function(roomSnap) {
+          if (!roomSnap.size) return;
+          var batch = db.batch();
+          roomSnap.docs.forEach(function(rd) { batch.delete(rd.ref); });
+          return batch.commit();
+        });
+      });
+    }, Promise.resolve()).then(function() {
+      return cdDeleteCollection(&quot;hotels&quot;);
+    });
+  });
+}
+function clearTestData() {
+  var selected = Array.prototype.slice.call(document.querySelectorAll(&quot;.cd-check:checked&quot;)).map(function(el){ return el.dataset.key; });
+  if (!selected.length) { T(&quot;Nothing Selected&quot;, &quot;Pick at least one category to clear.&quot;); return; }
+  var labels = CD_COLLECTIONS.filter(function(c){ return selected.indexOf(c.key) > -1; }).map(function(c){ return c.label; }).join(&quot;, &quot;);
+  if (!confirm(&quot;This will permanently delete: &quot; + labels + &quot;.\n\nThis cannot be undone. Continue?&quot;)) return;
+  var btn = document.getElementById(&quot;cd-clear-btn&quot;);
+  var progress = document.getElementById(&quot;cd-progress&quot;);
+  btn.disabled = true;
+  progress.textContent = &quot;Clearing data\u2026&quot;;
+  selected.reduce(function(p, key) {
+    return p.then(function() {
+      progress.textContent = &quot;Clearing &quot; + key + &quot;\u2026&quot;;
+      return key === &quot;hotels&quot; ? cdDeleteHotelsAndRooms() : cdDeleteCollection(key);
+    });
+  }, Promise.resolve()).then(function() {
+    progress.textContent = &quot;Done. Reloading data\u2026&quot;;
+    document.getElementById(&quot;cd-confirm-input&quot;).value = &quot;&quot;;
+    return loadAll();
+  }).then(function() {
+    progress.textContent = &quot;&quot;;
+    T(&quot;Test Data Cleared&quot;, &quot;The selected data has been permanently removed.&quot;);
+    cdCheckConfirm();
+  }).catch(function(e) {
+    console.error(e);
+    progress.textContent = &quot;&quot;;
+    btn.disabled = false;
+    T(&quot;Error&quot;, &quot;Could not clear all selected data. Check Firestore rules and try again.&quot;, 6000);
+  });
+}
+
 /* ============ BOOKINGS ============ */
 var _bkPage = 1, _bkPerPage = 10;
 function exportBookingsCSV() {
@@ -3775,6 +3905,7 @@ function renderSettings() {
   var logoUrl = _settings.company &amp;&amp; _settings.company[&quot;company-logo&quot;];
   var logoEl = document.getElementById(&quot;st-logo-preview&quot;);
   if (logoEl) logoEl.innerHTML = logoUrl ? '<img src=&quot;'+logoUrl+'&quot;/>' : &quot;&amp;#127970;&quot;;
+  renderClearDataList();
 }
 function uploadCompanyLogo(input) {
   var file = input.files &amp;&amp; input.files[0];
@@ -4069,9 +4200,16 @@ setTimeout(hideLoader, 2000);
 // Applies the uploaded company logo (Admin > Settings > Company Profile) to
 // the public site's logo slots (nav brand + loader mark). These slots are
 // intentionally left empty in the HTML so no hardcoded/default icon ever
-// shows before the real uploaded logo loads.
+// shows before the real uploaded logo loads. Also caches the logo in
+// localStorage so the next page load can show it instantly (see the small
+// inline script right after </nav>) instead of waiting on this Firestore
+// round-trip again.
 function applyPublicBranding(logo) {
   if (!logo) return;
+  try {
+    if (localStorage.getItem("hc-company-logo") === logo) return; // already showing this version
+    localStorage.setItem("hc-company-logo", logo);
+  } catch (e) {}
   document.querySelectorAll(".nlm").forEach(function(el) {
     el.innerHTML = '<img src="' + logo + '" style="width:100%;height:100%;object-fit:cover;border-radius:9px"/>';
   });
