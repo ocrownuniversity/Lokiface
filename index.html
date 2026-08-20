@@ -252,6 +252,17 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 .img-label{font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:.35rem}
 .img-input{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:.62rem .85rem;font-family:'Jost',sans-serif;font-size:.78rem;color:var(--text);outline:none;transition:border-color .2s}
 .img-input:focus{border-color:var(--gold)}
+.gal-thumbs{display:flex;flex-wrap:wrap;gap:.5rem}
+.gal-thumb{position:relative;width:74px;height:74px;border-radius:9px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}
+.gal-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.gal-thumb .gal-rm{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.gal-thumb .gal-cover-tag{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:.52rem;text-align:center;padding:1px 0;letter-spacing:.03em;text-transform:uppercase}
+.hd-gallery{display:grid;grid-template-columns:2fr 1fr;gap:.6rem;max-width:1000px;margin:0 auto 1rem;padding:0 1.5rem}
+.hd-gallery-main{border-radius:14px;overflow:hidden;height:320px}
+.hd-gallery-main img{width:100%;height:100%;object-fit:cover;display:block}
+.hd-gallery-strip{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;height:320px}
+.hd-gallery-strip img{width:100%;height:100%;object-fit:cover;display:block;border-radius:10px}
+@media(max-width:640px){.hd-gallery{grid-template-columns:1fr;padding:0 1rem}.hd-gallery-main{height:220px}.hd-gallery-strip{grid-template-columns:1fr 1fr;height:110px}}
 @media(max-width:600px){
   nav{padding:0 1rem}
   .nmenu{display:none}
@@ -387,10 +398,19 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     </div>
   </div>
 
+  <div class="sec">
+    <div class="seye">Marketplace</div>
+    <h2 class="stitle">Explore Our Partner Hotels</h2>
+    <p style="text-align:center;color:var(--muted);max-width:560px;margin:-1.6rem auto 1.6rem;font-size:.92rem">Browse hotels registered on our platform across Nigeria and book your stay directly — with instant confirmation and secure payment.</p>
+    <div id="home-mp-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.1rem"><div class="empty">Loading hotels...</div></div>
+    <div style="text-align:center;margin-top:1.6rem"><button class="btn bo" onclick="SP('hotels')">View All Partner Hotels &#8250;</button></div>
+  </div>
+
   <div id="rsec"></div>
   <div class="sec">
-    <div class="seye">Our Accommodations</div>
+    <div class="seye">Hotels Continental &middot; Flagship Property</div>
     <h2 class="stitle">Choose Your Perfect Suite</h2>
+    <p style="text-align:center;color:var(--muted);max-width:560px;margin:-1.6rem auto 1.6rem;font-size:.92rem">Our own signature hotel in Lagos — book instantly with real-time room availability.</p>
     <div class="rgrid" id="rooms-grid">
       <div class="rc" onclick="SP('booking')">
         <div class="rt" style="background:linear-gradient(135deg,#dde6f0,#d4c8b8)"><div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem" id="rt-Single">&#x1F6CF;</div><div class="rt-overlay"></div><div class="rrib">Single</div><button class="wl-heart" id="wl-Single" onclick="event.stopPropagation();toggleWishlist('Single')">&#9825;</button></div>
@@ -688,6 +708,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         <div class="fg"><label>Email</label><input type="email" id="acc-su-email" placeholder="you@email.com"/></div>
         <div class="fg"><label>Phone Number</label><input type="tel" id="acc-su-phone" placeholder="e.g. 08012345678"/></div>
         <div class="fg pw-wrap"><label>Password</label><input type="password" id="acc-su-pass" placeholder="Min. 6 characters"/><button type="button" class="pw-eye" onclick="togglePw('acc-su-pass',this)">&#128065;</button></div>
+        <div class="fg"><label>Referral Code <span style="color:var(--muted2);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><input type="text" id="acc-su-ref" placeholder="Got a code from a friend? Enter it here" style="text-transform:uppercase"/><div class="eferr" id="acc-su-ref-err">That referral code was not found. Check it and try again, or leave it blank.</div></div>
         <div class="eferr" id="acc-su-err">Please check your details and try again.</div>
         <button class="fsub" onclick="accSignup()">Create Account</button>
       </div>
@@ -821,6 +842,13 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
             </div>
             <div class="fg"><label>Number of Rooms</label><input type="number" id="hr-rooms" min="1" placeholder="e.g. 24"/></div>
             <div class="fg"><label>Short Description (optional)</label><textarea id="hr-desc" rows="3" placeholder="Tell us a little about your hotel" style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:.62rem .85rem;font-family:'Jost',sans-serif;font-size:.82rem;color:var(--text);outline:none;resize:vertical"></textarea></div>
+
+            <div class="fg" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-top:.5rem">
+              <label style="display:block;font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem">&#128247; Hotel Photos</label>
+              <div style="font-size:.7rem;color:var(--muted);margin-bottom:.5rem">Upload a few photos of your hotel &mdash; these appear on your Marketplace listing so guests see your real property instead of a placeholder. The first photo becomes your cover image.</div>
+              <input type="file" accept="image/*" multiple id="hr-gallery-file" class="img-input" onchange="hrAddGalleryFiles(this)"/>
+              <div class="gal-thumbs" id="hr-gallery-preview" style="margin-top:.6rem"></div>
+            </div>
 
             <div class="fg" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-top:.5rem">
               <label style="display:block;font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem">&#128274; Verification Documents</label>
@@ -1201,6 +1229,31 @@ main{padding:74px 1rem 78px;max-width:1200px;margin:0 auto}
 .tgl-slider:before{position:absolute;content:&quot;&quot;;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
 .tgl input:checked+.tgl-slider{background:var(--blue)}
 .tgl input:checked+.tgl-slider:before{transform:translateX(18px)}
+/* ---- settings ---- */
+.st-wrap{display:grid;grid-template-columns:230px 1fr;gap:1rem;align-items:start;margin-top:1rem}
+@media(max-width:800px){.st-wrap{grid-template-columns:1fr}}
+.st-nav{background:#fff;border:1px solid var(--border);border-radius:14px;padding:.5rem;box-shadow:var(--shadow)}
+.st-nav-item{display:flex;align-items:center;gap:.6rem;padding:.6rem .6rem;border-radius:10px;cursor:pointer;margin-bottom:.1rem;transition:background .15s}
+.st-nav-item:hover{background:var(--blue-dim)}
+.st-nav-item.on{background:var(--blue-dim)}
+.st-nav-ico{width:30px;height:30px;border-radius:8px;background:var(--bg);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+.st-nav-item.on .st-nav-ico{background:var(--blue);color:#fff}
+.st-nav-txt{line-height:1.2;min-width:0}
+.st-nav-title{font-size:.78rem;font-weight:700;color:var(--text);display:block}
+.st-nav-item.on .st-nav-title{color:var(--blue)}
+.st-nav-sub{font-size:.64rem;color:var(--muted);display:block}
+.st-content{min-width:0}
+.st-pane .card:first-child{margin-top:0}
+.logo-upload{display:flex;flex-direction:column;align-items:center;gap:.5rem;padding-top:.2rem}
+.logo-preview{width:96px;height:96px;border-radius:14px;background:var(--navy);display:flex;align-items:center;justify-content:center;overflow:hidden;color:#fff;font-size:2rem;flex-shrink:0}
+.logo-preview img{width:100%;height:100%;object-fit:cover}
+.bk-row{display:flex;align-items:center;gap:.7rem;padding:.75rem 0;border-bottom:1px solid var(--border)}
+.bk-ico{width:34px;height:34px;border-radius:9px;background:var(--blue-dim);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
+.gal-thumbs{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
+.gal-thumb{position:relative;width:74px;height:74px;border-radius:9px;overflow:hidden;border:1px solid var(--border)}
+.gal-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.gal-thumb .gal-rm{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.gal-add{width:74px;height:74px;border-radius:9px;border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;font-size:1.3rem;flex-shrink:0}
 .hv-card{border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:.8rem;cursor:pointer;transition:box-shadow .15s}
 .hv-card:hover{box-shadow:var(--shadow)}
 .hv-card-top{display:flex;align-items:center;gap:.8rem}
@@ -1233,6 +1286,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 .tbl-wrap{overflow-x:auto;margin-top:.9rem}
 
 .pager{display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:1rem}
+.pager-wrap{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)}
 .pg-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:.75rem}
 .pg-btn.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 
@@ -1403,8 +1457,25 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;ph&quot;><div class=&quot;ph-row&quot;><div><div class=&quot;ph-title&quot;>Hotel Verification</div><div class=&quot;ph-sub&quot;>Review and verify hotels before they go live on the platform.</div></div><button class=&quot;btn btn-o&quot; onclick=&quot;exportBookingsCSV()&quot;>&amp;#8681; Export Report</button></div></div>
       <div class=&quot;stat-grid&quot; id=&quot;hv-stats&quot;></div>
       <div class=&quot;tabs&quot; id=&quot;hv-tabs&quot;></div>
-      <div class=&quot;toolbar&quot;><div class=&quot;tb-search&quot;><span class=&quot;si&quot;>&amp;#128269;</span><input type=&quot;text&quot; id=&quot;hv-search&quot; placeholder=&quot;Search by hotel name...&quot; oninput=&quot;renderHV()&quot;/></div><select class=&quot;tb-select&quot; id=&quot;hv-country-filter&quot; onchange=&quot;renderHV()&quot;><option value=&quot;&quot;>Country</option></select></div>
-      <div class=&quot;card&quot;><div id=&quot;hv-list&quot;></div><div class=&quot;pager&quot; id=&quot;hv-pager&quot;></div></div>
+      <div class=&quot;toolbar&quot;>
+        <div class=&quot;tb-search&quot;><span class=&quot;si&quot;>&amp;#128269;</span><input type=&quot;text&quot; id=&quot;hv-search&quot; placeholder=&quot;Search by hotel name...&quot; oninput=&quot;renderHV()&quot;/></div>
+        <select class=&quot;tb-select&quot; id=&quot;hv-country-filter&quot; onchange=&quot;renderHV()&quot;><option value=&quot;&quot;>Country</option></select>
+      </div>
+      <div class=&quot;toolbar&quot;>
+        <select class=&quot;tb-select&quot; id=&quot;hv-status-filter&quot; onchange=&quot;setHVTab(this.value)&quot;>
+          <option value=&quot;&quot;>Verification Status</option>
+          <option value=&quot;Pending Review&quot;>Pending Review</option>
+          <option value=&quot;Under Review&quot;>Under Review</option>
+          <option value=&quot;Verified&quot;>Verified</option>
+          <option value=&quot;Rejected&quot;>Rejected</option>
+        </select>
+        <select class=&quot;tb-select&quot; id=&quot;hv-date-sort&quot; onchange=&quot;renderHV()&quot;>
+          <option value=&quot;desc&quot;>Submission Date &amp;#8595; Newest</option>
+          <option value=&quot;asc&quot;>Submission Date &amp;#8593; Oldest</option>
+        </select>
+        <button class=&quot;btn btn-o&quot; onclick=&quot;resetHVFilters()&quot;>&amp;#9878; Filters</button>
+      </div>
+      <div class=&quot;card&quot;><div id=&quot;hv-list&quot;></div><div class=&quot;pager-wrap&quot; id=&quot;hv-pager-wrap&quot;><div class=&quot;lr-sub&quot; id=&quot;hv-pager-count&quot;></div><div style=&quot;display:flex;align-items:center;gap:.6rem&quot;><div class=&quot;pager&quot; id=&quot;hv-pager&quot;></div><select class=&quot;tb-select&quot; id=&quot;hv-per-page&quot; onchange=&quot;renderHV()&quot; style=&quot;padding:.4rem .6rem;font-size:.72rem&quot;><option value=&quot;10&quot;>10 / page</option><option value=&quot;25&quot;>25 / page</option><option value=&quot;50&quot;>50 / page</option></select></div></div></div>
     </div>
 
     <!-- ============ HOTEL VERIFICATION DETAIL ============ -->
@@ -1483,63 +1554,165 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 
     <!-- ============ SETTINGS ============ -->
     <div class=&quot;apage&quot; id=&quot;page-settings&quot;>
-      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Settings</div><div class=&quot;ph-sub&quot;>Manage your platform settings and preferences.</div></div>
-      <div class=&quot;tabs&quot; id=&quot;st-tabs&quot;>
-        <button class=&quot;tab-btn on&quot; data-tab=&quot;general&quot; onclick=&quot;setSettingsTab('general')&quot;>General</button>
-        <button class=&quot;tab-btn&quot; data-tab=&quot;company&quot; onclick=&quot;setSettingsTab('company')&quot;>Company</button>
-        <button class=&quot;tab-btn&quot; data-tab=&quot;payment&quot; onclick=&quot;setSettingsTab('payment')&quot;>Payment</button>
-        <button class=&quot;tab-btn&quot; data-tab=&quot;security&quot; onclick=&quot;setSettingsTab('security')&quot;>Security</button>
-        <button class=&quot;tab-btn&quot; data-tab=&quot;backup&quot; onclick=&quot;setSettingsTab('backup')&quot;>Backup &amp;amp; Data</button>
-      </div>
-      <div id=&quot;st-general&quot; class=&quot;st-pane&quot;>
-        <div class=&quot;card&quot;>
-          <div class=&quot;card-title&quot;>General Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('general')&quot;>Save Changes</button></div>
-          <div class=&quot;fgrid2&quot;>
-            <div class=&quot;fg&quot;><label>Platform Name</label><input type=&quot;text&quot; id=&quot;st-platform-name&quot; value=&quot;Hotels Continental&quot;/></div>
-            <div class=&quot;fg&quot;><label>Website URL</label><input type=&quot;text&quot; id=&quot;st-website&quot; value=&quot;https://www.hotelscontinental.com&quot;/></div>
-            <div class=&quot;fg&quot;><label>Platform Tagline</label><input type=&quot;text&quot; id=&quot;st-tagline&quot; value=&quot;Discover. Book. Relax.&quot;/></div>
-            <div class=&quot;fg&quot;><label>Admin Email</label><input type=&quot;email&quot; id=&quot;st-admin-email&quot; value=&quot;admin@hotelscontinental.com&quot;/></div>
-            <div class=&quot;fg&quot;><label>Support Email</label><input type=&quot;email&quot; id=&quot;st-support-email&quot; value=&quot;support@hotelscontinental.com&quot;/></div>
-            <div class=&quot;fg&quot;><label>Admin Phone</label><input type=&quot;text&quot; id=&quot;st-admin-phone&quot; value=&quot;+234 800 765 4321&quot;/></div>
-            <div class=&quot;fg&quot;><label>Support Phone</label><input type=&quot;text&quot; id=&quot;st-support-phone&quot; value=&quot;+234 800 123 4567&quot;/></div>
-            <div class=&quot;fg&quot;><label>Default Timezone</label><select id=&quot;st-timezone&quot;><option>(UTC+01:00) West Africa Time (WAT)</option><option>(UTC+00:00) GMT</option></select></div>
-            <div class=&quot;fg&quot;><label>Date Format</label><select id=&quot;st-date-format&quot;><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option><option>YYYY-MM-DD</option></select></div>
-            <div class=&quot;fg&quot;><label>Time Format</label><select id=&quot;st-time-format&quot;><option>12 Hours</option><option>24 Hours</option></select></div>
+      <div class=&quot;ph&quot;><div class=&quot;ph-row&quot;><div><div class=&quot;ph-title&quot;>Settings</div><div class=&quot;ph-sub&quot;>Manage your platform settings and preferences.</div></div><span class=&quot;pill pill-green&quot; style=&quot;display:flex;align-items:center;gap:.35rem&quot;><span style=&quot;width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block&quot;></span>System Status</span></div></div>
+      <div class=&quot;st-wrap&quot;>
+        <div class=&quot;st-nav&quot; id=&quot;st-nav&quot;>
+          <div class=&quot;st-nav-item on&quot; data-sec=&quot;general&quot; onclick=&quot;setSettingsSection('general')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#9881;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>General Settings</span><span class=&quot;st-nav-sub&quot;>Basic platform info</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;company&quot; onclick=&quot;setSettingsSection('company')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#127970;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Company Profile</span><span class=&quot;st-nav-sub&quot;>Update company details</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;localization&quot; onclick=&quot;setSettingsSection('localization')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#127760;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Localization</span><span class=&quot;st-nav-sub&quot;>Language, timezone, currency</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;payment&quot; onclick=&quot;setSettingsSection('payment')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128179;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Payment Settings</span><span class=&quot;st-nav-sub&quot;>Payment methods &amp;amp; fees</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;email&quot; onclick=&quot;setSettingsSection('email')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#9993;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Email Settings</span><span class=&quot;st-nav-sub&quot;>Email templates &amp;amp; SMTP</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;sms&quot; onclick=&quot;setSettingsSection('sms')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128172;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>SMS Settings</span><span class=&quot;st-nav-sub&quot;>SMS gateway &amp;amp; templates</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;notifications&quot; onclick=&quot;setSettingsSection('notifications')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128276;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Notification Settings</span><span class=&quot;st-nav-sub&quot;>In-app &amp;amp; push notifications</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;booking&quot; onclick=&quot;setSettingsSection('booking')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128197;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Booking Settings</span><span class=&quot;st-nav-sub&quot;>Booking preferences</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;commission&quot; onclick=&quot;setSettingsSection('commission')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128176;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Commission Settings</span><span class=&quot;st-nav-sub&quot;>Commission &amp;amp; fees setup</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;security&quot; onclick=&quot;setSettingsSection('security')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128274;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Security Settings</span><span class=&quot;st-nav-sub&quot;>Password, 2FA &amp;amp; security</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;api&quot; onclick=&quot;setSettingsSection('api')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128268;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>API Settings</span><span class=&quot;st-nav-sub&quot;>API keys &amp;amp; integrations</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;backup&quot; onclick=&quot;setSettingsSection('backup')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#9729;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Backup &amp;amp; Data</span><span class=&quot;st-nav-sub&quot;>Backup and recovery</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;logs&quot; onclick=&quot;setSettingsSection('logs')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128220;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>System Logs</span><span class=&quot;st-nav-sub&quot;>Activity &amp;amp; audit trail</span></span></div>
+        </div>
+        <div class=&quot;st-content&quot;>
+          <div id=&quot;st-general&quot; class=&quot;st-pane&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>General Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('general')&quot;>Save Changes</button></div>
+              <div class=&quot;fgrid2&quot;>
+                <div class=&quot;fg&quot;><label>Platform Name</label><input type=&quot;text&quot; id=&quot;st-platform-name&quot; value=&quot;Hotels Continental&quot;/></div>
+                <div class=&quot;fg&quot;><label>Website URL</label><input type=&quot;text&quot; id=&quot;st-website&quot; value=&quot;https://www.hotelscontinental.com&quot;/></div>
+                <div class=&quot;fg&quot;><label>Platform Tagline</label><input type=&quot;text&quot; id=&quot;st-tagline&quot; value=&quot;Discover. Book. Relax.&quot;/></div>
+                <div class=&quot;fg&quot;><label>Admin Email</label><input type=&quot;email&quot; id=&quot;st-admin-email&quot; value=&quot;admin@hotelscontinental.com&quot;/></div>
+                <div class=&quot;fg&quot;><label>Support Email</label><input type=&quot;email&quot; id=&quot;st-support-email&quot; value=&quot;support@hotelscontinental.com&quot;/></div>
+                <div class=&quot;fg&quot;><label>Admin Phone</label><input type=&quot;text&quot; id=&quot;st-admin-phone&quot; value=&quot;+234 800 765 4321&quot;/></div>
+                <div class=&quot;fg&quot;><label>Support Phone</label><input type=&quot;text&quot; id=&quot;st-support-phone&quot; value=&quot;+234 800 123 4567&quot;/></div>
+                <div class=&quot;fg&quot;><label>Default Timezone</label><select id=&quot;st-timezone&quot;><option>(UTC+01:00) West Africa Time (WAT)</option><option>(UTC+00:00) GMT</option></select></div>
+                <div class=&quot;fg&quot;><label>Date Format</label><select id=&quot;st-date-format&quot;><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option><option>YYYY-MM-DD</option></select></div>
+                <div class=&quot;fg&quot;><label>Time Format</label><select id=&quot;st-time-format&quot;><option>12 Hours</option><option>24 Hours</option></select></div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div id=&quot;st-company&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
-        <div class=&quot;card&quot;>
-          <div class=&quot;card-title&quot;>Company Profile <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('company')&quot;>Save Changes</button></div>
-          <div class=&quot;fgrid2&quot;>
-            <div class=&quot;fg&quot;><label>Company Name</label><input type=&quot;text&quot; id=&quot;st-company-name&quot; value=&quot;Hotels Continental Ltd&quot;/></div>
-            <div class=&quot;fg&quot;><label>Company Email</label><input type=&quot;email&quot; id=&quot;st-company-email&quot; value=&quot;info@hotelscontinental.com&quot;/></div>
-            <div class=&quot;fg&quot;><label>Company Phone</label><input type=&quot;text&quot; id=&quot;st-company-phone&quot; value=&quot;+234 800 123 4567&quot;/></div>
-            <div class=&quot;fg&quot;><label>Company Address</label><input type=&quot;text&quot; id=&quot;st-company-address&quot; value=&quot;123 Victoria Island, Lagos, Nigeria&quot;/></div>
+          <div id=&quot;st-company&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Company Profile <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('company')&quot;>Save Changes</button></div>
+              <div class=&quot;fgrid2&quot; style=&quot;align-items:start&quot;>
+                <div class=&quot;logo-upload&quot;>
+                  <div class=&quot;logo-preview&quot; id=&quot;st-logo-preview&quot;>&amp;#127970;</div>
+                  <input type=&quot;file&quot; accept=&quot;image/*&quot; id=&quot;st-logo-file&quot; style=&quot;display:none&quot; onchange=&quot;uploadCompanyLogo(this)&quot;/>
+                  <button class=&quot;btn btn-o btn-sm&quot; type=&quot;button&quot; onclick=&quot;document.getElementById('st-logo-file').click()&quot;>Change Logo</button>
+                  <div style=&quot;font-size:.64rem;color:var(--muted);text-align:center&quot;>PNG, JPG or SVG. Max size 2MB</div>
+                </div>
+                <div>
+                  <div class=&quot;fg&quot;><label>Company Name</label><input type=&quot;text&quot; id=&quot;st-company-name&quot; value=&quot;Hotels Continental Ltd&quot;/></div>
+                  <div class=&quot;fg&quot;><label>Company Email</label><input type=&quot;email&quot; id=&quot;st-company-email&quot; value=&quot;info@hotelscontinental.com&quot;/></div>
+                </div>
+              </div>
+              <div class=&quot;fgrid2&quot;>
+                <div class=&quot;fg&quot;><label>Company Phone</label><input type=&quot;text&quot; id=&quot;st-company-phone&quot; value=&quot;+234 800 123 4567&quot;/></div>
+                <div class=&quot;fg&quot;><label>Company Address</label><input type=&quot;text&quot; id=&quot;st-company-address&quot; value=&quot;123 Victoria Island, Lagos, Nigeria&quot;/></div>
+              </div>
+              <div class=&quot;fg&quot;><label>About Company</label><textarea id=&quot;st-company-about&quot; rows=&quot;3&quot;>Hotels Continental connects travelers to the best hotels and accommodations across Lagos and Nigeria.</textarea></div>
+            </div>
           </div>
-          <div class=&quot;fg&quot;><label>About Company</label><textarea id=&quot;st-company-about&quot; rows=&quot;3&quot;>Hotels Continental connects travelers to the best hotels and accommodations across Lagos and Nigeria.</textarea></div>
-          <div class=&quot;fg&quot;><label>Default Language</label><select id=&quot;st-language&quot;><option>English</option><option>French</option></select></div>
-          <div class=&quot;fg&quot;><label>Currency</label><select id=&quot;st-currency&quot;><option>NGN - Nigerian Naira (&amp;#8358;)</option><option>USD - US Dollar ($)</option></select></div>
-        </div>
-      </div>
-      <div id=&quot;st-payment&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
-        <div class=&quot;card&quot;>
-          <div class=&quot;card-title&quot;>Payment Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('payment')&quot;>Save Changes</button></div>
-          <div id=&quot;st-payment-list&quot;></div>
-        </div>
-      </div>
-      <div id=&quot;st-security&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
-        <div class=&quot;card&quot;>
-          <div class=&quot;card-title&quot;>Security Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('security')&quot;>Save Changes</button></div>
-          <div id=&quot;st-security-list&quot;></div>
-        </div>
-      </div>
-      <div id=&quot;st-backup&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
-        <div class=&quot;card&quot;>
-          <div class=&quot;card-title&quot;>Backup &amp;amp; Data</div>
-          <div class=&quot;ad-item&quot; style=&quot;border-bottom:1px solid var(--border)&quot; onclick=&quot;T('Backup started','Your database backup is being generated.')&quot;><span class=&quot;ic&quot;>&amp;#128190;</span>Backup Database Now<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-          <div class=&quot;ad-item&quot; style=&quot;border-bottom:1px solid var(--border)&quot; onclick=&quot;exportBookingsCSV()&quot;><span class=&quot;ic&quot;>&amp;#128193;</span>Export All Data (CSV)<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-          <div class=&quot;ad-item&quot; onclick=&quot;T('Logs','System logs viewer coming soon.')&quot;><span class=&quot;ic&quot;>&amp;#128220;</span>View System Logs<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+          <div id=&quot;st-localization&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Localization <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('localization')&quot;>Save Changes</button></div>
+              <div class=&quot;fg&quot;><label>Default Language</label><select id=&quot;st-language&quot;><option>English</option><option>French</option></select></div>
+              <div class=&quot;fg&quot;><label>Currency</label><select id=&quot;st-currency&quot;><option>NGN - Nigerian Naira (&amp;#8358;)</option><option>USD - US Dollar ($)</option></select></div>
+              <div class=&quot;fg&quot;><label>Number Format</label><select id=&quot;st-number-format&quot;><option>1,234,567.89</option><option>1.234.567,89</option><option>1 234 567.89</option></select></div>
+              <div class=&quot;fg&quot;><label>Timezone</label><select id=&quot;st-loc-timezone&quot;><option>(UTC+01:00) West Africa Time (WAT)</option><option>(UTC+00:00) GMT</option></select></div>
+            </div>
+          </div>
+          <div id=&quot;st-payment&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Payment Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('payment')&quot;>Save Changes</button></div>
+              <div class=&quot;ph-sub&quot; style=&quot;margin:-.4rem 0 .5rem&quot;>Manage payment methods and processing</div>
+              <div id=&quot;st-payment-list&quot;></div>
+            </div>
+          </div>
+          <div id=&quot;st-email&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Email Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('email')&quot;>Save Changes</button></div>
+              <div class=&quot;toggle-row&quot;><div><div class=&quot;toggle-lbl&quot;>Enable Email Notifications</div><div class=&quot;toggle-sub&quot;>Send transactional emails to guests and hotel partners</div></div><label class=&quot;tgl&quot;><input type=&quot;checkbox&quot; id=&quot;st-email-enabled&quot; checked/><span class=&quot;tgl-slider&quot;></span></label></div>
+              <div class=&quot;fgrid2&quot; style=&quot;margin-top:.9rem&quot;>
+                <div class=&quot;fg&quot;><label>SMTP Host</label><input type=&quot;text&quot; id=&quot;st-smtp-host&quot; placeholder=&quot;e.g. smtp.gmail.com&quot;/></div>
+                <div class=&quot;fg&quot;><label>SMTP Port</label><input type=&quot;text&quot; id=&quot;st-smtp-port&quot; placeholder=&quot;e.g. 587&quot;/></div>
+                <div class=&quot;fg&quot;><label>SMTP Username</label><input type=&quot;text&quot; id=&quot;st-smtp-user&quot; placeholder=&quot;e.g. noreply@hotelscontinental.com&quot;/></div>
+                <div class=&quot;fg&quot;><label>SMTP Password</label><input type=&quot;password&quot; id=&quot;st-smtp-pass&quot; placeholder=&quot;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&quot;/></div>
+                <div class=&quot;fg&quot;><label>From Email</label><input type=&quot;email&quot; id=&quot;st-from-email&quot; value=&quot;noreply@hotelscontinental.com&quot;/></div>
+                <div class=&quot;fg&quot;><label>From Name</label><input type=&quot;text&quot; id=&quot;st-from-name&quot; value=&quot;Hotels Continental&quot;/></div>
+              </div>
+            </div>
+          </div>
+          <div id=&quot;st-sms&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>SMS Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('sms')&quot;>Save Changes</button></div>
+              <div class=&quot;toggle-row&quot;><div><div class=&quot;toggle-lbl&quot;>Enable SMS Notifications</div><div class=&quot;toggle-sub&quot;>Send SMS alerts for bookings and OTPs</div></div><label class=&quot;tgl&quot;><input type=&quot;checkbox&quot; id=&quot;st-sms-enabled&quot;/><span class=&quot;tgl-slider&quot;></span></label></div>
+              <div class=&quot;fgrid2&quot; style=&quot;margin-top:.9rem&quot;>
+                <div class=&quot;fg&quot;><label>SMS Gateway</label><select id=&quot;st-sms-gateway&quot;><option>Termii</option><option>Twilio</option><option>Africa's Talking</option></select></div>
+                <div class=&quot;fg&quot;><label>Sender ID</label><input type=&quot;text&quot; id=&quot;st-sms-sender&quot; placeholder=&quot;e.g. HotelsCont&quot;/></div>
+              </div>
+              <div class=&quot;fg&quot;><label>API Key</label><input type=&quot;password&quot; id=&quot;st-sms-key&quot; placeholder=&quot;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&quot;/></div>
+            </div>
+          </div>
+          <div id=&quot;st-notifications&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Notification Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('notifications')&quot;>Save Changes</button></div>
+              <div id=&quot;st-notifications-list&quot;></div>
+            </div>
+          </div>
+          <div id=&quot;st-booking&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Booking Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('booking')&quot;>Save Changes</button></div>
+              <div class=&quot;fgrid2&quot;>
+                <div class=&quot;fg&quot;><label>Minimum Booking Notice (hours)</label><input type=&quot;number&quot; id=&quot;st-min-notice&quot; value=&quot;2&quot; min=&quot;0&quot;/></div>
+                <div class=&quot;fg&quot;><label>Maximum Advance Booking (days)</label><input type=&quot;number&quot; id=&quot;st-max-advance&quot; value=&quot;365&quot; min=&quot;1&quot;/></div>
+                <div class=&quot;fg&quot;><label>Cancellation Window (hours)</label><input type=&quot;number&quot; id=&quot;st-cancel-window&quot; value=&quot;24&quot; min=&quot;0&quot;/></div>
+              </div>
+              <div class=&quot;toggle-row&quot;><div><div class=&quot;toggle-lbl&quot;>Auto-Confirm Bookings</div><div class=&quot;toggle-sub&quot;>Skip manual review for new bookings</div></div><label class=&quot;tgl&quot;><input type=&quot;checkbox&quot; id=&quot;st-auto-confirm&quot;/><span class=&quot;tgl-slider&quot;></span></label></div>
+              <div class=&quot;toggle-row&quot;><div><div class=&quot;toggle-lbl&quot;>Allow Same-Day Booking</div><div class=&quot;toggle-sub&quot;>Guests can book for check-in today</div></div><label class=&quot;tgl&quot;><input type=&quot;checkbox&quot; id=&quot;st-same-day&quot; checked/><span class=&quot;tgl-slider&quot;></span></label></div>
+            </div>
+          </div>
+          <div id=&quot;st-commission&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Commission Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('commission')&quot;>Save Changes</button></div>
+              <div class=&quot;fgrid2&quot;>
+                <div class=&quot;fg&quot;><label>Platform Commission (%)</label><input type=&quot;number&quot; id=&quot;st-commission-pct&quot; value=&quot;10&quot; min=&quot;0&quot; max=&quot;100&quot;/></div>
+                <div class=&quot;fg&quot;><label>Payout Schedule</label><select id=&quot;st-payout-schedule&quot;><option>Weekly</option><option>Biweekly</option><option>Monthly</option></select></div>
+              </div>
+              <div class=&quot;fg&quot;><label>Minimum Payout Amount (&amp;#8358;)</label><input type=&quot;number&quot; id=&quot;st-min-payout&quot; value=&quot;10000&quot; min=&quot;0&quot;/></div>
+            </div>
+          </div>
+          <div id=&quot;st-security&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Security Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('security')&quot;>Save Changes</button></div>
+              <div id=&quot;st-security-list&quot;></div>
+            </div>
+          </div>
+          <div id=&quot;st-api&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>API Settings <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('api')&quot;>Save Changes</button></div>
+              <div class=&quot;fgrid2&quot;>
+                <div class=&quot;fg&quot;><label>Paystack Public Key</label><input type=&quot;text&quot; id=&quot;st-paystack-pub&quot; placeholder=&quot;pk_live_...&quot;/></div>
+                <div class=&quot;fg&quot;><label>Paystack Secret Key</label><input type=&quot;password&quot; id=&quot;st-paystack-secret&quot; placeholder=&quot;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&quot;/></div>
+                <div class=&quot;fg&quot;><label>Flutterwave Public Key</label><input type=&quot;text&quot; id=&quot;st-flw-pub&quot; placeholder=&quot;FLWPUBK_...&quot;/></div>
+                <div class=&quot;fg&quot;><label>Google Maps API Key</label><input type=&quot;password&quot; id=&quot;st-maps-key&quot; placeholder=&quot;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&quot;/></div>
+              </div>
+            </div>
+          </div>
+          <div id=&quot;st-backup&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Backup &amp;amp; Data</div>
+              <div class=&quot;bk-row&quot;><div class=&quot;bk-ico&quot;>&amp;#128190;</div><div style=&quot;flex:1&quot;><div class=&quot;toggle-lbl&quot;>Database Backup</div><div class=&quot;toggle-sub&quot;>Daily &amp;middot; Last backup: today, 02:30 AM</div></div><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;T('Backup started','Your database backup is being generated.')&quot;>Backup Now</button></div>
+              <div class=&quot;bk-row&quot;><div class=&quot;bk-ico&quot;>&amp;#128193;</div><div style=&quot;flex:1&quot;><div class=&quot;toggle-lbl&quot;>Files Backup</div><div class=&quot;toggle-sub&quot;>Weekly &amp;middot; Last backup: this week</div></div><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;exportBookingsCSV()&quot;>Backup Now</button></div>
+              <div class=&quot;bk-row&quot;><div class=&quot;bk-ico&quot;>&amp;#128203;</div><div style=&quot;flex:1&quot;><div class=&quot;toggle-lbl&quot;>System Logs</div><div class=&quot;toggle-sub&quot;>Enabled &amp;middot; Recent activity logs</div></div><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;setSettingsSection('logs')&quot;>View Logs</button></div>
+              <div class=&quot;bk-row&quot; style=&quot;border-bottom:none&quot;><div class=&quot;bk-ico&quot;>&amp;#128465;</div><div style=&quot;flex:1&quot;><div class=&quot;toggle-lbl&quot;>Clear Cache</div><div class=&quot;toggle-sub&quot;>Improve performance</div></div><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;T('Cache Cleared','Local cache has been cleared.')&quot;>Clear Now</button></div>
+              <div style=&quot;background:var(--blue-dim);border:1px solid var(--blue-bd);border-radius:10px;padding:.8rem 1rem;margin-top:1rem;font-size:.76rem;color:var(--text)&quot;>&amp;#8505;&amp;#65039; Changes you make will be saved automatically. Always backup your data before making major changes.</div>
+            </div>
+          </div>
+          <div id=&quot;st-logs&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>System Logs</div>
+              <div class=&quot;empty&quot;>Activity and audit logs will appear here as actions are performed on the platform.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1609,7 +1782,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     <button class=&quot;bnav-item&quot; data-page=&quot;hotels&quot; onclick=&quot;goPage('hotels')&quot;><span class=&quot;ic&quot;>&amp;#127974;</span><span class=&quot;lbl&quot;>Hotels</span></button>
     <button class=&quot;bnav-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage('hotelbookings')&quot;><span class=&quot;ic&quot;>&amp;#128273;</span><span class=&quot;lbl&quot;>Bookings</span></button>
     <button class=&quot;bnav-item&quot; data-page=&quot;users&quot; onclick=&quot;goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span><span class=&quot;lbl&quot;>Users</span></button>
-    <button class=&quot;bnav-item&quot; onclick=&quot;toggleSidebar(true)&quot;><span class=&quot;ic&quot;>&amp;#8942;</span><span class=&quot;lbl&quot;>More</span></button>
+    <button class=&quot;bnav-item&quot; onclick=&quot;toggleSidebar(true)&quot;><span class=&quot;ic&quot;>&amp;#9776;</span><span class=&quot;lbl&quot;>Menu</span></button>
   </div>
 </div>
 
@@ -1622,6 +1795,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     <div class=&quot;fg&quot;><label>Owner Name</label><input type=&quot;text&quot; id=&quot;h-owner&quot;/></div>
     <div class=&quot;fg&quot;><label>Owner Email</label><input type=&quot;email&quot; id=&quot;h-owner-email&quot;/></div>
     <div class=&quot;fg&quot;><label>Status</label><select id=&quot;h-status&quot;><option>Active</option><option>Pending</option><option>Blocked</option></select></div>
+    <div class=&quot;fg&quot;><label>Hotel Gallery (optional)</label><input type=&quot;file&quot; accept=&quot;image/*&quot; multiple id=&quot;h-gallery&quot; onchange=&quot;hPreviewGallery(this)&quot;/><div style=&quot;font-size:.68rem;color:var(--muted);margin-top:.3rem&quot;>Upload one or more photos. These show on the hotel's Marketplace listing instead of a placeholder icon.</div><div class=&quot;gal-thumbs&quot; id=&quot;h-gallery-preview&quot;></div></div>
     <button class=&quot;fsub&quot; onclick=&quot;saveHotel()&quot;>Save Hotel</button>
   </div>
 </div>
@@ -2073,7 +2247,7 @@ var _allPromotions = [];
 var _settings = {};
 var _hotelById = {};
 var _hvTab = &quot;&quot;;
-var _hvPage = 1, _hvPerPage = 5;
+var _hvPage = 1, _hvPerPage = 10;
 var _hvCurrentId = null;
 var _poTab = &quot;&quot;;
 var _prTab = &quot;&quot;;
@@ -2631,9 +2805,41 @@ function approveHotelBooking(id) {
       b.status = &quot;Approved&quot;; b.roomNumber = roomNum || &quot;&quot;; b.accessCode = code;
       renderHotelBookingsAdmin();
       T(&quot;Booking Approved&quot;, &quot;Room &quot;+(roomNum||&quot;&quot;)+&quot; assigned and access code sent.&quot;);
+      maybeGrantReferralReward(b.email);
     });
   }).catch(function(){ T(&quot;Error&quot;, &quot;Could not approve this booking.&quot;); });
 }
+
+// ── REFERRAL REWARDS (admin-side mirror) ──
+// Same logic as the customer-facing helper: credits both the referrer and the
+// referred guest's wallet the first time that guest's stay is confirmed paid,
+// guarded by the referralRewarded flag so it only ever pays out once.
+var REFERRAL_REFERRER_BONUS = 1000;
+var REFERRAL_NEW_USER_BONUS = 500;
+function maybeGrantReferralReward(email) {
+  email = (email || &quot;&quot;).trim().toLowerCase();
+  if (!email) return;
+  db.collection(&quot;users&quot;).where(&quot;email&quot;, &quot;==&quot;, email).limit(1).get().then(function(usnap) {
+    if (usnap.empty) return;
+    var udoc = usnap.docs[0];
+    var u = udoc.data();
+    if (u.referralRewarded || !u.referredBy) return;
+    return db.collection(&quot;users&quot;).where(&quot;referralCode&quot;, &quot;==&quot;, u.referredBy).limit(1).get().then(function(rsnap) {
+      if (rsnap.empty) return;
+      var refDoc = rsnap.docs[0];
+      return Promise.all([
+        db.collection(&quot;users&quot;).doc(udoc.id).update({
+          referralRewarded: true,
+          walletBalance: firebase.firestore.FieldValue.increment(REFERRAL_NEW_USER_BONUS)
+        }),
+        db.collection(&quot;users&quot;).doc(refDoc.id).update({
+          walletBalance: firebase.firestore.FieldValue.increment(REFERRAL_REFERRER_BONUS)
+        })
+      ]);
+    });
+  }).catch(function(e) { console.error(&quot;referral reward error&quot;, e); });
+}
+
 function rejectHotelBooking(id) {
   var b = _allHotelBookings.find(function(x){ return x.id===id; }); if (!b) return;
   db.collection(&quot;hotelBookings&quot;).doc(id).update({ status: &quot;Rejected&quot;, paymentStatus: &quot;failed&quot; }).then(function() {
@@ -2688,6 +2894,29 @@ function cycleHotelStatus(id) {
   });
 }
 function openHotelModal() { openModalEl(&quot;hotel-modal&quot;); }
+var _hGalleryFiles = [];
+function hPreviewGallery(input) {
+  var files = input.files ? Array.from(input.files) : [];
+  _hGalleryFiles = _hGalleryFiles.concat(files);
+  var box = document.getElementById(&quot;h-gallery-preview&quot;);
+  box.innerHTML = _hGalleryFiles.map(function(f, i){
+    return '<div class=&quot;gal-thumb&quot; id=&quot;h-gal-thumb-'+i+'&quot;><span style=&quot;display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--bg);font-size:.6rem;color:var(--muted);text-align:center;padding:2px&quot;>Loading&amp;hellip;</span><button class=&quot;gal-rm&quot; onclick=&quot;hRemoveGalleryFile('+i+')&quot;>&amp;#10005;</button></div>';
+  }).join(&quot;&quot;);
+  _hGalleryFiles.forEach(function(f, i){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var el = document.getElementById(&quot;h-gal-thumb-&quot;+i);
+      if (el) el.innerHTML = '<img src=&quot;'+e.target.result+'&quot;/><button class=&quot;gal-rm&quot; onclick=&quot;hRemoveGalleryFile('+i+')&quot;>&amp;#10005;</button>';
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value = &quot;&quot;;
+}
+function hRemoveGalleryFile(i) {
+  _hGalleryFiles.splice(i, 1);
+  document.getElementById(&quot;h-gallery-preview&quot;).innerHTML = &quot;&quot;;
+  hPreviewGallery({ files: [] });
+}
 function saveHotel() {
   var name = document.getElementById(&quot;h-name&quot;).value.trim();
   var location = document.getElementById(&quot;h-location&quot;).value.trim();
@@ -2696,14 +2925,33 @@ function saveHotel() {
   var status = document.getElementById(&quot;h-status&quot;).value;
   if (!name || !location) { T(&quot;Missing info&quot;, &quot;Hotel name and location are required.&quot;); return; }
   var country = /ghana/i.test(location) ? &quot;Ghana&quot; : /kenya/i.test(location) ? &quot;Kenya&quot; : &quot;Nigeria&quot;;
-  db.collection(&quot;hotels&quot;).add({ name:name, location:location, ownerName:owner, ownerEmail:ownerEmail, status:status, verificationStatus:&quot;Pending Review&quot;, country:country, docsSubmitted:[&quot;Business Registration&quot;,&quot;Government ID&quot;], regNumber:&quot;RC&quot;+Math.floor(1000000+Math.random()*9000000), createdAt:firebase.firestore.FieldValue.serverTimestamp() }).then(function(ref){
-    _allHotels.push({ id:ref.id, name:name, location:location, ownerName:owner, ownerEmail:ownerEmail, status:status, verificationStatus:&quot;Pending Review&quot;, country:country, docsSubmitted:[&quot;Business Registration&quot;,&quot;Government ID&quot;], regNumber:&quot;RC&quot;+Math.floor(1000000+Math.random()*9000000) });
-    _hotelById[ref.id] = _allHotels[_allHotels.length-1];
-    closeModal(&quot;hotel-modal&quot;);
-    [&quot;h-name&quot;,&quot;h-location&quot;,&quot;h-owner&quot;,&quot;h-owner-email&quot;].forEach(function(id){ document.getElementById(id).value=&quot;&quot;; });
-    renderHotels(); renderHotelsStats(); renderHV();
-    T(&quot;Hotel Added&quot;, name+&quot; has been added to the platform and is Pending Review.&quot;);
-  }).catch(function(e){ T(&quot;Error&quot;, &quot;Could not add hotel.&quot;); console.error(e); });
+  function finishSave(gallery) {
+    var data = { name:name, location:location, ownerName:owner, ownerEmail:ownerEmail, status:status, verificationStatus:&quot;Pending Review&quot;, country:country, docsSubmitted:[&quot;Business Registration&quot;,&quot;Government ID&quot;], regNumber:&quot;RC&quot;+Math.floor(1000000+Math.random()*9000000), createdAt:firebase.firestore.FieldValue.serverTimestamp() };
+    if (gallery &amp;&amp; gallery.length) { data.gallery = gallery; data.coverImage = gallery[0]; }
+    db.collection(&quot;hotels&quot;).add(data).then(function(ref){
+      var rec = Object.assign({ id:ref.id }, data); delete rec.createdAt;
+      _allHotels.push(rec);
+      _hotelById[ref.id] = rec;
+      closeModal(&quot;hotel-modal&quot;);
+      [&quot;h-name&quot;,&quot;h-location&quot;,&quot;h-owner&quot;,&quot;h-owner-email&quot;].forEach(function(id){ document.getElementById(id).value=&quot;&quot;; });
+      _hGalleryFiles = []; document.getElementById(&quot;h-gallery-preview&quot;).innerHTML = &quot;&quot;;
+      renderHotels(); renderHotelsStats(); renderHV();
+      T(&quot;Hotel Added&quot;, name+&quot; has been added to the platform and is Pending Review.&quot;);
+    }).catch(function(e){ T(&quot;Error&quot;, &quot;Could not add hotel.&quot;); console.error(e); });
+  }
+  if (_hGalleryFiles.length) {
+    var gallery = []; var remaining = _hGalleryFiles.length;
+    _hGalleryFiles.forEach(function(f){
+      compressImageToLimit(f, function(dataUrl){
+        gallery.push(dataUrl); remaining--;
+        if (remaining === 0) finishSave(gallery);
+      }, { maxBytes: 500000, maxDim: 1200, minDim: 300, onError: function(){
+        remaining--; if (remaining === 0) finishSave(gallery);
+      }});
+    });
+  } else {
+    finishSave([]);
+  }
 }
 
 /* ============ BOOKINGS ============ */
@@ -2990,6 +3238,9 @@ function deleteSubAdmin(id) {
 
 /* ============ HOTEL VERIFICATION ============ */
 var HV_PILL = { &quot;Pending Review&quot;:&quot;pill-amber&quot;, &quot;Under Review&quot;:&quot;pill-purple&quot;, &quot;Verified&quot;:&quot;pill-green&quot;, &quot;Rejected&quot;:&quot;pill-red&quot; };
+var COUNTRY_FLAGS = { &quot;Nigeria&quot;:&quot;&amp;#127475;&amp;#127468;&quot;, &quot;Kenya&quot;:&quot;&amp;#127472;&amp;#127466;&quot;, &quot;Ghana&quot;:&quot;&amp;#127468;&amp;#127469;&quot;, &quot;South Africa&quot;:&quot;&amp;#127487;&amp;#127462;&quot;, &quot;Egypt&quot;:&quot;&amp;#127466;&amp;#127468;&quot;, &quot;Rwanda&quot;:&quot;&amp;#127479;&amp;#127484;&quot;, &quot;Tanzania&quot;:&quot;&amp;#127481;&amp;#127487;&quot;, &quot;Uganda&quot;:&quot;&amp;#127482;&amp;#127468;&quot;, &quot;Ethiopia&quot;:&quot;&amp;#127466;&amp;#127481;&quot;, &quot;Morocco&quot;:&quot;&amp;#127474;&amp;#127462;&quot;, &quot;Senegal&quot;:&quot;&amp;#127480;&amp;#127475;&quot;, &quot;Ivory Coast&quot;:&quot;&amp;#127464;&amp;#127470;&quot;, &quot;Cameroon&quot;:&quot;&amp;#127464;&amp;#127474;&quot;, &quot;Zambia&quot;:&quot;&amp;#127487;&amp;#127474;&quot;, &quot;Zimbabwe&quot;:&quot;&amp;#127487;&amp;#127484;&quot; };
+function countryFlag(c) { return COUNTRY_FLAGS[c] || &quot;&amp;#127760;&quot;; }
+var _hvSort = &quot;desc&quot;;
 function hvCounts() {
   var c = { total:_allHotels.length, pending:0, underReview:0, verified:0, rejected:0 };
   _allHotels.forEach(function(h){
@@ -3006,9 +3257,9 @@ function renderHV() {
   document.getElementById(&quot;hv-stats&quot;).innerHTML =
     statCard(&quot;&amp;#128190;&quot;,&quot;var(--blue)&quot;,&quot;var(--blue-dim)&quot;,&quot;Total Submissions&quot;, c.total) +
     statCard(&quot;&amp;#9203;&quot;,&quot;var(--amber)&quot;,&quot;var(--amber-bg)&quot;,&quot;Pending Review&quot;, c.pending) +
-    statCard(&quot;&amp;#128269;&quot;,&quot;var(--purple)&quot;,&quot;var(--purple-bg)&quot;,&quot;Under Review&quot;, c.underReview) +
     statCard(&quot;&amp;#9989;&quot;,&quot;var(--green)&quot;,&quot;var(--green-bg)&quot;,&quot;Verified Hotels&quot;, c.verified) +
-    statCard(&quot;&amp;#10060;&quot;,&quot;var(--red)&quot;,&quot;var(--red-bg)&quot;,&quot;Rejected Hotels&quot;, c.rejected);
+    statCard(&quot;&amp;#10060;&quot;,&quot;var(--red)&quot;,&quot;var(--red-bg)&quot;,&quot;Rejected Hotels&quot;, c.rejected) +
+    statCard(&quot;&amp;#128269;&quot;,&quot;var(--purple)&quot;,&quot;var(--purple-bg)&quot;,&quot;Under Review&quot;, c.underReview);
 
   var tabs = [
     {key:&quot;&quot;, label:&quot;All Submissions (&quot;+c.total+&quot;)&quot;},
@@ -3026,6 +3277,13 @@ function renderHV() {
   var curCountry = countryFilter.value;
   countryFilter.innerHTML = '<option value=&quot;&quot;>Country</option>' + countries.map(function(c2){ return '<option'+(c2===curCountry?' selected':'')+'>'+c2+'</option>'; }).join(&quot;&quot;);
 
+  var statusFilter = document.getElementById(&quot;hv-status-filter&quot;);
+  if (statusFilter) statusFilter.value = _hvTab;
+  var sortSelect = document.getElementById(&quot;hv-date-sort&quot;);
+  if (sortSelect) _hvSort = sortSelect.value;
+  var perPageSelect = document.getElementById(&quot;hv-per-page&quot;);
+  if (perPageSelect) _hvPerPage = parseInt(perPageSelect.value, 10) || 10;
+
   var q = (document.getElementById(&quot;hv-search&quot;).value||&quot;&quot;).toLowerCase();
   var list = _allHotels.filter(function(h){
     var matchTab = !_hvTab || h.verificationStatus === _hvTab;
@@ -3033,31 +3291,53 @@ function renderHV() {
     var matchC = !countryFilter.value || h.country === countryFilter.value;
     return matchTab &amp;&amp; matchQ &amp;&amp; matchC;
   });
+  list.sort(function(a,b){
+    var av = a.createdAt ? a.createdAt.toMillis() : 0, bv = b.createdAt ? b.createdAt.toMillis() : 0;
+    return _hvSort === &quot;asc&quot; ? av-bv : bv-av;
+  });
   var totalPages = Math.max(1, Math.ceil(list.length / _hvPerPage));
   if (_hvPage > totalPages) _hvPage = totalPages;
+  var startIdx = list.length ? (_hvPage-1)*_hvPerPage+1 : 0;
+  var endIdx = Math.min(list.length, _hvPage*_hvPerPage);
   var slice = list.slice((_hvPage-1)*_hvPerPage, _hvPage*_hvPerPage);
   var html = &quot;&quot;;
   slice.forEach(function(h){
-    html += '<div class=&quot;hv-card&quot; onclick=&quot;openHVDetail(\''+h.id+'\')&quot;>'+
-      '<div class=&quot;hv-card-top&quot;><div class=&quot;hv-thumb&quot;>&amp;#127974;</div><div style=&quot;flex:1&quot;>'+
+    var docCount = (h.docsSubmitted||[]).length;
+    html += '<div class=&quot;list-row&quot; onclick=&quot;openHVDetail(\''+h.id+'\')&quot; style=&quot;cursor:pointer&quot;>'+
+      (h.coverImage ? '<img src=&quot;'+h.coverImage+'&quot; style=&quot;width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0&quot;/>' : '<div class=&quot;hv-thumb&quot;>&amp;#127974;</div>')+
+      '<div style=&quot;flex:1;min-width:0&quot;>'+
       '<div class=&quot;lr-name&quot;>'+esc(h.name)+'</div>'+
-      '<div class=&quot;lr-sub&quot;>'+esc(h.ownerName||&quot;-&quot;)+' &amp;middot; '+esc(h.ownerEmail||&quot;-&quot;)+'</div>'+
-      '<div class=&quot;lr-sub&quot;>'+esc(h.location||&quot;-&quot;)+' &amp;middot; '+esc(h.country||&quot;Nigeria&quot;)+'</div>'+
-      '</div><span class=&quot;pill '+(HV_PILL[h.verificationStatus]||&quot;pill-gray&quot;)+'&quot;>'+esc(h.verificationStatus)+'</span></div>'+
+      '<div class=&quot;lr-sub&quot;>'+esc(h.ownerName||&quot;-&quot;)+'</div>'+
+      '<div class=&quot;lr-sub&quot;>'+esc(h.ownerEmail||&quot;-&quot;)+'</div>'+
+      '</div>'+
+      '<div style=&quot;text-align:right;min-width:110px&quot;><div style=&quot;font-size:1rem&quot;>'+countryFlag(h.country)+'</div><div class=&quot;lr-sub&quot;>'+esc(h.location||&quot;-&quot;)+'</div></div>'+
+      '<span class=&quot;pill '+(HV_PILL[h.verificationStatus]||&quot;pill-gray&quot;)+'&quot;>'+esc(h.verificationStatus)+'</span>'+
+      '<span style=&quot;font-size:.7rem;color:var(--muted2);white-space:nowrap;display:flex;align-items:center;gap:.2rem&quot;>&amp;#128196; '+docCount+'</span>'+
+      '<span style=&quot;color:var(--muted2);font-size:1.1rem&quot;>&amp;#8250;</span>'+
       '</div>';
   });
   document.getElementById(&quot;hv-list&quot;).innerHTML = slice.length ? html : '<div class=&quot;empty&quot;>No hotel submissions found.</div>';
   var pager = &quot;&quot;;
   for (var i=1;i<=totalPages;i++) pager += '<button class=&quot;pg-btn'+(i===_hvPage?&quot; on&quot;:&quot;&quot;)+'&quot; onclick=&quot;_hvPage='+i+';renderHV()&quot;>'+i+'</button>';
-  document.getElementById(&quot;hv-pager&quot;).innerHTML = totalPages>1 ? pager : &quot;&quot;;
+  document.getElementById(&quot;hv-pager&quot;).innerHTML = pager;
+  var countEl = document.getElementById(&quot;hv-pager-count&quot;);
+  if (countEl) countEl.textContent = list.length ? (&quot;Showing &quot;+startIdx+&quot; to &quot;+endIdx+&quot; of &quot;+list.length+&quot; submissions&quot;) : &quot;No submissions&quot;;
+}
+function resetHVFilters() {
+  document.getElementById(&quot;hv-search&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;hv-country-filter&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;hv-date-sort&quot;).value = &quot;desc&quot;; _hvSort = &quot;desc&quot;;
+  _hvTab = &quot;&quot;; _hvPage = 1;
+  renderHV();
 }
 function setHVTab(key) { _hvTab = key; _hvPage = 1; renderHV(); }
 function openHVDetail(id) {
   _hvCurrentId = id;
   var h = _hotelById[id];
   if (!h) return;
-  var docs = (h.docsSubmitted||[]).map(function(d){
-    return '<div class=&quot;doc-row&quot;><span class=&quot;ic&quot;>&amp;#128196;</span>'+esc(d)+'<span style=&quot;margin-left:auto;color:var(--muted2);font-size:.72rem&quot;>Uploaded</span></div>';
+  var docs = (h.docsSubmitted||[]).map(function(d, i){
+    var url = i===0 ? h.bizDocURL : h.govIdURL;
+    return '<div class=&quot;doc-row&quot;><span class=&quot;ic&quot;>&amp;#128196;</span>'+esc(d)+'<span style=&quot;margin-left:auto&quot;>'+(url ? '<a href=&quot;#&quot; onclick=&quot;event.preventDefault();viewHVDocument(\''+id+'\','+i+')&quot; style=&quot;color:var(--blue);font-size:.72rem;font-weight:600&quot;>View</a>' : '<span style=&quot;color:var(--muted2);font-size:.72rem&quot;>Uploaded</span>')+'</span></div>';
   }).join(&quot;&quot;) || '<div class=&quot;empty&quot;>No documents submitted.</div>';
   var actions = &quot;&quot;;
   if (h.verificationStatus === &quot;Pending Review&quot; || h.verificationStatus === &quot;Under Review&quot;) {
@@ -3069,18 +3349,81 @@ function openHVDetail(id) {
   } else {
     actions = '<div class=&quot;hv-actions&quot;><button class=&quot;btn btn-o&quot; onclick=&quot;setHVStatus(\''+id+'\',\'Under Review\')&quot;>Move to Under Review</button></div>';
   }
-  document.getElementById(&quot;hv-detail-wrap&quot;).innerHTML =
-    '<div class=&quot;hv-card-top&quot; style=&quot;margin-bottom:1rem&quot;><div class=&quot;hv-thumb&quot; style=&quot;width:64px;height:64px;font-size:1.6rem&quot;>&amp;#127974;</div><div style=&quot;flex:1&quot;>'+
+  var coverImg = h.coverImage ?
+    '<div style=&quot;margin-bottom:1.2rem&quot;><img src=&quot;'+h.coverImage+'&quot; style=&quot;width:100%;max-height:280px;object-fit:cover;border-radius:12px&quot;/></div>' : &quot;&quot;;
+  document.getElementById(&quot;hv-detail-wrap&quot;).innerHTML = coverImg +
+    '<div class=&quot;hv-card-top&quot; style=&quot;margin-bottom:1rem&quot;><div class=&quot;hv-thumb&quot; style=&quot;width:64px;height:64px;font-size:1.6rem&quot;>'+(h.coverImage ? '' : '&amp;#127974;')+'</div><div style=&quot;flex:1&quot;>'+
     '<div style=&quot;font-weight:800;font-size:1.1rem&quot;>'+esc(h.name)+'</div>'+
     '<span class=&quot;pill '+(HV_PILL[h.verificationStatus]||&quot;pill-gray&quot;)+'&quot;>'+esc(h.verificationStatus)+'</span></div></div>'+
     '<div class=&quot;fgrid2&quot;>'+
     '<div><div class=&quot;lr-sub&quot;>Owner Name</div><div class=&quot;lr-name&quot;>'+esc(h.ownerName||&quot;-&quot;)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Owner Email</div><div class=&quot;lr-name&quot;>'+esc(h.ownerEmail||&quot;-&quot;)+'</div></div>'+
-    '<div><div class=&quot;lr-sub&quot;>Location</div><div class=&quot;lr-name&quot;>'+esc(h.location||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Location</div><div class=&quot;lr-name&quot;>'+countryFlag(h.country)+' '+esc(h.location||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Email Address</div><div class=&quot;lr-name&quot;>'+esc(h.ownerEmail||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Hotel Type</div><div class=&quot;lr-name&quot;>'+esc(h.hotelType||&quot;Hotel&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Phone Number</div><div class=&quot;lr-name&quot;>'+esc(h.ownerPhone||&quot;Not provided&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Submitted On</div><div class=&quot;lr-name&quot;>'+fmtDate(h.createdAt)+'</div></div>'+
     '<div><div class=&quot;lr-sub&quot;>Registration No.</div><div class=&quot;lr-name&quot;>'+esc(h.regNumber||&quot;-&quot;)+'</div></div>'+
+    '</div>'+
+    '<div class=&quot;card-title&quot; style=&quot;margin-top:1.2rem&quot;>Hotel Gallery <span style=&quot;font-weight:400;font-size:.7rem;color:var(--muted)&quot;>Shown to guests on the Marketplace</span></div>'+
+    '<div class=&quot;gal-thumbs&quot; id=&quot;hv-gallery-thumbs&quot;>'+renderHVGalleryThumbs(h)+
+    '<label class=&quot;gal-add&quot;>+<input type=&quot;file&quot; accept=&quot;image/*&quot; multiple style=&quot;display:none&quot; onchange=&quot;uploadHVGalleryPhoto(\''+id+'\',this)&quot;/></label>'+
     '</div>'+
     '<div class=&quot;card-title&quot; style=&quot;margin-top:1.2rem&quot;>Submitted Documents</div>'+docs+actions;
   goPage(&quot;hvdetail&quot;);
+}
+function renderHVGalleryThumbs(h) {
+  var gal = (h.gallery &amp;&amp; h.gallery.length) ? h.gallery : (h.coverImage ? [h.coverImage] : []);
+  if (!gal.length) return '<div class=&quot;empty&quot; style=&quot;padding:.5rem 0&quot;>No gallery photos yet.</div>';
+  return gal.map(function(url, i){
+    return '<div class=&quot;gal-thumb&quot;><img src=&quot;'+url+'&quot;/><button class=&quot;gal-rm&quot; title=&quot;Remove&quot; onclick=&quot;event.stopPropagation();removeHVGalleryPhoto(\''+h.id+'\','+i+')&quot;>&amp;#10005;</button></div>';
+  }).join(&quot;&quot;);
+}
+function uploadHVGalleryPhoto(hotelId, input) {
+  var files = input.files ? Array.from(input.files) : [];
+  if (!files.length) return;
+  var h = _hotelById[hotelId]; if (!h) return;
+  var gal = (h.gallery &amp;&amp; h.gallery.length) ? h.gallery.slice() : (h.coverImage ? [h.coverImage] : []);
+  var remaining = files.length;
+  files.forEach(function(file){
+    compressImageToLimit(file, function(dataUrl){
+      gal.push(dataUrl);
+      remaining--;
+      if (remaining === 0) saveHVGallery(hotelId, gal);
+    }, { maxBytes: 500000, maxDim: 1200, minDim: 300, onError: function(){
+      remaining--;
+      if (remaining === 0) saveHVGallery(hotelId, gal);
+      T(&quot;Error&quot;, &quot;Could not process one of the photos.&quot;);
+    }});
+  });
+  input.value = &quot;&quot;;
+}
+function removeHVGalleryPhoto(hotelId, idx) {
+  var h = _hotelById[hotelId]; if (!h) return;
+  var gal = (h.gallery &amp;&amp; h.gallery.length) ? h.gallery.slice() : (h.coverImage ? [h.coverImage] : []);
+  gal.splice(idx, 1);
+  saveHVGallery(hotelId, gal);
+}
+function saveHVGallery(hotelId, gal) {
+  var h = _hotelById[hotelId]; if (!h) return;
+  var update = { gallery: gal, coverImage: gal[0] || firebase.firestore.FieldValue.delete() };
+  db.collection(&quot;hotels&quot;).doc(hotelId).update(update).then(function(){
+    h.gallery = gal; h.coverImage = gal[0] || null;
+    document.getElementById(&quot;hv-gallery-thumbs&quot;).innerHTML = renderHVGalleryThumbs(h) +
+      '<label class=&quot;gal-add&quot;>+<input type=&quot;file&quot; accept=&quot;image/*&quot; multiple style=&quot;display:none&quot; onchange=&quot;uploadHVGalleryPhoto(\''+hotelId+'\',this)&quot;/></label>';
+    renderHV();
+    T(&quot;Gallery Updated&quot;, &quot;The hotel's photo gallery is now live on the Marketplace.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update the gallery. Check Firestore rules.&quot;); });
+}
+function viewHVDocument(hotelId, idx) {
+  var h = _hotelById[hotelId]; if (!h) return;
+  var url = idx===0 ? h.bizDocURL : h.govIdURL;
+  if (!url) { T(&quot;No Document&quot;, &quot;No file was uploaded for this document.&quot;); return; }
+  var w = window.open(&quot;&quot;);
+  if (!w) { T(&quot;Pop-up Blocked&quot;, &quot;Please allow pop-ups to view the document.&quot;); return; }
+  var isImg = /^data:image/.test(url);
+  w.document.write('<title>Hotel Document</title><body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;>'+
+    (isImg ? '<img src=&quot;'+url+'&quot; style=&quot;max-width:100%;max-height:100vh&quot;/>' : '<iframe src=&quot;'+url+'&quot; style=&quot;width:100vw;height:100vh;border:none&quot;></iframe>') +
+    '</body>');
 }
 function setHVStatus(id, status) {
   var h = _hotelById[id]; if (!h) return;
@@ -3173,8 +3516,11 @@ function openHRDetail(id) {
   } else {
     actions = '<div class=&quot;hv-actions&quot;><span class=&quot;pill '+(HR_PILL[r.status]||&quot;pill-amber&quot;)+'&quot;>'+esc(r.status)+'</span></div>';
   }
+  var gal = (r.gallery &amp;&amp; r.gallery.length) ? r.gallery : (r.coverImage ? [r.coverImage] : []);
+  var galleryBlock = '<div class=&quot;card-title&quot; style=&quot;margin-top:1.2rem&quot;>Hotel Photos Submitted</div>' +
+    (gal.length ? '<div class=&quot;gal-thumbs&quot;>'+gal.map(function(url){ return '<div class=&quot;gal-thumb&quot;><img src=&quot;'+url+'&quot;/></div>'; }).join(&quot;&quot;)+'</div>' : '<div class=&quot;empty&quot; style=&quot;padding:.5rem 0&quot;>No photos were submitted with this application.</div>');
   document.getElementById(&quot;hr-detail-wrap&quot;).innerHTML =
-    '<div class=&quot;hv-card-top&quot; style=&quot;margin-bottom:1rem&quot;><div class=&quot;hv-thumb&quot; style=&quot;width:64px;height:64px;font-size:1.6rem&quot;>&amp;#127974;</div><div style=&quot;flex:1&quot;>'+
+    '<div class=&quot;hv-card-top&quot; style=&quot;margin-bottom:1rem&quot;>'+(gal.length ? '<img src=&quot;'+gal[0]+'&quot; style=&quot;width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0&quot;/>' : '<div class=&quot;hv-thumb&quot; style=&quot;width:64px;height:64px;font-size:1.6rem&quot;>&amp;#127974;</div>')+'<div style=&quot;flex:1&quot;>'+
     '<div style=&quot;font-weight:800;font-size:1.1rem&quot;>'+esc(r.hotelName)+'</div>'+
     '<span class=&quot;pill '+(HR_PILL[r.status]||&quot;pill-amber&quot;)+'&quot;>'+esc(r.status||&quot;Pending&quot;)+'</span></div></div>'+
     '<div class=&quot;fgrid2&quot;>'+
@@ -3186,20 +3532,24 @@ function openHRDetail(id) {
     '<div><div class=&quot;lr-sub&quot;>City / Country</div><div class=&quot;lr-name&quot;>'+esc(r.city||&quot;-&quot;)+', '+esc(r.country||&quot;Nigeria&quot;)+'</div></div>'+
     '</div>'+
     (r.description ? '<div style=&quot;margin-top:1rem&quot;><div class=&quot;lr-sub&quot;>Description</div><div class=&quot;lr-name&quot; style=&quot;font-weight:400&quot;>'+esc(r.description)+'</div></div>' : '') +
+    galleryBlock+
     '<div class=&quot;card-title&quot; style=&quot;margin-top:1.2rem&quot;>Submitted Documents</div>'+docs+actions;
   goPage(&quot;hrdetail&quot;);
 }
 function approveHotelReg(id) {
   var r = _hotelRegById[id]; if (!r) return;
   if (!r.ownerUid) { T(&quot;Cannot Approve&quot;, &quot;This application has no linked owner account (older submission). Ask them to re-register.&quot;); return; }
-  db.collection(&quot;hotels&quot;).doc(r.ownerUid).set({
+  var hotelData = {
     name: r.hotelName, location: (r.city||&quot;&quot;)+&quot;, &quot;+(r.country||&quot;Nigeria&quot;), status:&quot;Active&quot;,
     ownerName: r.ownerName||&quot;&quot;, ownerEmail: r.email||&quot;&quot;, email: r.email||&quot;&quot;, country: r.country||&quot;Nigeria&quot;,
     description: r.description||&quot;&quot;, verificationStatus:&quot;Verified&quot;, govIdURL: r.govIdURL||&quot;&quot;, bizDocURL: r.bizDocURL||&quot;&quot;,
     docsSubmitted: [&quot;Business Registration&quot;,&quot;Government ID&quot;],
     walletBalance: 0, totalEarned: 0, totalWithdrawn: 0,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){
+  };
+  if (r.gallery &amp;&amp; r.gallery.length) { hotelData.gallery = r.gallery; hotelData.coverImage = r.gallery[0]; }
+  else if (r.coverImage) { hotelData.coverImage = r.coverImage; }
+  db.collection(&quot;hotels&quot;).doc(r.ownerUid).set(hotelData).then(function(){
     return db.collection(&quot;hotelRegistrations&quot;).doc(id).update({ status:&quot;Approved&quot; });
   }).then(function(){
     r.status = &quot;Approved&quot;;
@@ -3387,10 +3737,22 @@ function savePromotion() {
 /* ============ SETTINGS ============ */
 var PAYMENT_METHODS = [&quot;Credit / Debit Cards&quot;,&quot;Paystack&quot;,&quot;Flutterwave&quot;,&quot;Bank Transfer&quot;,&quot;USSD&quot;,&quot;PayPal&quot;];
 var SECURITY_TOGGLES = [&quot;Two-Factor Authentication (2FA)&quot;,&quot;Strong Password Policy&quot;,&quot;Login Session Timeout&quot;,&quot;Login Attempt Limit&quot;];
-function setSettingsTab(tab) {
-  document.querySelectorAll(&quot;#st-tabs .tab-btn&quot;).forEach(function(el){ el.classList.toggle(&quot;on&quot;, el.dataset.tab===tab); });
+var NOTIFICATION_TOGGLES = [&quot;New Booking Alert&quot;,&quot;Payment Received Alert&quot;,&quot;New Hotel Registration Alert&quot;,&quot;New Review Alert&quot;,&quot;Low Wallet Balance Alert&quot;];
+function setSettingsSection(sec) {
+  document.querySelectorAll(&quot;#st-nav .st-nav-item&quot;).forEach(function(el){ el.classList.toggle(&quot;on&quot;, el.dataset.sec===sec); });
   document.querySelectorAll(&quot;.st-pane&quot;).forEach(function(el){ el.style.display = &quot;none&quot;; });
-  document.getElementById(&quot;st-&quot;+tab).style.display = &quot;block&quot;;
+  var pane = document.getElementById(&quot;st-&quot;+sec);
+  if (pane) pane.style.display = &quot;block&quot;;
+}
+// Kept for backward compatibility with any older bookmarked links.
+function setSettingsTab(tab) { setSettingsSection(tab); }
+function applySettingsToForm(obj, prefix) {
+  if (!obj) return;
+  Object.keys(obj).forEach(function(k){
+    var el = document.getElementById((prefix||&quot;st-&quot;)+k);
+    if (!el) return;
+    if (el.type === &quot;checkbox&quot;) el.checked = !!obj[k]; else el.value = obj[k];
+  });
 }
 function renderSettings() {
   if (!document.getElementById(&quot;st-payment-list&quot;)) return;
@@ -3404,18 +3766,35 @@ function renderSettings() {
     var checked = sec[s] === undefined ? true : sec[s];
     return '<div class=&quot;toggle-row&quot;><div><div class=&quot;toggle-lbl&quot;>'+s+'</div></div><label class=&quot;tgl&quot;><input type=&quot;checkbox&quot; data-sec=&quot;'+s+'&quot; '+(checked?&quot;checked&quot;:&quot;&quot;)+'/><span class=&quot;tgl-slider&quot;></span></label></div>';
   }).join(&quot;&quot;);
-  if (_settings.general) {
-    Object.keys(_settings.general).forEach(function(k){
-      var el = document.getElementById(&quot;st-&quot;+k);
-      if (el) el.value = _settings.general[k];
-    });
-  }
-  if (_settings.company) {
-    Object.keys(_settings.company).forEach(function(k){
-      var el = document.getElementById(&quot;st-&quot;+k);
-      if (el) el.value = _settings.company[k];
-    });
-  }
+  var notif = _settings.notifications || {};
+  document.getElementById(&quot;st-notifications-list&quot;).innerHTML = NOTIFICATION_TOGGLES.map(function(n){
+    var checked = notif[n] === undefined ? true : notif[n];
+    return '<div class=&quot;toggle-row&quot;><div><div class=&quot;toggle-lbl&quot;>'+n+'</div></div><label class=&quot;tgl&quot;><input type=&quot;checkbox&quot; data-notif=&quot;'+n+'&quot; '+(checked?&quot;checked&quot;:&quot;&quot;)+'/><span class=&quot;tgl-slider&quot;></span></label></div>';
+  }).join(&quot;&quot;);
+  applySettingsToForm(_settings.general);
+  applySettingsToForm(_settings.company);
+  applySettingsToForm(_settings.localization);
+  applySettingsToForm(_settings.email);
+  applySettingsToForm(_settings.sms);
+  applySettingsToForm(_settings.booking);
+  applySettingsToForm(_settings.commission);
+  applySettingsToForm(_settings.api);
+  var logoUrl = _settings.company &amp;&amp; _settings.company[&quot;company-logo&quot;];
+  var logoEl = document.getElementById(&quot;st-logo-preview&quot;);
+  if (logoEl) logoEl.innerHTML = logoUrl ? '<img src=&quot;'+logoUrl+'&quot;/>' : &quot;&amp;#127970;&quot;;
+}
+function uploadCompanyLogo(input) {
+  var file = input.files &amp;&amp; input.files[0];
+  if (!file) return;
+  compressImageToLimit(file, function(dataUrl) {
+    _settings.company = _settings.company || {};
+    _settings.company[&quot;company-logo&quot;] = dataUrl;
+    db.collection(&quot;config&quot;).doc(&quot;settings&quot;).set({ company: _settings.company }, {merge:true}).then(function(){
+      document.getElementById(&quot;st-logo-preview&quot;).innerHTML = '<img src=&quot;'+dataUrl+'&quot;/>';
+      T(&quot;Logo Updated&quot;, &quot;Your company logo has been changed.&quot;);
+    }).catch(function(){ T(&quot;Error&quot;, &quot;Could not save logo.&quot;); });
+  }, { maxBytes: 250000, maxDim: 500, minDim: 120, square: true, onError: function(){ T(&quot;Error&quot;, &quot;Could not process that logo image.&quot;); } });
+  input.value = &quot;&quot;;
 }
 function collectGeneralSettings() {
   return {
@@ -3432,20 +3811,77 @@ function collectGeneralSettings() {
   };
 }
 function collectCompanySettings() {
+  var existingLogo = (_settings.company &amp;&amp; _settings.company[&quot;company-logo&quot;]) || &quot;&quot;;
   return {
     &quot;company-name&quot;: document.getElementById(&quot;st-company-name&quot;).value,
     &quot;company-email&quot;: document.getElementById(&quot;st-company-email&quot;).value,
     &quot;company-phone&quot;: document.getElementById(&quot;st-company-phone&quot;).value,
     &quot;company-address&quot;: document.getElementById(&quot;st-company-address&quot;).value,
     &quot;company-about&quot;: document.getElementById(&quot;st-company-about&quot;).value,
+    &quot;company-logo&quot;: existingLogo
+  };
+}
+function collectLocalizationSettings() {
+  return {
     &quot;language&quot;: document.getElementById(&quot;st-language&quot;).value,
-    &quot;currency&quot;: document.getElementById(&quot;st-currency&quot;).value
+    &quot;currency&quot;: document.getElementById(&quot;st-currency&quot;).value,
+    &quot;number-format&quot;: document.getElementById(&quot;st-number-format&quot;).value,
+    &quot;loc-timezone&quot;: document.getElementById(&quot;st-loc-timezone&quot;).value
+  };
+}
+function collectEmailSettings() {
+  return {
+    &quot;email-enabled&quot;: document.getElementById(&quot;st-email-enabled&quot;).checked,
+    &quot;smtp-host&quot;: document.getElementById(&quot;st-smtp-host&quot;).value,
+    &quot;smtp-port&quot;: document.getElementById(&quot;st-smtp-port&quot;).value,
+    &quot;smtp-user&quot;: document.getElementById(&quot;st-smtp-user&quot;).value,
+    &quot;smtp-pass&quot;: document.getElementById(&quot;st-smtp-pass&quot;).value,
+    &quot;from-email&quot;: document.getElementById(&quot;st-from-email&quot;).value,
+    &quot;from-name&quot;: document.getElementById(&quot;st-from-name&quot;).value
+  };
+}
+function collectSmsSettings() {
+  return {
+    &quot;sms-enabled&quot;: document.getElementById(&quot;st-sms-enabled&quot;).checked,
+    &quot;sms-gateway&quot;: document.getElementById(&quot;st-sms-gateway&quot;).value,
+    &quot;sms-sender&quot;: document.getElementById(&quot;st-sms-sender&quot;).value,
+    &quot;sms-key&quot;: document.getElementById(&quot;st-sms-key&quot;).value
+  };
+}
+function collectBookingSettings() {
+  return {
+    &quot;min-notice&quot;: document.getElementById(&quot;st-min-notice&quot;).value,
+    &quot;max-advance&quot;: document.getElementById(&quot;st-max-advance&quot;).value,
+    &quot;cancel-window&quot;: document.getElementById(&quot;st-cancel-window&quot;).value,
+    &quot;auto-confirm&quot;: document.getElementById(&quot;st-auto-confirm&quot;).checked,
+    &quot;same-day&quot;: document.getElementById(&quot;st-same-day&quot;).checked
+  };
+}
+function collectCommissionSettings() {
+  return {
+    &quot;commission-pct&quot;: document.getElementById(&quot;st-commission-pct&quot;).value,
+    &quot;payout-schedule&quot;: document.getElementById(&quot;st-payout-schedule&quot;).value,
+    &quot;min-payout&quot;: document.getElementById(&quot;st-min-payout&quot;).value
+  };
+}
+function collectApiSettings() {
+  return {
+    &quot;paystack-pub&quot;: document.getElementById(&quot;st-paystack-pub&quot;).value,
+    &quot;paystack-secret&quot;: document.getElementById(&quot;st-paystack-secret&quot;).value,
+    &quot;flw-pub&quot;: document.getElementById(&quot;st-flw-pub&quot;).value,
+    &quot;maps-key&quot;: document.getElementById(&quot;st-maps-key&quot;).value
   };
 }
 function saveSettings(section) {
   var update = {};
   if (section === &quot;general&quot;) { _settings.general = collectGeneralSettings(); update.general = _settings.general; }
   if (section === &quot;company&quot;) { _settings.company = collectCompanySettings(); update.company = _settings.company; }
+  if (section === &quot;localization&quot;) { _settings.localization = collectLocalizationSettings(); update.localization = _settings.localization; }
+  if (section === &quot;email&quot;) { _settings.email = collectEmailSettings(); update.email = _settings.email; }
+  if (section === &quot;sms&quot;) { _settings.sms = collectSmsSettings(); update.sms = _settings.sms; }
+  if (section === &quot;booking&quot;) { _settings.booking = collectBookingSettings(); update.booking = _settings.booking; }
+  if (section === &quot;commission&quot;) { _settings.commission = collectCommissionSettings(); update.commission = _settings.commission; }
+  if (section === &quot;api&quot;) { _settings.api = collectApiSettings(); update.api = _settings.api; }
   if (section === &quot;payment&quot;) {
     var pm = {};
     document.querySelectorAll('[data-pm]').forEach(function(el){ pm[el.dataset.pm] = el.checked; });
@@ -3455,6 +3891,11 @@ function saveSettings(section) {
     var sec = {};
     document.querySelectorAll('[data-sec]').forEach(function(el){ sec[el.dataset.sec] = el.checked; });
     _settings.security = sec; update.security = sec;
+  }
+  if (section === &quot;notifications&quot;) {
+    var notif = {};
+    document.querySelectorAll('[data-notif]').forEach(function(el){ notif[el.dataset.notif] = el.checked; });
+    _settings.notifications = notif; update.notifications = notif;
   }
   db.collection(&quot;config&quot;).doc(&quot;settings&quot;).set(update, {merge:true}).then(function(){
     T(&quot;Settings Saved&quot;, &quot;Your changes have been saved successfully.&quot;);
@@ -3659,7 +4100,7 @@ function SP(p, addHistory) {
   var ni = document.getElementById("ni-" + p);
   if (ni) ni.classList.add("on");
   window.scrollTo(0, 0);
-  if (p === "home") { loadHomeReviews(); applyWishlistUI(); }
+  if (p === "home") { loadHomeReviews(); loadHomeMarketplace(); applyWishlistUI(); }
   if (p === "hotels") { loadMarketplaceHotels(); }
   // Push to browser history unless called from popstate
   if (addHistory !== false) {
@@ -4152,6 +4593,24 @@ function compressImage(file, callback) {
   compressImageToLimit(file, callback, { maxBytes: 700000, maxDim: 800, minDim: 200 });
 }
 
+// Compresses a list of gallery photo Files (in order) into an array of data
+// URLs, calling back once all are done. Empty input calls back with [].
+function compressGalleryFiles(files, callback) {
+  if (!files || !files.length) { callback([]); return; }
+  var results = new Array(files.length);
+  var remaining = files.length;
+  files.forEach(function(file, i) {
+    compressImageToLimit(file, function(dataUrl) {
+      results[i] = dataUrl;
+      remaining--;
+      if (remaining === 0) callback(results.filter(Boolean));
+    }, { maxBytes: 500000, maxDim: 1200, minDim: 300, onError: function() {
+      remaining--;
+      if (remaining === 0) callback(results.filter(Boolean));
+    }});
+  });
+}
+
 /* ============ HOTEL REGISTRATION (public partner application) ============ */
 // Reads a document file (image or PDF) into a data URL. Images are always
 // compressed down to fit under Firestore's field-size limit, no matter how
@@ -4192,6 +4651,34 @@ function hrPreviewFile(input, previewId) {
   }
 }
 
+/* ---- hotel registration: gallery photo picker ---- */
+var _hrGalleryFiles = [];
+function hrRenderGalleryPreview() {
+  var box = document.getElementById("hr-gallery-preview");
+  if (!_hrGalleryFiles.length) { box.innerHTML = ""; return; }
+  box.innerHTML = _hrGalleryFiles.map(function(f, i) {
+    return '<div class="gal-thumb" id="hr-gal-thumb-' + i + '"><span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--surface2);font-size:.55rem;color:var(--muted);text-align:center;padding:2px">Loading&hellip;</span><button type="button" class="gal-rm" onclick="hrRemoveGalleryFile(' + i + ')">&#10005;</button>' + (i === 0 ? '<span class="gal-cover-tag">Cover</span>' : '') + '</div>';
+  }).join("");
+  _hrGalleryFiles.forEach(function(f, i) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var el = document.getElementById("hr-gal-thumb-" + i);
+      if (el) el.innerHTML = '<img src="' + e.target.result + '"/><button type="button" class="gal-rm" onclick="hrRemoveGalleryFile(' + i + ')">&#10005;</button>' + (i === 0 ? '<span class="gal-cover-tag">Cover</span>' : '');
+    };
+    reader.readAsDataURL(f);
+  });
+}
+function hrAddGalleryFiles(input) {
+  var files = input.files ? Array.from(input.files) : [];
+  _hrGalleryFiles = _hrGalleryFiles.concat(files).slice(0, 8);
+  hrRenderGalleryPreview();
+  input.value = "";
+}
+function hrRemoveGalleryFile(i) {
+  _hrGalleryFiles.splice(i, 1);
+  hrRenderGalleryPreview();
+}
+
 function esc(s) { return (s == null ? "" : String(s)).replace(/[&<>"']/g, function(c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 
 function submitHotelRegistration() {
@@ -4229,35 +4716,39 @@ function submitHotelRegistration() {
   var btn = document.getElementById("hrsub");
   btn.disabled = true; btn.textContent = "Submitting...";
 
-  docFileToDataURL(govFile, function(govDataUrl) {
-    docFileToDataURL(bizFile, function(bizDataUrl) {
-      auth.createUserWithEmailAndPassword(email, pass).then(function(cred) {
-        var ownerUid = cred.user.uid;
-        return db.collection("hotelRegistrations").add({
-          hotelName: hotelName, ownerName: ownerName, phone: phone, email: email,
-          address: address, city: city, country: country, rooms: rooms, description: description,
-          govIdURL: govDataUrl, govIdName: govFile.name,
-          bizDocURL: bizDataUrl, bizDocName: bizFile.name,
-          ownerUid: ownerUid, status: "Pending",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  compressGalleryFiles(_hrGalleryFiles, function(galleryUrls) {
+    docFileToDataURL(govFile, function(govDataUrl) {
+      docFileToDataURL(bizFile, function(bizDataUrl) {
+        auth.createUserWithEmailAndPassword(email, pass).then(function(cred) {
+          var ownerUid = cred.user.uid;
+          var regData = {
+            hotelName: hotelName, ownerName: ownerName, phone: phone, email: email,
+            address: address, city: city, country: country, rooms: rooms, description: description,
+            govIdURL: govDataUrl, govIdName: govFile.name,
+            bizDocURL: bizDataUrl, bizDocName: bizFile.name,
+            ownerUid: ownerUid, status: "Pending",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+          if (galleryUrls.length) { regData.gallery = galleryUrls; regData.coverImage = galleryUrls[0]; }
+          return db.collection("hotelRegistrations").add(regData).then(function() {
+            return auth.signOut();
+          });
         }).then(function() {
-          return auth.signOut();
+          document.getElementById("hrform").style.display = "none";
+          document.getElementById("hrsuccess").style.display = "block";
+          btn.disabled = false; btn.textContent = "\uD83C\uDFE8 Submit Application";
+        }).catch(function(e) {
+          T("Submission Failed", e.message || "Could not submit your application. Please try again.", 6000);
+          btn.disabled = false; btn.textContent = "\uD83C\uDFE8 Submit Application";
         });
-      }).then(function() {
-        document.getElementById("hrform").style.display = "none";
-        document.getElementById("hrsuccess").style.display = "block";
-        btn.disabled = false; btn.textContent = "\uD83C\uDFE8 Submit Application";
-      }).catch(function(e) {
-        T("Submission Failed", e.message || "Could not submit your application. Please try again.", 6000);
+      }, function(errMsg) {
+        T("Business Document Issue", errMsg);
         btn.disabled = false; btn.textContent = "\uD83C\uDFE8 Submit Application";
       });
     }, function(errMsg) {
-      T("Business Document Issue", errMsg);
+      T("Government ID Issue", errMsg);
       btn.disabled = false; btn.textContent = "\uD83C\uDFE8 Submit Application";
     });
-  }, function(errMsg) {
-    T("Government ID Issue", errMsg);
-    btn.disabled = false; btn.textContent = "\uD83C\uDFE8 Submit Application";
   });
 }
 
@@ -4272,6 +4763,9 @@ function resetHotelRegistration() {
   document.getElementById("hr-govid-preview").innerHTML = "";
   document.getElementById("hr-bizdoc-preview").style.display = "none";
   document.getElementById("hr-bizdoc-preview").innerHTML = "";
+  _hrGalleryFiles = [];
+  document.getElementById("hr-gallery-file").value = "";
+  document.getElementById("hr-gallery-preview").innerHTML = "";
   document.getElementById("hrsuccess").style.display = "none";
   document.getElementById("hrform").style.display = "block";
 }
@@ -4376,6 +4870,39 @@ var _paymentDone = false;
 var _paymentRef = "";
 var _paymentAmount = 0;
 
+// ═══════════════════════════════════════════
+// REFERRAL REWARDS
+// Credits both the referrer and the referred guest's wallet the first time
+// the referred guest's booking is marked "paid" (matches the Refer & Earn
+// copy: "when they book their first stay, you both earn rewards"). Guarded
+// by the referralRewarded flag so it only ever pays out once per account.
+// ═══════════════════════════════════════════
+var REFERRAL_REFERRER_BONUS = 1000;
+var REFERRAL_NEW_USER_BONUS = 500;
+function maybeGrantReferralReward(email) {
+  email = (email || "").trim().toLowerCase();
+  if (!email) return;
+  db.collection("users").where("email", "==", email).limit(1).get().then(function(usnap) {
+    if (usnap.empty) return;
+    var udoc = usnap.docs[0];
+    var u = udoc.data();
+    if (u.referralRewarded || !u.referredBy) return;
+    return db.collection("users").where("referralCode", "==", u.referredBy).limit(1).get().then(function(rsnap) {
+      if (rsnap.empty) return;
+      var refDoc = rsnap.docs[0];
+      return Promise.all([
+        db.collection("users").doc(udoc.id).update({
+          referralRewarded: true,
+          walletBalance: firebase.firestore.FieldValue.increment(REFERRAL_NEW_USER_BONUS)
+        }),
+        db.collection("users").doc(refDoc.id).update({
+          walletBalance: firebase.firestore.FieldValue.increment(REFERRAL_REFERRER_BONUS)
+        })
+      ]);
+    });
+  }).catch(function(e) { console.error("referral reward error", e); });
+}
+
 function initiatePayment() {
   var name = document.getElementById("b-name").value.trim();
   var phone = document.getElementById("b-phone").value.trim();
@@ -4478,6 +5005,7 @@ function submitAndAutoApprove(payRef, paidAmt, name, phone, email, room, cin, co
       document.getElementById("bform").style.display = "none";
       document.getElementById("bsuccess").style.display = "block";
       _appliedPromo = null;
+      maybeGrantReferralReward(email);
       return;
     }
 
@@ -4498,6 +5026,7 @@ function submitAndAutoApprove(payRef, paidAmt, name, phone, email, room, cin, co
       T("Approved! Room " + assignedRoom, "Access code sent to " + email);
       _appliedPromo = null;
       sendEmail({name:name, email:email, roomType:room, roomNumber:assignedRoom, checkIn:cin, checkOut:cout, code:code});
+      maybeGrantReferralReward(email);
     }).catch(function(e) {
       T("Error", "Payment received but booking failed. Contact us with ref: " + payRef, 8000);
       console.error(e);
@@ -4518,6 +5047,7 @@ function sendEmail(d) {
     .catch(function(e) { console.warn("EmailJS:", e); });
 }
 loadHomeReviews();
+loadHomeMarketplace();
 
 // ═══════════════════════════════════════════
 // USER ACCOUNT (AUTH, DASHBOARD, WISHLIST)
@@ -4582,26 +5112,54 @@ function accSignup() {
   var email = document.getElementById("acc-su-email").value.trim();
   var phone = document.getElementById("acc-su-phone").value.trim();
   var pass = document.getElementById("acc-su-pass").value;
+  var refCode = document.getElementById("acc-su-ref").value.trim().toUpperCase();
   var err = document.getElementById("acc-su-err");
+  var refErr = document.getElementById("acc-su-ref-err");
   err.classList.remove("show");
+  refErr.classList.remove("show");
   if (!name || !email || pass.length < 6) {
     err.textContent = "Enter your name, a valid email and a password of at least 6 characters.";
     err.classList.add("show");
     return;
   }
-  auth.createUserWithEmailAndPassword(email, pass).then(function(cred) {
-    return db.collection("users").doc(cred.user.uid).set({
-      name: name, email: email, phone: phone, photoURL: "",
-      referralCode: cred.user.uid.slice(0, 8).toUpperCase(),
-      walletBalance: 0,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  var btn = document.querySelector("#acc-signup-form .fsub");
+  if (btn) { btn.disabled = true; btn.textContent = "Creating Account..."; }
+
+  function finishSignup(validReferrer) {
+    auth.createUserWithEmailAndPassword(email, pass).then(function(cred) {
+      return db.collection("users").doc(cred.user.uid).set({
+        name: name, email: email, phone: phone, photoURL: "",
+        referralCode: cred.user.uid.slice(0, 8).toUpperCase(),
+        referredBy: validReferrer ? refCode : "",
+        referralRewarded: false,
+        walletBalance: 0,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }).then(function() {
+      T("Welcome!", "Your account has been created." + (validReferrer ? " Referral code applied!" : ""));
+    }).catch(function(e) {
+      if (btn) { btn.disabled = false; btn.textContent = "Create Account"; }
+      err.textContent = e.message || "Could not create account.";
+      err.classList.add("show");
     });
-  }).then(function() {
-    T("Welcome!", "Your account has been created.");
-  }).catch(function(e) {
-    err.textContent = e.message || "Could not create account.";
-    err.classList.add("show");
-  });
+  }
+
+  if (refCode) {
+    db.collection("users").where("referralCode", "==", refCode).limit(1).get().then(function(snap) {
+      if (snap.empty) {
+        if (btn) { btn.disabled = false; btn.textContent = "Create Account"; }
+        refErr.classList.add("show");
+        return;
+      }
+      finishSignup(true);
+    }).catch(function() {
+      // If the lookup fails for any reason, don't block account creation —
+      // just create the account without a referral link.
+      finishSignup(false);
+    });
+  } else {
+    finishSignup(false);
+  }
 }
 
 function accLogin() {
@@ -5140,11 +5698,26 @@ var _hbReceiptData = null;
 
 function loadMarketplaceHotels() {
   document.getElementById("mp-list").innerHTML = '<div class="empty">Loading hotels...</div>';
-  db.collection("hotels").where("status", "==", "Active").get().then(function(snap) {
+  return db.collection("hotels").where("status", "==", "Active").get().then(function(snap) {
     _mpHotels = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
     renderMarketplaceList();
   }).catch(function() {
     document.getElementById("mp-list").innerHTML = '<div class="empty">Could not load hotels right now.</div>';
+  });
+}
+function loadHomeMarketplace() {
+  var wrap = document.getElementById("home-mp-list");
+  if (wrap) wrap.innerHTML = '<div class="empty">Loading hotels...</div>';
+  loadMarketplaceHotels().then(function() {
+    if (!wrap) return;
+    if (!_mpHotels.length) { wrap.innerHTML = '<div class="empty">No partner hotels are live yet. Check back soon!</div>'; return; }
+    wrap.innerHTML = _mpHotels.slice(0, 6).map(function(h) {
+      return '<div class="mp-card" onclick="openHotelDetail(\'' + h.id + '\')">' +
+        '<div class="mp-img">' + (h.coverImage ? '<img src="' + h.coverImage + '"/>' : '&#127974;') + '</div>' +
+        '<div class="mp-body"><div style="font-family:\'Playfair Display\',serif;font-size:1.05rem">' + esc(h.name) + '</div>' +
+        '<div style="font-size:.78rem;color:var(--muted);margin-top:.2rem">' + esc(h.location || "") + '</div></div>' +
+      '</div>';
+    }).join("");
   });
 }
 function renderMarketplaceList() {
@@ -5161,9 +5734,16 @@ function renderMarketplaceList() {
 function openHotelDetail(hotelId) {
   _mpCurrentHotel = _mpHotels.find(function(h) { return h.id === hotelId; }) || { id: hotelId };
   SP("hoteldetail");
+  var h = _mpCurrentHotel;
+  var gallery = (h.gallery && h.gallery.length) ? h.gallery : (h.coverImage ? [h.coverImage] : []);
+  var galleryHtml = gallery.length ?
+    '<div class="hd-gallery">' +
+      '<div class="hd-gallery-main"><img src="' + gallery[0] + '"/></div>' +
+      (gallery.length > 1 ? '<div class="hd-gallery-strip">' + gallery.slice(1, 5).map(function(url) { return '<img src="' + url + '"/>'; }).join("") + '</div>' : '') +
+    '</div>' : '';
   document.getElementById("mpd-header").innerHTML =
-    '<div class="phero"><div class="ptag">' + esc(_mpCurrentHotel.location || "") + '</div><h1 class="ptitle">' + esc(_mpCurrentHotel.name || "Hotel") + '</h1>' +
-    (_mpCurrentHotel.description ? '<p class="psub">' + esc(_mpCurrentHotel.description) + '</p>' : '') + '</div>';
+    '<div class="phero"><div class="ptag">' + esc(h.location || "") + '</div><h1 class="ptitle">' + esc(h.name || "Hotel") + '</h1>' +
+    (h.description ? '<p class="psub">' + esc(h.description) + '</p>' : '') + '</div>' + galleryHtml;
   document.getElementById("mpd-rooms").innerHTML = '<div class="empty">Loading rooms...</div>';
   db.collection("hotels").doc(hotelId).collection("rooms").get().then(function(snap) {
     var rooms = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
@@ -5339,6 +5919,7 @@ function finalizeHotelBooking(payRef, total, name, phone, email, cin, cout) {
     document.getElementById("hb-success").style.display = "block";
     document.getElementById("hb-success-msg").innerHTML = "Your booking at <strong>" + esc(_mpCurrentHotel.name) + "</strong> is confirmed. A 6-digit access code has been sent to your email.";
     T("Booking Confirmed!", "Enjoy your stay at " + _mpCurrentHotel.name + ".");
+    maybeGrantReferralReward(email);
   }).catch(function(e) {
     T("Error", "Payment received but booking failed. Contact support with ref: " + payRef, 8000);
     console.error(e);
