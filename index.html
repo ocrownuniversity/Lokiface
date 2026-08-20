@@ -53,6 +53,29 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .mnav{display:none;position:fixed;top:62px;left:0;right:0;background:var(--cream);border-bottom:1px solid var(--border);padding:.7rem 1rem;z-index:499;flex-direction:column;gap:.2rem;box-shadow:var(--shadow)}
 .mnav.open{display:flex}
 .mnav .ni{width:100%;text-align:left;padding:.6rem 1rem}
+/* Hotel Owner Dashboard: admin-style off-canvas sidebar nav */
+.hd-topbar{position:sticky;top:62px;z-index:400;background:var(--cream);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.8rem;padding:.7rem 1.2rem}
+.hd-ham{display:flex;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:.4rem}
+.hd-ham span{width:21px;height:2px;background:var(--ink);border-radius:2px;display:block}
+.hd-topbar-txt{flex:1;min-width:0}
+.hd-topbar-tag{font-size:.65rem;letter-spacing:.14em;color:var(--gold);text-transform:uppercase}
+.hd-topbar-name{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd-overlay{position:fixed;inset:0;background:rgba(10,15,30,.45);z-index:590;opacity:0;pointer-events:none;transition:opacity .25s}
+.hd-overlay.open{opacity:1;pointer-events:auto}
+.hd-sidebar{position:fixed;top:0;left:0;bottom:0;width:270px;background:#fff;z-index:600;transform:translateX(-100%);transition:transform .25s ease;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.hd-sidebar.open{transform:translateX(0)}
+.hd-sb-head{background:var(--ink);padding:1.4rem 1.2rem;color:#fff}
+.hd-sb-avatar{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:1.2rem;overflow:hidden;margin-bottom:.6rem}
+.hd-sb-avatar img{width:100%;height:100%;object-fit:cover}
+.hd-sb-name{font-weight:700;font-size:.98rem}
+.hd-sb-tag{font-size:.68rem;color:rgba(255,255,255,.6);margin-top:.15rem}
+.hd-sb-nav{flex:1;overflow-y:auto;padding:.6rem}
+.hd-sb-item{display:flex;align-items:center;gap:.7rem;padding:.75rem .8rem;border-radius:9px;cursor:pointer;font-size:.85rem;font-weight:500;color:var(--text);transition:all .15s}
+.hd-sb-item:hover{background:var(--gold-dim)}
+.hd-sb-item.on{background:var(--gold-dim);color:var(--gold);font-weight:700}
+.hd-sb-item .ic{width:20px;text-align:center;font-size:1.05rem}
+.hd-sb-foot{padding:.9rem;border-top:1px solid var(--border)}
+.hd-sb-logout{width:100%;padding:.7rem;background:var(--red-bg);color:var(--red);border:none;border-radius:9px;font-weight:700;font-size:.8rem;cursor:pointer}
 .wa-float{position:fixed;bottom:1.5rem;left:1.5rem;z-index:800;width:54px;height:54px;border-radius:50%;background:#25d366;box-shadow:0 4px 20px rgba(37,211,102,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;text-decoration:none}
 .wa-float:hover{transform:scale(1.12)}
 .wa-float:active{transform:scale(.94)}
@@ -393,7 +416,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       <p class="hsub">Where Lagos's finest hospitality meets modern comfort</p>
       <div class="hbtns">
         <button class="btn bg" onclick="SP('hotels')">Book Now</button>
-        <button class="btn bo" onclick="document.getElementById('rsec').scrollIntoView({behavior:'smooth'})">Explore Rooms</button>
+        <button class="btn bo" onclick="SP('hotels')">Explore Rooms</button>
         <button class="btn bo" onclick="SP('account')">Sign Up / Log In</button>
       </div>
       <div class="hstats">
@@ -977,24 +1000,34 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 
 <!-- HOTEL OWNER DASHBOARD -->
 <div class="page" id="page-hoteldash">
-  <div class="bpw">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.2rem">
-      <div>
-        <div class="ptag" id="hd-status-tag">Hotel Dashboard</div>
-        <h1 class="ptitle" style="font-size:1.9rem" id="hd-hotel-name">Your Hotel</h1>
-      </div>
-      <button class="btn btn-o" onclick="accLogout()">Log Out</button>
+  <div class="hd-topbar">
+    <button class="hd-ham" onclick="hdToggleSidebar(true)"><span></span><span></span><span></span></button>
+    <div class="hd-topbar-txt">
+      <div class="hd-topbar-tag" id="hd-status-tag">Hotel Dashboard</div>
+      <div class="hd-topbar-name" id="hd-hotel-name">Your Hotel</div>
     </div>
+  </div>
+  <div class="hd-overlay" id="hd-overlay" onclick="hdToggleSidebar(false)"></div>
+  <div class="hd-sidebar" id="hd-sidebar">
+    <div class="hd-sb-head">
+      <div class="hd-sb-avatar" id="hd-sb-avatar">&#127974;</div>
+      <div class="hd-sb-name" id="hd-sb-hotelname">Your Hotel</div>
+      <div class="hd-sb-tag" id="hd-sb-status">Hotel Dashboard</div>
+    </div>
+    <div class="hd-sb-nav">
+      <div class="hd-sb-item on" data-t="overview" onclick="hdSetTab('overview')"><span class="ic">&#128202;</span>Overview</div>
+      <div class="hd-sb-item" data-t="rooms" onclick="hdSetTab('rooms')"><span class="ic">&#128716;</span>Rooms</div>
+      <div class="hd-sb-item" data-t="bookings" onclick="hdSetTab('bookings')"><span class="ic">&#128197;</span>Bookings</div>
+      <div class="hd-sb-item" data-t="wallet" onclick="hdSetTab('wallet')"><span class="ic">&#128176;</span>Wallet</div>
+      <div class="hd-sb-item" data-t="settings" onclick="hdSetTab('settings')"><span class="ic">&#9881;</span>Settings</div>
+    </div>
+    <div class="hd-sb-foot"><button class="hd-sb-logout" onclick="accLogout()">&#128682; Log Out</button></div>
+  </div>
+  <div class="bpw">
     <div id="hd-pending-banner" style="display:none;background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.2rem;font-size:.85rem">
       &#9203; Your hotel application is still under review. You'll be able to manage rooms and bookings once approved.
     </div>
     <div id="hd-app" style="display:none">
-      <div style="display:flex;gap:.4rem;overflow-x:auto;border-bottom:1px solid var(--border);margin-bottom:1.2rem" id="hd-tabs">
-        <button class="tab-btn on" data-t="overview" onclick="hdSetTab('overview')">Overview</button>
-        <button class="tab-btn" data-t="rooms" onclick="hdSetTab('rooms')">Rooms</button>
-        <button class="tab-btn" data-t="bookings" onclick="hdSetTab('bookings')">Bookings</button>
-        <button class="tab-btn" data-t="wallet" onclick="hdSetTab('wallet')">Wallet</button>
-      </div>
       <div id="hd-tab-overview" class="hd-tab">
         <div class="stat-grid" id="hd-stats"></div>
         <div class="card"><div class="card-title">Recent Bookings</div><div id="hd-recent"></div></div>
@@ -1029,6 +1062,33 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
           <button class="fsub" onclick="hdRequestWithdrawal()">Request Withdrawal</button>
         </div>
         <div class="card"><div class="card-title">Withdrawal History</div><div id="hd-withdrawals-list"></div></div>
+      </div>
+      <div id="hd-tab-settings" class="hd-tab" style="display:none">
+        <div class="lcard" style="text-align:center">
+          <div id="hds-avatar" style="width:88px;height:88px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold);margin:0 auto;overflow:hidden">&#127974;</div>
+          <div class="acc-avatar-upload"><label for="hds-photo-input">&#128247; Change Profile Photo</label><input type="file" id="hds-photo-input" accept="image/*" onchange="hdUploadProfilePhoto(this)"/></div>
+        </div>
+        <div class="fc" style="margin:1.1rem 0">
+          <div class="fst" style="margin-bottom:.8rem">Hotel Information</div>
+          <div class="fg"><label>Hotel Name</label><input type="text" id="hds-name" disabled style="opacity:.6"/><div style="font-size:.68rem;color:var(--muted);margin-top:.3rem">Contact the platform admin to change your registered hotel name.</div></div>
+          <div class="fg"><label>Location</label><input type="text" id="hds-location" placeholder="e.g. Victoria Island, Lagos"/></div>
+          <div class="fg"><label>Phone Number</label><input type="tel" id="hds-phone" placeholder="Contact phone number"/></div>
+          <div class="fg"><label>About / Description</label><textarea id="hds-description" rows="4" placeholder="Tell guests about your hotel"></textarea></div>
+          <button class="fsub" onclick="hdSaveInfo()">Save Changes</button>
+        </div>
+        <div class="fc" style="margin:1.1rem 0">
+          <div class="fst" style="margin-bottom:.8rem">Photo Gallery</div>
+          <p style="font-size:.72rem;color:var(--muted);margin:-.3rem 0 .8rem">The first photo is used as your cover image on the marketplace. Add or remove as many as you like.</p>
+          <div class="gal-thumbs" id="hds-gallery-preview" style="margin-bottom:.8rem"></div>
+          <input type="file" accept="image/*" multiple id="hds-gallery-file" class="img-input" onchange="hdAddGalleryFiles(this)"/>
+        </div>
+        <div class="fc" style="margin:1.1rem 0">
+          <div class="fst" style="margin-bottom:.8rem">Change Password</div>
+          <div class="fg"><label>Current Password</label><input type="password" id="hds-pw-current" placeholder="Your current password"/></div>
+          <div class="fg"><label>New Password</label><input type="password" id="hds-pw-new" placeholder="At least 6 characters"/></div>
+          <div class="fg"><label>Confirm New Password</label><input type="password" id="hds-pw-confirm" placeholder="Re-enter new password"/></div>
+          <button class="fsub" onclick="hdChangePassword()">Update Password</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2911,7 +2971,7 @@ function renderHotels() {
   });
   var html = &quot;&quot;;
   list.forEach(function(h){
-    html += '<div class=&quot;list-row&quot;><div class=&quot;avatar-sm&quot;>&amp;#127974;</div><div style=&quot;flex:1&quot;><div class=&quot;lr-name&quot;>'+esc(h.name)+'</div><div class=&quot;lr-sub&quot;>'+esc(h.location||&quot;-&quot;)+' &amp;middot; '+hotelBookingCount(h.id)+' bookings &amp;middot; '+NGN(hotelRevenue(h.id))+'</div></div>'+pill(h.status||&quot;Active&quot;)+'<button class=&quot;kebab&quot; onclick=&quot;cycleHotelStatus(\''+h.id+'\')&quot;>&amp;#8942;</button></div>';
+    html += '<div class=&quot;list-row&quot;><div class=&quot;avatar-sm&quot;>&amp;#127974;</div><div style=&quot;flex:1&quot;><div class=&quot;lr-name&quot;>'+esc(h.name)+'</div><div class=&quot;lr-sub&quot;>'+esc(h.location||&quot;-&quot;)+' &amp;middot; '+hotelBookingCount(h.id)+' bookings &amp;middot; '+NGN(hotelRevenue(h.id))+'</div></div>'+pill(h.status||&quot;Active&quot;)+'<button class=&quot;kebab&quot; title=&quot;Cycle status (Active / Pending / Blocked)&quot; onclick=&quot;cycleHotelStatus(\''+h.id+'\')&quot;>&amp;#8942;</button><button class=&quot;kebab&quot; title=&quot;Delete permanently&quot; style=&quot;color:var(--red)&quot; onclick=&quot;deleteHotelPermanently(\''+h.id+'\')&quot;>&amp;#128465;</button></div>';
   });
   document.getElementById(&quot;hotels-list&quot;).innerHTML = list.length ? html : '<div class=&quot;empty&quot;>No hotels found.</div>';
 }
@@ -2921,6 +2981,26 @@ function cycleHotelStatus(id) {
   var next = order[(order.indexOf(h.status||&quot;Active&quot;)+1)%order.length];
   db.collection(&quot;hotels&quot;).doc(id).update({status:next}).then(function(){
     h.status = next; renderHotels(); renderHotelsStats(); T(&quot;Updated&quot;, h.name+&quot; is now &quot;+next+&quot;.&quot;);
+  });
+}
+function deleteHotelPermanently(id) {
+  var h = _hotelById[id]; if (!h) return;
+  if (!confirm('Permanently delete &quot;'+h.name+'&quot;?\n\nThis removes it (and its room types) from the marketplace immediately and cannot be undone. Existing bookings already made for this hotel are kept for your records.')) return;
+  db.collection(&quot;hotels&quot;).doc(id).collection(&quot;rooms&quot;).get().then(function(snap){
+    if (!snap.size) return;
+    var batch = db.batch();
+    snap.docs.forEach(function(d){ batch.delete(d.ref); });
+    return batch.commit();
+  }).then(function(){
+    return db.collection(&quot;hotels&quot;).doc(id).delete();
+  }).then(function(){
+    _allHotels = _allHotels.filter(function(x){ return x.id !== id; });
+    delete _hotelById[id];
+    renderHotels(); renderHotelsStats(); renderDashboard();
+    T(&quot;Hotel Deleted&quot;, h.name+&quot; has been permanently removed from the marketplace.&quot;);
+  }).catch(function(e){
+    console.error(e);
+    T(&quot;Error&quot;, &quot;Could not delete this hotel. Please try again.&quot;, 5000);
   });
 }
 function openHotelModal() { openModalEl(&quot;hotel-modal&quot;); }
@@ -6256,8 +6336,13 @@ function openHotelDash() {
   SP("hoteldash");
   var h = _hotelProfile || {};
   document.getElementById("hd-hotel-name").textContent = h.name || "Your Hotel";
+  document.getElementById("hd-sb-hotelname").textContent = h.name || "Your Hotel";
+  var sbAv = document.getElementById("hd-sb-avatar");
+  sbAv.innerHTML = h.profilePhoto ? '<img src="' + h.profilePhoto + '"/>' : "&#127974;";
   var isActive = h.status === "Active";
-  document.getElementById("hd-status-tag").textContent = isActive ? "Hotel Dashboard" : "Application Status: " + (h.status || "Pending");
+  var statusTxt = isActive ? "Hotel Dashboard" : "Application Status: " + (h.status || "Pending");
+  document.getElementById("hd-status-tag").textContent = statusTxt;
+  document.getElementById("hd-sb-status").textContent = statusTxt;
   document.getElementById("hd-pending-banner").style.display = isActive ? "none" : "block";
   document.getElementById("hd-app").style.display = isActive ? "block" : "none";
   if (isActive) {
@@ -6267,11 +6352,17 @@ function openHotelDash() {
     hdLoadWithdrawals();
   }
 }
+function hdToggleSidebar(open) {
+  document.getElementById("hd-sidebar").classList.toggle("open", open);
+  document.getElementById("hd-overlay").classList.toggle("open", open);
+}
 function hdSetTab(tab) {
   _hdTab = tab;
-  document.querySelectorAll("#hd-tabs .tab-btn").forEach(function(b) { b.classList.toggle("on", b.dataset.t === tab); });
+  document.querySelectorAll("#hd-sidebar .hd-sb-item").forEach(function(b) { b.classList.toggle("on", b.dataset.t === tab); });
   document.querySelectorAll(".hd-tab").forEach(function(el) { el.style.display = "none"; });
   document.getElementById("hd-tab-" + tab).style.display = "block";
+  if (tab === "settings") hdRenderSettings();
+  hdToggleSidebar(false);
 }
 function hdLoadRooms() {
   db.collection("hotels").doc(_hotelSession).collection("rooms").get().then(function(snap) {
@@ -6430,6 +6521,96 @@ function hdRequestWithdrawal() {
     hdLoadWithdrawals();
   }).catch(function() { T("Error", "Could not submit withdrawal request."); });
 }
+
+// ── HOTEL SETTINGS (profile photo, hotel info, gallery, password) ──
+var _hdGallery = [];
+function hdRenderSettings() {
+  var h = _hotelProfile || {};
+  var av = document.getElementById("hds-avatar");
+  av.innerHTML = h.profilePhoto ? '<img src="' + h.profilePhoto + '" style="width:100%;height:100%;object-fit:cover"/>' : "&#127974;";
+  document.getElementById("hds-name").value = h.name || "";
+  document.getElementById("hds-location").value = h.location || "";
+  document.getElementById("hds-phone").value = h.phone || "";
+  document.getElementById("hds-description").value = h.description || "";
+  _hdGallery = (h.gallery && h.gallery.length) ? h.gallery.slice() : (h.coverImage ? [h.coverImage] : []);
+  hdRenderGalleryPreview();
+}
+function hdRenderGalleryPreview() {
+  var box = document.getElementById("hds-gallery-preview");
+  if (!_hdGallery.length) { box.innerHTML = '<div style="font-size:.76rem;color:var(--muted)">No photos yet. Add some below so guests can see your hotel.</div>'; return; }
+  box.innerHTML = _hdGallery.map(function(url, i) {
+    return '<div class="gal-thumb"><img src="' + url + '" style="width:100%;height:100%;object-fit:cover"/><button type="button" class="gal-rm" onclick="hdRemoveGalleryPhoto(' + i + ')">&#10005;</button>' + (i === 0 ? '<span class="gal-cover-tag">Cover</span>' : '') + '</div>';
+  }).join("");
+}
+function hdSaveGallery(successMsg) {
+  return db.collection("hotels").doc(_hotelSession).set({
+    gallery: _hdGallery, coverImage: _hdGallery[0] || null
+  }, { merge: true }).then(function() {
+    _hotelProfile.gallery = _hdGallery.slice();
+    _hotelProfile.coverImage = _hdGallery[0] || null;
+    hdRenderGalleryPreview();
+    if (successMsg) T("Gallery Updated", successMsg);
+  }).catch(function() { T("Error", "Could not update gallery."); });
+}
+function hdAddGalleryFiles(input) {
+  var files = Array.prototype.slice.call(input.files || []);
+  if (!files.length) return;
+  compressGalleryFiles(files, function(urls) {
+    _hdGallery = _hdGallery.concat(urls);
+    hdSaveGallery("Your photos have been added.");
+    input.value = "";
+  });
+}
+function hdRemoveGalleryPhoto(i) {
+  _hdGallery.splice(i, 1);
+  hdSaveGallery("Photo removed.");
+}
+function hdUploadProfilePhoto(input) {
+  var file = input.files && input.files[0];
+  if (!file || !_hotelSession) return;
+  compressImageToLimit(file, function(b64) {
+    db.collection("hotels").doc(_hotelSession).set({ profilePhoto: b64 }, { merge: true }).then(function() {
+      _hotelProfile.profilePhoto = b64;
+      hdRenderSettings();
+      var sbAv = document.getElementById("hd-sb-avatar");
+      if (sbAv) sbAv.innerHTML = '<img src="' + b64 + '"/>';
+      T("Photo Updated", "Your profile photo has been changed.");
+    }).catch(function() { T("Error", "Could not upload photo."); });
+  }, { maxBytes: 400000, maxDim: 500, minDim: 150, square: true, onError: function(){ T("Error", "Could not process that photo."); } });
+}
+function hdSaveInfo() {
+  if (!_hotelSession) return;
+  var location = document.getElementById("hds-location").value.trim();
+  var phone = document.getElementById("hds-phone").value.trim();
+  var description = document.getElementById("hds-description").value.trim();
+  db.collection("hotels").doc(_hotelSession).set({ location: location, phone: phone, description: description }, { merge: true }).then(function() {
+    _hotelProfile.location = location; _hotelProfile.phone = phone; _hotelProfile.description = description;
+    T("Saved", "Your hotel information has been updated.");
+  }).catch(function() { T("Error", "Could not save changes."); });
+}
+function hdChangePassword() {
+  var current = document.getElementById("hds-pw-current").value;
+  var next = document.getElementById("hds-pw-new").value;
+  var confirm2 = document.getElementById("hds-pw-confirm").value;
+  if (!current) { T("Missing Info", "Enter your current password."); return; }
+  if (!next || next.length < 6) { T("Weak Password", "New password must be at least 6 characters."); return; }
+  if (next !== confirm2) { T("Passwords Don't Match", "Your new password entries don't match."); return; }
+  var user = auth.currentUser;
+  if (!user) return;
+  var cred = firebase.auth.EmailAuthProvider.credential(user.email, current);
+  user.reauthenticateWithCredential(cred).then(function() {
+    return user.updatePassword(next);
+  }).then(function() {
+    document.getElementById("hds-pw-current").value = "";
+    document.getElementById("hds-pw-new").value = "";
+    document.getElementById("hds-pw-confirm").value = "";
+    T("Password Updated", "Your password has been changed.");
+  }).catch(function(e) {
+    if (e.code === "auth/wrong-password") T("Incorrect Password", "Your current password is wrong.");
+    else T("Error", "Could not update password. Please try again.", 6000);
+  });
+}
+
 function statCardMain(icon, color, bg, label, val) {
   return '<div class="stat-card"><div class="stat-top"><div class="stat-ico" style="background:' + bg + ';color:' + color + '">' + icon + '</div><div class="stat-lbl">' + label + '</div></div><div class="stat-val">' + val + '</div></div>';
 }
