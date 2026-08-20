@@ -102,6 +102,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .bo{background:transparent;color:var(--gold2);border:1px solid var(--gold-border)}
 .bo:hover{background:var(--gold-dim)}
 .bo:active{transform:scale(.95)}
+.btn-o{background:#fff;border:1.5px solid var(--border);color:var(--text)}
+.btn-o:hover{border-color:var(--gold);color:var(--gold)}
+.btn-sm{padding:.4rem .75rem;font-size:.72rem}
 .sec{padding:4.5rem 1.5rem;max-width:1200px;margin:0 auto}
 .seye{font-size:.68rem;letter-spacing:.18em;color:var(--gold);text-transform:uppercase;margin-bottom:.55rem;display:flex;align-items:center;gap:.5rem}
 .seye::before{content:'';width:20px;height:1px;background:var(--gold)}
@@ -368,7 +371,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     <button class="ni" id="ni-access" onclick="SP('access')">Room Access</button>
     <button class="ni" id="ni-history" onclick="SP('history')">My Booking</button>
     <button class="ni" id="ni-hotels" onclick="SP('hotels')">Hotels</button>
-    <button class="ni" id="ni-account" onclick="SP('account')">Sign In / Register</button>
+    <button class="ni" id="ni-account" onclick="goAccount()">Sign In / Register</button>
     <button class="ni" id="ni-registerhotel" onclick="SP('registerhotel')">Register Hotel</button>
     <button class="ni" id="ni-admin" onclick="SP('admin')">Admin</button>
     <button class="ni cta" onclick="SP('booking')">Reserve</button>
@@ -400,7 +403,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   <button class="ni" onclick="SP('access');toggleNav()">Room Access</button>
   <button class="ni" onclick="SP('history');toggleNav()">My Booking</button>
   <button class="ni" id="ni-hotels-m" onclick="SP('hotels');toggleNav()">Hotels</button>
-  <button class="ni" id="ni-account-m" onclick="SP('account');toggleNav()">Sign In / Register</button>
+  <button class="ni" id="ni-account-m" onclick="goAccount();toggleNav()">Sign In / Register</button>
   <button class="ni" onclick="SP('registerhotel');toggleNav()">Register Hotel</button>
   <button class="ni" onclick="SP('admin');toggleNav()">Admin</button>
 </div>
@@ -417,7 +420,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       <div class="hbtns">
         <button class="btn bg" onclick="SP('hotels')">Book Now</button>
         <button class="btn bo" onclick="SP('hotels')">Explore Rooms</button>
-        <button class="btn bo" onclick="SP('account')">Sign Up / Log In</button>
+        <button class="btn bo" onclick="goAccount()">Sign Up / Log In</button>
       </div>
       <div class="hstats">
         <div><div class="hsn">7</div><div class="hsl">Room Types</div></div>
@@ -701,37 +704,70 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     </div>
   </div>
 
-  <div id="acc-app" style="display:none">
+  <div id="acc-loggedin" style="display:none">
+    <div class="hd-topbar">
+      <button class="hd-ham" onclick="accToggleSidebar(true)"><span></span><span></span><span></span></button>
+      <div class="hd-topbar-txt">
+        <div class="hd-topbar-tag">My Account</div>
+        <div class="hd-topbar-name" id="acc-topbar-name">Guest</div>
+      </div>
+      <div id="acc-topbar-avatar" onclick="accOpenSub('profile')" style="width:36px;height:36px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.95rem;color:var(--gold);overflow:hidden;flex-shrink:0;cursor:pointer" title="My Profile">U</div>
+    </div>
+    <div class="hd-overlay" id="acc-overlay" onclick="accToggleSidebar(false)"></div>
+    <div class="hd-sidebar" id="acc-sidebar">
+      <div class="hd-sb-head">
+        <div class="hd-sb-avatar" id="acc-sb-avatar">U</div>
+        <div class="hd-sb-name" id="acc-sb-name">Guest</div>
+        <div class="hd-sb-tag" id="acc-sb-role">Member</div>
+      </div>
+      <div class="hd-sb-nav">
+        <div class="hd-sb-item on" data-k="overview" onclick="accShowMenu();accToggleSidebar(false)"><span class="ic">&#127968;</span>Overview</div>
+        <div class="hd-sb-item" data-k="bookings" onclick="accOpenSub('bookings')"><span class="ic">&#128197;</span>My Bookings</div>
+        <div class="hd-sb-item" data-k="wishlist" onclick="accOpenSub('wishlist')"><span class="ic">&#9825;</span>My Wishlist</div>
+        <div class="hd-sb-item" data-k="profile" onclick="accOpenSub('profile')"><span class="ic">&#128100;</span>My Profile</div>
+        <div class="hd-sb-item" data-k="payments" onclick="accOpenSub('payments')"><span class="ic">&#128179;</span>Payments &amp; Wallet</div>
+        <div class="hd-sb-item" data-k="inbox" onclick="accOpenSub('inbox')"><span class="ic">&#9993;</span>Inbox<span id="acc-sb-inbox-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
+        <div class="hd-sb-item" data-k="notifications" onclick="accOpenSub('notifications')"><span class="ic">&#128276;</span>Notifications<span id="acc-sb-notif-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
+        <div class="hd-sb-item" data-k="refer" onclick="accOpenSub('refer')"><span class="ic">&#127873;</span>Refer &amp; Earn</div>
+        <div class="hd-sb-item" data-k="help" onclick="accOpenSub('help')"><span class="ic">&#127911;</span>Help &amp; Support</div>
+        <div class="hd-sb-item" data-k="about" onclick="accOpenSub('about')"><span class="ic">&#8505;</span>About Hotels Continental</div>
+        <div class="hd-sb-item" data-k="terms" onclick="accOpenSub('terms')"><span class="ic">&#128220;</span>Terms &amp; Conditions</div>
+        <div class="hd-sb-item" data-k="privacy" onclick="accOpenSub('privacy')"><span class="ic">&#128274;</span>Privacy Policy</div>
+      </div>
+      <div class="hd-sb-foot"><button class="hd-sb-logout" onclick="accLogout()">&#128682; Log Out</button></div>
+    </div>
     <div class="bpw" style="max-width:640px;padding-top:1.4rem">
-      <div style="background:linear-gradient(135deg,var(--ink),#132b52);border-radius:20px;padding:1.6rem 1.4rem 1.4rem;color:#fff;margin-bottom:1rem">
-        <div style="display:flex;align-items:center;gap:1rem">
-          <div id="acc-avatar" style="width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.4rem;color:#fff;overflow:hidden;flex-shrink:0">U</div>
-          <div>
-            <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:#fff" id="acc-name">Guest</div>
-            <span style="font-size:.66rem;color:var(--gold2);background:rgba(255,255,255,.12);display:inline-block;padding:.18rem .6rem;border-radius:100px;margin-top:.3rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase" id="acc-role">Member</span>
-            <div id="acc-email" style="display:none"></div>
-          </div>
-        </div>
-        <div onclick="accOpenSub('payments')" style="margin-top:1.3rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
-          <div>
-            <div style="font-size:.66rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem">Wallet Balance</div>
-            <div style="display:flex;align-items:center;gap:.55rem">
-              <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold2)" id="acc-wallet-val">&#8358;0.00</div>
-              <button type="button" onclick="event.stopPropagation();accToggleWalletVisibility()" style="background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;font-size:1rem;padding:0;line-height:1" id="acc-wallet-eye">&#128065;</button>
+      <div id="acc-app" style="display:none">
+        <div style="background:linear-gradient(135deg,var(--ink),#132b52);border-radius:20px;padding:1.6rem 1.4rem 1.4rem;color:#fff;margin-bottom:1rem">
+          <div style="display:flex;align-items:center;gap:1rem">
+            <div id="acc-avatar" style="width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.4rem;color:#fff;overflow:hidden;flex-shrink:0">U</div>
+            <div>
+              <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:#fff" id="acc-name">Guest</div>
+              <span style="font-size:.66rem;color:var(--gold2);background:rgba(255,255,255,.12);display:inline-block;padding:.18rem .6rem;border-radius:100px;margin-top:.3rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase" id="acc-role">Member</span>
+              <div id="acc-email" style="display:none"></div>
             </div>
           </div>
-          <span style="color:rgba(255,255,255,.5);font-size:1.2rem">&#8250;</span>
+          <div onclick="accOpenSub('payments')" style="margin-top:1.3rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+            <div>
+              <div style="font-size:.66rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem">Wallet Balance</div>
+              <div style="display:flex;align-items:center;gap:.55rem">
+                <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold2)" id="acc-wallet-val">&#8358;0.00</div>
+                <button type="button" onclick="event.stopPropagation();accToggleWalletVisibility()" style="background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;font-size:1rem;padding:0;line-height:1" id="acc-wallet-eye">&#128065;</button>
+              </div>
+            </div>
+            <span style="color:rgba(255,255,255,.5);font-size:1.2rem">&#8250;</span>
+          </div>
         </div>
+        <p style="font-size:.78rem;color:var(--muted);text-align:center;margin-top:.5rem">Tap the menu icon above to get to your bookings, wishlist, profile and more.</p>
       </div>
-      <div id="acc-menu"></div>
-    </div>
-  </div>
 
-  <!-- Account sub-pages -->
-  <div class="hxout" id="acc-sub" style="display:none;max-width:640px">
-    <button class="sagain" onclick="accShowMenu()" style="margin-bottom:1rem">&#8592; Back to Account</button>
-    <div id="acc-sub-title" class="fst" style="margin-bottom:1rem"></div>
-    <div id="acc-sub-body"></div>
+      <!-- Account sub-pages -->
+      <div class="hxout" id="acc-sub" style="display:none;max-width:640px;padding:0">
+        <button class="sagain" onclick="accShowMenu()" style="margin-bottom:1rem">&#8592; Back to Account</button>
+        <div id="acc-sub-title" class="fst" style="margin-bottom:1rem"></div>
+        <div id="acc-sub-body"></div>
+      </div>
+    </div>
   </div>
 
   <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
@@ -947,6 +983,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
           <div class="fg"><label>Check-In</label><input type="date" id="hb-cin"/><div class="eferr" id="hb-eci">Select a valid check-in date.</div></div>
           <div class="fg"><label>Check-Out</label><input type="date" id="hb-cout"/><div class="eferr" id="hb-eco">Check-out must be after check-in.</div></div>
         </div>
+        <div class="fg" style="max-width:160px"><label>Number of Guests</label><input type="number" id="hb-guests" min="1" value="1" inputmode="numeric"/></div>
         <div class="acard" style="margin:1rem 0">
           <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.4rem"><span>Room</span><strong id="hb-sum-room">-</strong></div>
           <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.4rem"><span>Nights</span><strong id="hb-sum-nights">-</strong></div>
@@ -1018,6 +1055,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       <div class="hd-sb-item on" data-t="overview" onclick="hdSetTab('overview')"><span class="ic">&#128202;</span>Overview</div>
       <div class="hd-sb-item" data-t="rooms" onclick="hdSetTab('rooms')"><span class="ic">&#128716;</span>Rooms</div>
       <div class="hd-sb-item" data-t="bookings" onclick="hdSetTab('bookings')"><span class="ic">&#128197;</span>Bookings</div>
+      <div class="hd-sb-item" data-t="notifications" onclick="hdSetTab('notifications')"><span class="ic">&#128276;</span>Notifications<span id="hd-sb-notif-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
       <div class="hd-sb-item" data-t="wallet" onclick="hdSetTab('wallet')"><span class="ic">&#128176;</span>Wallet</div>
       <div class="hd-sb-item" data-t="settings" onclick="hdSetTab('settings')"><span class="ic">&#9881;</span>Settings</div>
     </div>
@@ -1049,6 +1087,16 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       </div>
       <div id="hd-tab-bookings" class="hd-tab" style="display:none">
         <div class="card"><div class="card-title">All Bookings</div><div id="hd-bookings-list"></div></div>
+      </div>
+      <div id="hd-tab-notifications" class="hd-tab" style="display:none">
+        <div class="card">
+          <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap">
+            <span>New Booking Notifications</span>
+            <button class="btn btn-o btn-sm" onclick="hdMarkAllNotifRead()">Mark All as Read</button>
+          </div>
+          <p style="font-size:.72rem;color:var(--muted);margin:-.2rem 0 .8rem">View-only: booking approvals, cancellations and refunds are handled by the platform admin.</p>
+          <div id="hd-notif-list"></div>
+        </div>
       </div>
       <div id="hd-tab-wallet" class="hd-tab" style="display:none">
         <div class="stat-grid" id="hd-wallet-stats"></div>
@@ -2896,8 +2944,31 @@ function approveHotelBooking(id) {
       renderHotelBookingsAdmin();
       T(&quot;Booking Approved&quot;, &quot;Room &quot;+(roomNum||&quot;&quot;)+&quot; assigned and access code sent.&quot;);
       maybeGrantReferralReward(b.email);
+      notifyCustomerBookingUpdate(b, &quot;Approved&quot;, &quot;paid&quot;, &quot;Great news! Your booking at &quot; + b.hotelName + &quot; has been approved and confirmed.&quot;);
     });
   }).catch(function(){ T(&quot;Error&quot;, &quot;Could not approve this booking.&quot;); });
+}
+
+// ── CUSTOMER INBOX UPDATES (admin-triggered booking status changes) ──
+// Whenever the admin approves, rejects, or otherwise updates a partner-hotel
+// booking, this pushes a fresh booking-detail message into that customer's
+// website inbox (never by email) so they always see the latest status. The
+// customer is looked up by email since this admin panel doesn't carry uids.
+function notifyCustomerBookingUpdate(b, bookingStatus, paymentStatus, bodyText) {
+  var email = (b.email || &quot;&quot;).trim().toLowerCase();
+  if (!email) return;
+  db.collection(&quot;users&quot;).where(&quot;email&quot;, &quot;==&quot;, email).limit(1).get().then(function(snap) {
+    if (snap.empty) return;
+    var uid = snap.docs[0].id;
+    db.collection(&quot;messages&quot;).add({
+      uid: uid, type: &quot;booking&quot;, bookingId: b.id, hotelName: b.hotelName,
+      room: b.roomType, checkIn: b.checkIn, checkOut: b.checkOut, guests: b.guests || 1,
+      amount: b.amount, paymentStatus: paymentStatus, bookingStatus: bookingStatus,
+      subject: &quot;Booking Update &mdash; &quot; + b.hotelName,
+      body: bodyText, read: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function(e) { console.warn(&quot;inbox update write failed:&quot;, e); });
+  }).catch(function() {});
 }
 
 // ── REFERRAL REWARDS (admin-side mirror) ──
@@ -2936,6 +3007,7 @@ function rejectHotelBooking(id) {
     b.status = &quot;Rejected&quot;;
     renderHotelBookingsAdmin();
     T(&quot;Booking Rejected&quot;, &quot;The booking request has been rejected.&quot;);
+    notifyCustomerBookingUpdate(b, &quot;Rejected&quot;, &quot;failed&quot;, &quot;Unfortunately your booking request at &quot; + b.hotelName + &quot; could not be approved. Please contact support or try another hotel.&quot;);
   }).catch(function(){ T(&quot;Error&quot;, &quot;Could not reject this booking.&quot;); });
 }
 function pill(status) {
@@ -4364,6 +4436,14 @@ window.addEventListener("popstate", function(e) {
 })();
 function toggleNav() { document.getElementById("mnav").classList.toggle("open"); }
 
+// The nav's "Sign In / Register" button needs to behave differently for a
+// logged-in hotel partner: the #account page's content is only built for
+// guest users, so a hotel session would otherwise land on a blank page.
+// Send hotel sessions straight to their dashboard (which has Log Out).
+function goAccount() {
+  if (_hotelSession) { SP("hoteldash"); } else { SP("account"); }
+}
+
 // TOAST
 function T(t, m, d) {
   d = d || 3800;
@@ -5296,8 +5376,11 @@ auth.onAuthStateChanged(function(user) {
         _hotelProfile = hdoc.data();
         _hotelProfile.id = user.uid;
         document.getElementById("acc-guest").style.display = "none";
+        document.getElementById("acc-loggedin").style.display = "none";
         document.getElementById("acc-app").style.display = "none";
         document.getElementById("acc-sub").style.display = "none";
+        var navAH = document.getElementById("ni-account"); if (navAH) navAH.textContent = "Dashboard";
+        var navAmH = document.getElementById("ni-account-m"); if (navAmH) navAmH.textContent = "Dashboard";
         openHotelDash();
         return;
       }
@@ -5308,15 +5391,18 @@ auth.onAuthStateChanged(function(user) {
         loadWishlist();
       });
       document.getElementById("acc-guest").style.display = "none";
+      document.getElementById("acc-loggedin").style.display = "block";
       document.getElementById("acc-app").style.display = "block";
       document.getElementById("acc-sub").style.display = "none";
     }).catch(function() {
       _hotelSession = null; _hotelProfile = null;
     });
   } else {
+    if (_hdNotifUnsub) { _hdNotifUnsub(); _hdNotifUnsub = null; }
     _hotelSession = null; _hotelProfile = null;
     _accProfile = null;
     document.getElementById("acc-guest").style.display = "block";
+    document.getElementById("acc-loggedin").style.display = "none";
     document.getElementById("acc-app").style.display = "none";
     document.getElementById("acc-sub").style.display = "none";
     var navA = document.getElementById("ni-account"); if (navA) navA.textContent = "Sign In / Register";
@@ -5495,17 +5581,25 @@ function accRenderHeader() {
   document.getElementById("acc-name").textContent = p.name || "Guest";
   document.getElementById("acc-email").textContent = p.email || "";
   var roleEl = document.getElementById("acc-role"); if (roleEl) roleEl.textContent = "Member";
+  var initial = (p.name || "U").trim().charAt(0).toUpperCase();
+  var avHtml = p.photoURL ? '<img src="' + p.photoURL + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>' : initial;
   var av = document.getElementById("acc-avatar");
-  if (p.photoURL) {
-    av.innerHTML = '<img src="' + p.photoURL + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
-  } else {
-    av.textContent = (p.name || "U").trim().charAt(0).toUpperCase();
-  }
+  if (p.photoURL) { av.innerHTML = avHtml; } else { av.textContent = initial; }
+  var topbarAv = document.getElementById("acc-topbar-avatar"); if (topbarAv) topbarAv.innerHTML = avHtml;
+  var sbAv = document.getElementById("acc-sb-avatar"); if (sbAv) sbAv.innerHTML = avHtml;
+  var sbName = document.getElementById("acc-sb-name"); if (sbName) sbName.textContent = p.name || "Guest";
+  var topbarName = document.getElementById("acc-topbar-name"); if (topbarName) topbarName.textContent = p.name || "Guest";
   var firstName = (p.name || "Account").trim().split(" ")[0];
   var navA = document.getElementById("ni-account"); if (navA) navA.textContent = firstName;
   var navAm = document.getElementById("ni-account-m"); if (navAm) navAm.textContent = firstName;
   accShowMenu();
   accRenderWalletSummary();
+}
+
+// Opens/closes the account sidebar drawer (same pattern as the hotel dashboard)
+function accToggleSidebar(open) {
+  document.getElementById("acc-sidebar").classList.toggle("open", open);
+  document.getElementById("acc-overlay").classList.toggle("open", open);
 }
 
 var _accWalletHidden = false;
@@ -5539,27 +5633,7 @@ function accShowMenu() {
   document.getElementById("acc-sub").style.display = "none";
   document.getElementById("acc-app").style.display = "block";
   accRenderWalletSummary();
-  var items = [
-    { key: "bookings", ic: "&#128197;", lbl: "My Bookings" },
-    { key: "wishlist", ic: "&#9825;", lbl: "My Wishlist" },
-    { key: "profile", ic: "&#128100;", lbl: "My Profile" },
-    { key: "payments", ic: "&#128179;", lbl: "Payments & Wallet" },
-    { key: "inbox", ic: "&#9993;", lbl: "Inbox" },
-    { key: "notifications", ic: "&#128276;", lbl: "Notifications" },
-    { key: "refer", ic: "&#127873;", lbl: "Refer & Earn" },
-    { key: "help", ic: "&#127911;", lbl: "Help & Support" },
-    { key: "about", ic: "&#8505;", lbl: "About Hotels Continental" },
-    { key: "terms", ic: "&#128220;", lbl: "Terms & Conditions" },
-    { key: "privacy", ic: "&#128274;", lbl: "Privacy Policy" }
-  ];
-  var html = items.map(function(it) {
-    var badge = "";
-    if (it.key === "inbox") badge = '<span class="abadge" id="acc-inbox-badge" style="display:none">0</span>';
-    if (it.key === "notifications") badge = '<span class="abadge" id="acc-notif-badge" style="display:none">0</span>';
-    return '<div class="acc-item" onclick="accOpenSub(\'' + it.key + '\')"><span class="aic">' + it.ic + '</span><span class="alb">' + it.lbl + '</span>' + badge + '<span class="aarrow">&#8250;</span></div>';
-  }).join("");
-  html += '<div class="acc-item" style="color:var(--red);margin-top:.6rem;justify-content:center;text-align:center" onclick="accLogout()"><span class="aic">&#9211;</span><span class="alb" style="flex:none">Log Out</span></div>';
-  document.getElementById("acc-menu").innerHTML = html;
+  document.querySelectorAll("#acc-sidebar .hd-sb-item").forEach(function(b) { b.classList.toggle("on", b.dataset.k === "overview"); });
   accLoadMenuBadges();
 }
 
@@ -5567,20 +5641,22 @@ function accLoadMenuBadges() {
   var uid = _accUser ? _accUser.uid : "";
   if (!uid) return;
   db.collection("messages").where("uid", "==", uid).get().then(function(snap) {
-    var el = document.getElementById("acc-inbox-badge");
+    var el = document.getElementById("acc-sb-inbox-badge");
     if (!el) return;
-    if (snap.size) { el.textContent = snap.size; el.style.display = "flex"; } else { el.style.display = "none"; }
+    if (snap.size) { el.textContent = snap.size; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
   }).catch(function() {});
   db.collection("notifications").where("uid", "==", uid).get().then(function(snap) {
-    var el = document.getElementById("acc-notif-badge");
+    var el = document.getElementById("acc-sb-notif-badge");
     if (!el) return;
-    if (snap.size) { el.textContent = snap.size; el.style.display = "flex"; } else { el.style.display = "none"; }
+    if (snap.size) { el.textContent = snap.size; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
   }).catch(function() {});
 }
 
 function accOpenSub(key) {
   document.getElementById("acc-app").style.display = "none";
   document.getElementById("acc-sub").style.display = "block";
+  document.querySelectorAll("#acc-sidebar .hd-sb-item").forEach(function(b) { b.classList.toggle("on", b.dataset.k === key); });
+  accToggleSidebar(false);
   var titles = {
     bookings: "My Bookings", wishlist: "My Wishlist", profile: "My Profile",
     payments: "Payments & Wallet", inbox: "Inbox", notifications: "Notifications",
@@ -5880,11 +5956,31 @@ function accRenderInbox(body) {
   var uid = _accUser ? _accUser.uid : "";
   db.collection("messages").where("uid", "==", uid).get().then(function(snap) {
     if (snap.empty) { body.innerHTML = '<div class="emst"><span class="ei">&#9993;</span>Your inbox is empty.</div>'; return; }
-    var docs = snap.docs.map(function(d) { return d.data(); });
-    body.innerHTML = docs.map(function(m) {
-      return '<div class="lcard"><div class="fst" style="font-size:.95rem">' + (m.subject || "Message") + '</div><p style="font-size:.82rem;color:var(--muted)">' + (m.body || "") + '</p></div>';
-    }).join("");
+    var docs = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+    docs.sort(function(a, b) { return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
+    body.innerHTML = docs.map(accInboxRow).join("");
   }).catch(function() { body.innerHTML = '<div class="emst"><span class="ei">&#9993;</span>Your inbox is empty.</div>'; });
+}
+// Booking messages (type === "booking") carry structured fields sent
+// automatically whenever a booking is created or updated by the admin;
+// anything else falls back to the plain subject/body layout.
+function accInboxRow(m) {
+  if (m.type !== "booking") {
+    return '<div class="lcard"><div class="fst" style="font-size:.95rem">' + esc(m.subject || "Message") + '</div><p style="font-size:.82rem;color:var(--muted)">' + esc(m.body || "") + '</p></div>';
+  }
+  return '<div class="lcard">' +
+    '<div class="fst" style="font-size:.95rem">' + esc(m.subject || "Booking Update") + '</div>' +
+    (m.body ? '<p style="font-size:.82rem;color:var(--muted);margin:.2rem 0 .6rem">' + esc(m.body) + '</p>' : '') +
+    '<div style="font-size:.78rem;color:var(--muted);line-height:1.8;background:var(--surface2);border-radius:8px;padding:.7rem .85rem">' +
+      '<strong>Booking ID:</strong> ' + esc(m.bookingId) + '<br/>' +
+      '<strong>Hotel:</strong> ' + esc(m.hotelName) + '<br/>' +
+      '<strong>Room:</strong> ' + esc(m.room) + '<br/>' +
+      '<strong>Check-In / Check-Out:</strong> ' + esc(m.checkIn) + ' &#8594; ' + esc(m.checkOut) + '<br/>' +
+      '<strong>Guests:</strong> ' + esc(m.guests || 1) + '<br/>' +
+      '<strong>Amount:</strong> \u20a6' + (m.amount || 0).toLocaleString() + '<br/>' +
+      '<strong>Payment Status:</strong> ' + pillMini(m.paymentStatus) + ' &nbsp; <strong>Booking Status:</strong> ' + pillMini(m.bookingStatus) +
+    '</div>' +
+  '</div>';
 }
 
 function accRenderNotifications(body) {
@@ -6080,6 +6176,7 @@ function openHotelBooking(roomId) {
   document.getElementById("hb-form").style.display = "block";
   document.getElementById("hb-success").style.display = "none";
   ["hb-name","hb-phone","hb-email"].forEach(function(id) { document.getElementById(id).value = ""; });
+  document.getElementById("hb-guests").value = "1";
   var td = new Date().toISOString().split("T")[0];
   document.getElementById("hb-cin").min = td;
   document.getElementById("hb-cin").value = "";
@@ -6155,6 +6252,7 @@ function hotelBookInitiatePayment() {
   var email = document.getElementById("hb-email").value.trim();
   var cin = document.getElementById("hb-cin").value;
   var cout = document.getElementById("hb-cout").value;
+  var guests = parseInt(document.getElementById("hb-guests").value, 10) || 1;
   var td = new Date().toISOString().split("T")[0];
   var ok = true;
   function ve(id, pass) { var e = document.getElementById(id); if (pass) e.classList.remove("show"); else { e.classList.add("show"); ok = false; } }
@@ -6170,12 +6268,12 @@ function hotelBookInitiatePayment() {
   var total = nights * _mpCurrentRoom.price;
 
   if (_hbPayMethod === "manual") {
-    submitManualHotelBooking(total, name, phone, email, cin, cout);
+    submitManualHotelBooking(total, name, phone, email, cin, cout, guests);
     return;
   }
 
   if (_hbPayMethod === "wallet") {
-    payHotelBookingFromWallet(total, name, phone, email, cin, cout);
+    payHotelBookingFromWallet(total, name, phone, email, cin, cout, guests);
     return;
   }
 
@@ -6187,36 +6285,85 @@ function hotelBookInitiatePayment() {
       metadata: { name: name, phone: phone, hotelId: _mpCurrentHotel.id, roomId: _mpCurrentRoom.id },
       callback: function(response) {
         T("Payment Successful!", "Processing your booking...");
-        finalizeHotelBooking(response.reference, total, name, phone, email, cin, cout);
+        finalizeHotelBooking(response.reference, total, name, phone, email, cin, cout, guests);
       },
       onClose: function() { T("Payment Cancelled", "You closed the payment window."); }
     });
     handler.openIframe();
   }).catch(function() { T("Error", "Could not check room availability."); });
 }
-function submitManualHotelBooking(total, name, phone, email, cin, cout) {
+
+// ── BOOKING NOTIFICATIONS ──────────────────────────────────────────
+// Fires the moment a booking is created for a partner hotel: pushes a
+// real-time "New Booking" notification to that hotel's partner dashboard
+// (hotelNotifications, scoped by hotelId) and a matching detailed message
+// into the customer's website inbox (messages, scoped by uid). Both are
+// stored in Firestore so they persist after logout/login. This never sends
+// email — it is purely an in-app notification/inbox feature.
+function notifyBookingCreated(bookingId, b) {
+  db.collection("hotelNotifications").add({
+    hotelId: b.hotelId, bookingId: bookingId,
+    guestName: b.name, room: b.roomType, checkIn: b.checkIn, checkOut: b.checkOut,
+    guests: b.guests || 1, amount: b.amount, paymentStatus: b.paymentStatus,
+    bookingStatus: b.status, read: false,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(function(e) { console.warn("hotelNotifications write failed:", e); });
+
+  sendBookingInboxMessage(b.email, {
+    bookingId: bookingId, hotelName: b.hotelName, room: b.roomType,
+    checkIn: b.checkIn, checkOut: b.checkOut, guests: b.guests || 1,
+    amount: b.amount, paymentStatus: b.paymentStatus, bookingStatus: b.status,
+    subject: "Booking Received — " + b.hotelName,
+    body: "Your booking at " + b.hotelName + " (" + b.roomType + ") has been received."
+  });
+}
+// Writes a booking-detail message into a customer's in-app inbox (never by
+// email). Uses the signed-in session's uid when available; otherwise looks
+// the email up against the users collection so a guest checkout still lands
+// in the right account's inbox if that email already has one.
+function sendBookingInboxMessage(email, m) {
+  function write(uid) {
+    if (!uid) return;
+    db.collection("messages").add({
+      uid: uid, type: "booking", bookingId: m.bookingId, hotelName: m.hotelName,
+      room: m.room, checkIn: m.checkIn, checkOut: m.checkOut, guests: m.guests,
+      amount: m.amount, paymentStatus: m.paymentStatus, bookingStatus: m.bookingStatus,
+      subject: m.subject, body: m.body, read: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function(e) { console.warn("inbox message write failed:", e); });
+  }
+  if (_accUser && _accUser.uid) { write(_accUser.uid); return; }
+  var em = (email || "").trim().toLowerCase();
+  if (!em) return;
+  db.collection("users").where("email", "==", em).limit(1).get().then(function(snap) {
+    if (!snap.empty) write(snap.docs[0].id);
+  }).catch(function() {});
+}
+function submitManualHotelBooking(total, name, phone, email, cin, cout, guests) {
   var hotelShare = Math.round(total * 0.8);
   var platformShare = total - hotelShare;
-  db.collection("hotelBookings").add({
+  var bookingData = {
     hotelId: _mpCurrentHotel.id, hotelName: _mpCurrentHotel.name,
     roomId: _mpCurrentRoom.id, roomType: _mpCurrentRoom.name, roomNumber: "",
-    name: name, phone: phone, email: email, checkIn: cin, checkOut: cout,
+    name: name, phone: phone, email: email, checkIn: cin, checkOut: cout, guests: guests || 1,
     amount: total, hotelShare: hotelShare, platformShare: platformShare,
     status: "Pending", paymentStatus: "unpaid", paymentMethod: "manual",
     receiptURL: _hbReceiptData || "",
     accessCode: "", codeStatus: "inactive",
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function() {
+  };
+  db.collection("hotelBookings").add(bookingData).then(function(ref) {
     document.getElementById("hb-form").style.display = "none";
     document.getElementById("hb-success").style.display = "block";
     document.getElementById("hb-success-msg").innerHTML = "Your booking request at <strong>" + esc(_mpCurrentHotel.name) + "</strong> has been submitted. We'll confirm once your bank transfer is verified by our team, then send your access code.";
     T("Request Submitted", "Awaiting admin approval of your bank transfer.");
+    notifyBookingCreated(ref.id, bookingData);
   }).catch(function(e) {
     T("Error", "Could not submit your booking request. Please try again.");
     console.error(e);
   });
 }
-function payHotelBookingFromWallet(total, name, phone, email, cin, cout) {
+function payHotelBookingFromWallet(total, name, phone, email, cin, cout, guests) {
   var uid = _accUser ? _accUser.uid : "";
   var errEl = document.getElementById("hb-ewallet");
   if (!uid) { errEl.textContent = "Please sign in to pay from your wallet."; errEl.classList.add("show"); T("Sign In Required", "Please sign in to pay from your wallet."); return; }
@@ -6239,7 +6386,7 @@ function payHotelBookingFromWallet(total, name, phone, email, cin, cout) {
       }
       var payRef = "WALLET_" + Date.now();
       return db.collection("users").doc(uid).update({ walletBalance: firebase.firestore.FieldValue.increment(-total) })
-        .then(function() { return finalizeWalletHotelBooking(payRef, total, name, phone, email, cin, cout, roomNum); })
+        .then(function() { return finalizeWalletHotelBooking(payRef, total, name, phone, email, cin, cout, roomNum, guests); })
         .catch(function() {
           btn.disabled = false; btn.textContent = "Pay from Wallet & Confirm";
           T("Error", "Could not debit your wallet. Please try again.", 6000);
@@ -6247,30 +6394,32 @@ function payHotelBookingFromWallet(total, name, phone, email, cin, cout) {
     });
   }).catch(function() { T("Error", "Could not check your wallet balance."); });
 }
-function finalizeWalletHotelBooking(payRef, total, name, phone, email, cin, cout, roomNum) {
+function finalizeWalletHotelBooking(payRef, total, name, phone, email, cin, cout, roomNum, guests) {
   var hotelShare = Math.round(total * 0.8);
   var platformShare = total - hotelShare;
   var exp = new Date(cout + "T23:59:59");
   var code = String(Math.floor(100000 + Math.random() * 900000));
-  return db.collection("hotelBookings").add({
+  var bookingData = {
     hotelId: _mpCurrentHotel.id, hotelName: _mpCurrentHotel.name,
     roomId: _mpCurrentRoom.id, roomType: _mpCurrentRoom.name, roomNumber: roomNum || "",
-    name: name, phone: phone, email: email, checkIn: cin, checkOut: cout,
+    name: name, phone: phone, email: email, checkIn: cin, checkOut: cout, guests: guests || 1,
     amount: total, hotelShare: hotelShare, platformShare: platformShare,
     status: "Approved", paymentStatus: "paid", paymentRef: payRef, paymentMethod: "wallet",
     accessCode: code, codeStatus: "active", codeExpiry: firebase.firestore.Timestamp.fromDate(exp),
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function() {
+  };
+  return db.collection("hotelBookings").add(bookingData).then(function(ref) {
     return db.collection("hotels").doc(_mpCurrentHotel.id).update({
       walletBalance: firebase.firestore.FieldValue.increment(hotelShare),
       totalEarned: firebase.firestore.FieldValue.increment(hotelShare)
-    });
-  }).then(function() {
+    }).then(function() { return ref; });
+  }).then(function(ref) {
     document.getElementById("hb-form").style.display = "none";
     document.getElementById("hb-success").style.display = "block";
     document.getElementById("hb-success-msg").innerHTML = "Your booking at <strong>" + esc(_mpCurrentHotel.name) + "</strong> is confirmed and paid from your wallet. A 6-digit access code has been sent to your email.";
     T("Booking Confirmed!", "Paid from wallet. Enjoy your stay at " + _mpCurrentHotel.name + ".");
     maybeGrantReferralReward(email);
+    notifyBookingCreated(ref.id, bookingData);
   }).catch(function(e) {
     T("Error", "Wallet was debited but booking failed. Contact support with ref: " + payRef, 8000);
     console.error(e);
@@ -6291,32 +6440,36 @@ function findAvailableHotelRoomNumber(hotelId, roomId, checkIn, checkOut) {
     });
   });
 }
-function finalizeHotelBooking(payRef, total, name, phone, email, cin, cout) {
+function finalizeHotelBooking(payRef, total, name, phone, email, cin, cout, guests) {
   var hotelShare = Math.round(total * 0.8);
   var platformShare = total - hotelShare;
   var exp = new Date(cout + "T23:59:59");
   findAvailableHotelRoomNumber(_mpCurrentHotel.id, _mpCurrentRoom.id, cin, cout).then(function(roomNum) {
     var code = String(Math.floor(100000 + Math.random() * 900000));
-    return db.collection("hotelBookings").add({
+    var bookingData = {
       hotelId: _mpCurrentHotel.id, hotelName: _mpCurrentHotel.name,
       roomId: _mpCurrentRoom.id, roomType: _mpCurrentRoom.name, roomNumber: roomNum || "",
-      name: name, phone: phone, email: email, checkIn: cin, checkOut: cout,
+      name: name, phone: phone, email: email, checkIn: cin, checkOut: cout, guests: guests || 1,
       amount: total, hotelShare: hotelShare, platformShare: platformShare,
       status: "Approved", paymentStatus: "paid", paymentRef: payRef, paymentMethod: "paystack",
       accessCode: code, codeStatus: "active", codeExpiry: firebase.firestore.Timestamp.fromDate(exp),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(function() {
+    };
+    return db.collection("hotelBookings").add(bookingData).then(function(ref) {
       return db.collection("hotels").doc(_mpCurrentHotel.id).update({
         walletBalance: firebase.firestore.FieldValue.increment(hotelShare),
         totalEarned: firebase.firestore.FieldValue.increment(hotelShare)
-      });
+      }).then(function() { return ref; });
+    }).then(function(ref) {
+      return { ref: ref, bookingData: bookingData };
     });
-  }).then(function() {
+  }).then(function(result) {
     document.getElementById("hb-form").style.display = "none";
     document.getElementById("hb-success").style.display = "block";
     document.getElementById("hb-success-msg").innerHTML = "Your booking at <strong>" + esc(_mpCurrentHotel.name) + "</strong> is confirmed. A 6-digit access code has been sent to your email.";
     T("Booking Confirmed!", "Enjoy your stay at " + _mpCurrentHotel.name + ".");
     maybeGrantReferralReward(email);
+    notifyBookingCreated(result.ref.id, result.bookingData);
   }).catch(function(e) {
     T("Error", "Payment received but booking failed. Contact support with ref: " + payRef, 8000);
     console.error(e);
@@ -6331,6 +6484,8 @@ var _hdRooms = [];
 var _hdBookings = [];
 var _hdWithdrawals = [];
 var _hdEditingRoomId = null;
+var _hdNotifications = [];
+var _hdNotifUnsub = null;
 
 function openHotelDash() {
   SP("hoteldash");
@@ -6350,6 +6505,7 @@ function openHotelDash() {
     hdLoadRooms();
     hdLoadBookings();
     hdLoadWithdrawals();
+    hdListenNotifications();
   }
 }
 function hdToggleSidebar(open) {
@@ -6467,6 +6623,65 @@ function hdBookingRow(b) {
     '<div style="font-size:.74rem;color:var(--muted)">' + esc(b.checkIn) + ' &#8594; ' + esc(b.checkOut) + ' &middot; ' + esc(b.email) + '</div></div>' +
     '<div style="text-align:right"><div style="font-weight:700;color:var(--gold)">\u20a6' + (b.hotelShare || 0).toLocaleString() + '</div><div style="font-size:.7rem;color:var(--muted2)">code ' + esc(b.accessCode || "-") + '</div></div>' +
   '</div>';
+}
+// ── PARTNER NOTIFICATIONS (real-time "New Booking" alerts) ──
+// Live-listens to hotelNotifications for this hotel only (scoped by hotelId,
+// enforced server-side via Firestore security rules) so a new booking shows
+// up instantly without a refresh, and survives logout/login since it's
+// stored in Firestore rather than in memory. View-only: no action buttons —
+// partners cannot accept/reject/cancel/modify bookings from here.
+function hdListenNotifications() {
+  if (_hdNotifUnsub) { _hdNotifUnsub(); _hdNotifUnsub = null; }
+  if (!_hotelSession) return;
+  _hdNotifUnsub = db.collection("hotelNotifications").where("hotelId", "==", _hotelSession)
+    .onSnapshot(function(snap) {
+      _hdNotifications = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+      _hdNotifications.sort(function(a, b) { return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
+      hdRenderNotifications();
+    }, function(e) { console.warn("hotelNotifications listener:", e); });
+}
+function hdRenderNotifications() {
+  var badge = document.getElementById("hd-sb-notif-badge");
+  var unread = _hdNotifications.filter(function(n) { return !n.read; }).length;
+  if (badge) {
+    if (unread) { badge.textContent = unread; badge.style.display = "inline-flex"; } else { badge.style.display = "none"; }
+  }
+  var list = document.getElementById("hd-notif-list");
+  if (!list) return;
+  list.innerHTML = _hdNotifications.length ? _hdNotifications.map(hdNotifRow).join("") : '<div class="empty">No booking notifications yet.</div>';
+}
+function hdNotifRow(n) {
+  var unreadStyle = n.read ? "" : "background:var(--gold-dim);";
+  return '<div style="' + unreadStyle + 'border-radius:10px;padding:.75rem .85rem;margin-bottom:.6rem;border:1px solid var(--border)">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.6rem;flex-wrap:wrap">' +
+      '<div style="font-weight:700">' + (n.read ? "" : "&#128312; ") + "New Booking &mdash; " + esc(n.guestName) + '</div>' +
+      (n.read ? '' : '<button class="btn btn-o btn-sm" onclick="hdMarkNotifRead(\'' + n.id + '\')">Mark as Read</button>') +
+    '</div>' +
+    '<div style="font-size:.78rem;color:var(--muted);margin-top:.4rem;line-height:1.7">' +
+      '<strong>Booking ID:</strong> ' + esc(n.bookingId) + '<br/>' +
+      '<strong>Room:</strong> ' + esc(n.room) + '<br/>' +
+      '<strong>Check-In / Check-Out:</strong> ' + esc(n.checkIn) + ' &#8594; ' + esc(n.checkOut) + '<br/>' +
+      '<strong>Guests:</strong> ' + esc(n.guests || 1) + '<br/>' +
+      '<strong>Amount:</strong> \u20a6' + (n.amount || 0).toLocaleString() + '<br/>' +
+      '<strong>Payment Status:</strong> ' + pillMini(n.paymentStatus) + ' &nbsp; <strong>Booking Status:</strong> ' + pillMini(n.bookingStatus) +
+    '</div>' +
+  '</div>';
+}
+function pillMini(status) {
+  var s = String(status || "").toLowerCase();
+  var color = (s === "paid" || s === "approved") ? "var(--green)" : (s === "rejected" || s === "failed") ? "var(--red)" : "var(--muted)";
+  return '<span style="color:' + color + ';font-weight:700">' + esc(status || "-") + '</span>';
+}
+function hdMarkNotifRead(id) {
+  db.collection("hotelNotifications").doc(id).update({ read: true }).catch(function() { T("Error", "Could not mark this notification as read."); });
+}
+function hdMarkAllNotifRead() {
+  var unread = _hdNotifications.filter(function(n) { return !n.read; });
+  if (!unread.length) return;
+  var batch = db.batch();
+  unread.forEach(function(n) { batch.update(db.collection("hotelNotifications").doc(n.id), { read: true }); });
+  batch.commit().then(function() { T("All Caught Up", "All notifications marked as read."); })
+    .catch(function() { T("Error", "Could not mark all as read."); });
 }
 function hdLoadWithdrawals() {
   db.collection("withdrawals").where("hotelId", "==", _hotelSession).get().then(function(snap) {
