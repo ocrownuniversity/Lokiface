@@ -256,6 +256,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .fsub:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(26,86,219,.4)}
 .fsub:active{transform:scale(.97)}
 .fsub:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+.gbtn{width:100%;padding:.78rem;background:#fff;color:#3c4043;border:1.5px solid var(--border);border-radius:9px;font-family:'Jost',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.6rem;transition:all .18s}
+.gbtn:hover{background:#f8f8f8;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.gbtn:active{transform:scale(.98)}
+.gdiv{display:flex;align-items:center;gap:.8rem;margin:1.1rem 0;color:var(--muted2);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+.gdiv::before,.gdiv::after{content:"";flex:1;height:1px;background:var(--border)}
 .ripple-el{position:absolute;border-radius:50%;transform:scale(0);animation:rpl .55s linear;background:rgba(255,255,255,.3);pointer-events:none;z-index:10}
 @keyframes rpl{to{transform:scale(4);opacity:0}}
 footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;text-align:center}
@@ -685,6 +690,11 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         <button class="fsub" id="acc-tab-login" onclick="accSetTab('login')" style="flex:1">Sign In</button>
         <button class="fsub" id="acc-tab-signup" onclick="accSetTab('signup')" style="flex:1;background:transparent;color:var(--gold);border:1.5px solid var(--gold-border)">Sign Up</button>
       </div>
+      <button type="button" class="gbtn" onclick="accGoogleSignIn()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20.4H24v7.2h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.1-5.1C33.6 6.1 29 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l5.9 4.3C13.9 15.6 18.6 12.4 24 12.4c3.1 0 5.9 1.2 8 3.1l5.1-5.1C33.6 6.1 29 4 24 4c-7.4 0-13.8 4.2-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5 0 9.5-1.9 12.9-5.1l-5.9-5c-2 1.4-4.5 2.2-7 2.2-5.3 0-9.7-3.4-11.3-8l-5.9 4.5C9.9 39.6 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20.4H24v7.2h11.3c-.8 2.3-2.3 4.3-4.3 5.7l5.9 5C40.4 35.4 44 30.2 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+        Continue with Google
+      </button>
+      <div class="gdiv">or use email</div>
       <div id="acc-login-form">
         <div class="fg"><label>Email</label><input type="email" id="acc-li-email" placeholder="you@email.com"/></div>
         <div class="fg pw-wrap"><label>Password</label><input type="password" id="acc-li-pass" placeholder="Your password" onkeypress="if(event.key==='Enter')accLogin()"/><button type="button" class="pw-eye" onclick="togglePw('acc-li-pass',this)">&#128065;</button></div>
@@ -792,6 +802,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         <div class="sring">&#10003;</div>
         <div class="sttl">Check Your Email</div>
         <p class="smsg">If an account exists for that email, a password reset link has been sent. Click the link in that email to set a new password.</p>
+        <p class="smsg" style="font-size:.78rem;color:var(--muted);margin-top:-.4rem">Can't find it in your inbox? Please also check your Spam or Junk folder.</p>
         <button class="sagain" onclick="SP('account')">Back to Sign In</button>
       </div>
     </div>
@@ -5488,6 +5499,48 @@ function accLogin() {
   }).catch(function() {
     err.textContent = "Incorrect email or password.";
     err.classList.add("show");
+  });
+}
+
+// ── GOOGLE SIGN-IN ──
+// One button handles both sign-in and sign-up: if this Google account has
+// never been seen before, a matching "users" profile doc is created (using
+// their Google name/email/photo) exactly like a normal email sign-up would;
+// otherwise it's just a sign-in and onAuthStateChanged loads their existing
+// profile as usual.
+function accGoogleSignIn() {
+  var provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).then(function(cred) {
+    var user = cred.user;
+    if (!(cred.additionalUserInfo && cred.additionalUserInfo.isNewUser)) {
+      T("Welcome Back!", "You are now signed in.");
+      return;
+    }
+    var refInput = document.getElementById("acc-su-ref");
+    var refCode = refInput ? refInput.value.trim().toUpperCase() : "";
+    function createProfile(validReferrer) {
+      db.collection("users").doc(user.uid).set({
+        name: user.displayName || "", email: user.email || "", phone: user.phoneNumber || "",
+        photoURL: user.photoURL || "",
+        referralCode: user.uid.slice(0, 8).toUpperCase(),
+        referredBy: validReferrer ? refCode : "",
+        referralRewarded: false,
+        walletBalance: 0,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        T("Welcome!", "Your account has been created with Google." + (validReferrer ? " Referral code applied!" : ""));
+      });
+    }
+    if (refCode) {
+      db.collection("users").where("referralCode", "==", refCode).limit(1).get().then(function(snap) {
+        createProfile(!snap.empty);
+      }).catch(function() { createProfile(false); });
+    } else {
+      createProfile(false);
+    }
+  }).catch(function(e) {
+    if (e && (e.code === "auth/popup-closed-by-user" || e.code === "auth/cancelled-popup-request")) return;
+    T("Sign-In Failed", (e && e.message) || "Could not sign in with Google.");
   });
 }
 
