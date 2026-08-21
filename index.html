@@ -1241,6 +1241,11 @@ button,input,select{font-family:'Inter',sans-serif}
 .sb-logo{font-weight:800;font-size:1rem}
 .sb-logo span{color:var(--orange)}
 .sb-tag{font-size:.68rem;color:rgba(255,255,255,.6);margin-top:.15rem}
+.sb-profile{margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.15);display:flex;flex-direction:column;align-items:center;text-align:center;gap:.35rem}
+.sb-profile-avatar{width:56px;height:56px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;overflow:hidden;flex-shrink:0}
+.sb-profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.sb-profile-name{font-weight:700;font-size:.86rem}
+.sb-profile-role{font-size:.63rem;color:rgba(255,255,255,.7);background:rgba(255,255,255,.12);padding:.15rem .55rem;border-radius:6px}
 .sb-nav{flex:1;overflow-y:auto;padding:.6rem}
 .sb-item{display:flex;align-items:center;gap:.7rem;padding:.7rem .8rem;border-radius:9px;cursor:pointer;font-size:.83rem;font-weight:500;color:var(--text);transition:all .15s}
 .sb-item:hover{background:var(--blue-dim)}
@@ -1449,9 +1454,15 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     <div class=&quot;sb-head&quot;>
       <div class=&quot;sb-logo&quot;>HOTELS <span>CONTINENTAL</span></div>
       <div class=&quot;sb-tag&quot;>Admin &amp;amp; Partner Portal</div>
+      <div class=&quot;sb-profile&quot; id=&quot;sb-profile&quot; style=&quot;display:none&quot;>
+        <div class=&quot;sb-profile-avatar&quot; id=&quot;sb-profile-avatar&quot;>A</div>
+        <div class=&quot;sb-profile-name&quot; id=&quot;sb-profile-name&quot;>Staff</div>
+        <div class=&quot;sb-profile-role&quot;>Staff Admin</div>
+      </div>
     </div>
     <div class=&quot;sb-nav&quot;>
       <div class=&quot;sb-item on&quot; data-page=&quot;dashboard&quot; onclick=&quot;goPage('dashboard')&quot;><span class=&quot;ic&quot;>&amp;#128202;</span>Dashboard</div>
+      <div class=&quot;sb-item&quot; id=&quot;sb-myprofile&quot; data-page=&quot;myprofile&quot; onclick=&quot;goPage('myprofile')&quot; style=&quot;display:none&quot;><span class=&quot;ic&quot;>&amp;#128100;</span>My Profile</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotels&quot; onclick=&quot;goPage('hotels')&quot;><span class=&quot;ic&quot;>&amp;#127974;</span>Hotels</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage('hotelbookings')&quot;><span class=&quot;ic&quot;>&amp;#128273;</span>Marketplace Bookings</div>
       <div class=&quot;sb-item&quot; data-page=&quot;users&quot; onclick=&quot;goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span>Users</div>
@@ -1485,19 +1496,20 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       </div>
     </div>
     <div class=&quot;ad-menu&quot;>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelbookings')&quot;><span class=&quot;ic&quot;>&amp;#128197;</span>All Bookings<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotels')&quot;><span class=&quot;ic&quot;>&amp;#127974;</span>Manage Hotels<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span>Manage Users<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelverification')&quot;><span class=&quot;ic&quot;>&amp;#9989;</span>Hotel Verification<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelregs')&quot;><span class=&quot;ic&quot;>&amp;#128196;</span>Hotel Registrations<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('payments')&quot;><span class=&quot;ic&quot;>&amp;#128179;</span>Payments &amp;amp; Wallet<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('payouts')&quot;><span class=&quot;ic&quot;>&amp;#128176;</span>Payouts<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('walletfundings')&quot;><span class=&quot;ic&quot;>&amp;#128176;</span>Wallet Fundings<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('promotions')&quot;><span class=&quot;ic&quot;>&amp;#127881;</span>Promotions<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('reports')&quot;><span class=&quot;ic&quot;>&amp;#128200;</span>Reports<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('reviews')&quot;><span class=&quot;ic&quot;>&amp;#11088;</span>Reviews<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; id=&quot;ad-myprofile-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('myprofile')&quot; style=&quot;display:none&quot;><span class=&quot;ic&quot;>&amp;#128100;</span>My Profile<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelbookings')&quot;><span class=&quot;ic&quot;>&amp;#128197;</span>All Bookings<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;hotels&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotels')&quot;><span class=&quot;ic&quot;>&amp;#127974;</span>Manage Hotels<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;users&quot; onclick=&quot;toggleAcctDrawer(false);goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span>Manage Users<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;hotelverification&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelverification')&quot;><span class=&quot;ic&quot;>&amp;#9989;</span>Hotel Verification<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;hotelregs&quot; onclick=&quot;toggleAcctDrawer(false);goPage('hotelregs')&quot;><span class=&quot;ic&quot;>&amp;#128196;</span>Hotel Registrations<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;payments&quot; onclick=&quot;toggleAcctDrawer(false);goPage('payments')&quot;><span class=&quot;ic&quot;>&amp;#128179;</span>Payments &amp;amp; Wallet<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;payouts&quot; onclick=&quot;toggleAcctDrawer(false);goPage('payouts')&quot;><span class=&quot;ic&quot;>&amp;#128176;</span>Payouts<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;walletfundings&quot; onclick=&quot;toggleAcctDrawer(false);goPage('walletfundings')&quot;><span class=&quot;ic&quot;>&amp;#128176;</span>Wallet Fundings<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;promotions&quot; onclick=&quot;toggleAcctDrawer(false);goPage('promotions')&quot;><span class=&quot;ic&quot;>&amp;#127881;</span>Promotions<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;reports&quot; onclick=&quot;toggleAcctDrawer(false);goPage('reports')&quot;><span class=&quot;ic&quot;>&amp;#128200;</span>Reports<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;reviews&quot; onclick=&quot;toggleAcctDrawer(false);goPage('reviews')&quot;><span class=&quot;ic&quot;>&amp;#11088;</span>Reviews<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; id=&quot;ad-subadmin-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('subadmins')&quot; style=&quot;display:none&quot;><span class=&quot;ic&quot;>&amp;#128272;</span>Sub-Admins<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
-      <div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage('settings')&quot;><span class=&quot;ic&quot;>&amp;#9881;</span>Settings<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
+      <div class=&quot;ad-item&quot; data-page=&quot;settings&quot; onclick=&quot;toggleAcctDrawer(false);goPage('settings')&quot;><span class=&quot;ic&quot;>&amp;#9881;</span>Settings<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;T('Help &amp; Support','Email HotelsContinental@gmail.com')&quot;><span class=&quot;ic&quot;>&amp;#127911;</span>Help &amp;amp; Support<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
       <div class=&quot;ad-item&quot; onclick=&quot;T('About Hotels Continental','Multi-hotel booking &amp;amp; management platform.')&quot;><span class=&quot;ic&quot;>&amp;#8505;</span>About Hotels Continental<span class=&quot;arrow&quot;>&amp;#8250;</span></div>
     </div>
@@ -1507,15 +1519,39 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
   <main>
     <!-- ============ DASHBOARD ============ -->
     <div class=&quot;apage active&quot; id=&quot;page-dashboard&quot;>
-      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Dashboard</div><div class=&quot;ph-sub&quot;>Platform overview at a glance.</div></div>
+      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot; id=&quot;dash-title&quot;>Dashboard</div><div class=&quot;ph-sub&quot; id=&quot;dash-sub&quot;>Platform overview at a glance.</div></div>
       <div class=&quot;stat-grid&quot; id=&quot;dash-stats&quot;></div>
+      <div id=&quot;dash-empty&quot; class=&quot;empty&quot; style=&quot;display:none&quot;>No overview metrics for your assigned role yet. Ask a super admin if you need access to more sections.</div>
       <div class=&quot;chart-grid2&quot;>
-        <div class=&quot;card&quot;><div class=&quot;card-title&quot;>Bookings (Last 7 Days)</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;dash-chart-bookings&quot;></canvas></div></div>
-        <div class=&quot;card&quot;><div class=&quot;card-title&quot;>Revenue (Last 7 Days)</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;dash-chart-revenue&quot;></canvas></div></div>
+        <div class=&quot;card&quot; id=&quot;dash-card-bookingschart&quot;><div class=&quot;card-title&quot;>Bookings (Last 7 Days)</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;dash-chart-bookings&quot;></canvas></div></div>
+        <div class=&quot;card&quot; id=&quot;dash-card-revenuechart&quot;><div class=&quot;card-title&quot;>Revenue (Last 7 Days)</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;dash-chart-revenue&quot;></canvas></div></div>
       </div>
-      <div class=&quot;card&quot;>
+      <div class=&quot;card&quot; id=&quot;dash-card-recent&quot;>
         <div class=&quot;card-title&quot;>Recent Bookings <button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage('hotelbookings')&quot;>View All</button></div>
         <div id=&quot;dash-recent&quot; class=&quot;tbl-wrap&quot;></div>
+      </div>
+    </div>
+
+    <!-- ============ MY PROFILE ============ -->
+    <div class=&quot;apage&quot; id=&quot;page-myprofile&quot;>
+      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>My Profile</div><div class=&quot;ph-sub&quot;>Your account details — visible only to you.</div></div>
+      <div class=&quot;card&quot; style=&quot;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.4rem;padding-top:1.6rem&quot;>
+        <div class=&quot;ad-avatar&quot; id=&quot;mp-avatar&quot; style=&quot;margin-bottom:0;width:76px;height:76px;font-size:1.5rem&quot;>A</div>
+        <div class=&quot;avatar-upload&quot; style=&quot;margin-top:.2rem&quot;><label for=&quot;mp-avatar-input&quot; style=&quot;background:var(--blue-dim);color:var(--gold)&quot;>&amp;#128247; Change Photo</label><input type=&quot;file&quot; id=&quot;mp-avatar-input&quot; accept=&quot;image/*&quot; onchange=&quot;uploadAdminPhoto(this)&quot;/></div>
+        <div class=&quot;pill pill-blue&quot; id=&quot;mp-role&quot; style=&quot;margin-top:.5rem&quot;>Staff Admin</div>
+        <div style=&quot;font-size:.76rem;color:var(--muted)&quot; id=&quot;mp-email&quot;>-</div>
+      </div>
+      <div class=&quot;card&quot;>
+        <div class=&quot;card-title&quot;>Display Name</div>
+        <div class=&quot;fg&quot;><label>Name shown across the dashboard</label><input type=&quot;text&quot; id=&quot;mp-name-input&quot; placeholder=&quot;e.g. Ada Okafor&quot;/></div>
+        <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveDisplayName()&quot;>Save Name</button>
+      </div>
+      <div class=&quot;card&quot;>
+        <div class=&quot;card-title&quot;>Change Password</div>
+        <div class=&quot;fg&quot;><label>Current Password</label><input type=&quot;password&quot; id=&quot;mp-pw-current&quot; placeholder=&quot;Enter current password&quot; autocomplete=&quot;current-password&quot;/></div>
+        <div class=&quot;fg&quot;><label>New Password</label><input type=&quot;password&quot; id=&quot;mp-pw-new&quot; placeholder=&quot;At least 6 characters&quot; autocomplete=&quot;new-password&quot;/></div>
+        <div class=&quot;fg&quot;><label>Confirm New Password</label><input type=&quot;password&quot; id=&quot;mp-pw-confirm&quot; placeholder=&quot;Re-enter new password&quot; autocomplete=&quot;new-password&quot;/></div>
+        <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;subAdminChangePassword()&quot;>Update Password</button>
       </div>
     </div>
 
@@ -1880,6 +1916,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     <div class=&quot;apage&quot; id=&quot;page-subadmins&quot;>
       <div class=&quot;ph&quot;><div class=&quot;ph-row&quot;><div><div class=&quot;ph-title&quot;>Sub-Admins</div><div class=&quot;ph-sub&quot;>Staff accounts with limited dashboard access.</div></div></div></div>
       <div class=&quot;card&quot;>
+        <div class=&quot;fg&quot;><label>Full Name</label><input type=&quot;text&quot; id=&quot;sa-name&quot; placeholder=&quot;e.g. Ada Okafor&quot;/></div>
         <div class=&quot;fg&quot;><label>Email</label><input type=&quot;email&quot; id=&quot;sa-user&quot; placeholder=&quot;e.g. staff@hotelscontinental.com&quot;/></div>
         <div class=&quot;fg&quot;><label>Temporary Password</label><input type=&quot;text&quot; id=&quot;sa-pass&quot; placeholder=&quot;Set an initial password (min 6 characters)&quot;/></div>
         <div class=&quot;fg&quot;><label>Access Permissions (Roles)</label><div style=&quot;font-size:.76rem;color:var(--muted);margin:-.3rem 0 .6rem&quot;>Pick the sections this sub-admin should be able to open. They'll only see and access what's checked here.</div><div id=&quot;sa-new-perm-list&quot;></div></div>
@@ -2387,6 +2424,7 @@ function viewWalletFundingReceipt(id) {
 var SUPER_EMAIL = &quot;oladejiridwanopeyemi@gmail.com&quot;;
 var _isSuperAdmin = false;
 var _currentSubAdmin = &quot;&quot;;
+var _currentSubAdminName = &quot;&quot;;
 var _defaultHotelId = null;
 var _defaultHotelName = &quot;Hotels Continental&quot;;
 
@@ -2458,8 +2496,10 @@ function adminLogin() {
       resetBtn();
       if (!snap.empty) {
         _isSuperAdmin = false; _currentSubAdmin = email;
-        _currentSubAdminPerms = snap.docs[0].data().permissions || [];
-        loginSuccess(email, &quot;Staff Admin&quot;);
+        var saData = snap.docs[0].data();
+        _currentSubAdminPerms = saData.permissions || [];
+        _currentSubAdminName = saData.name || email.split(&quot;@&quot;)[0];
+        loginSuccess(_currentSubAdminName, &quot;Staff Admin&quot;);
       } else {
         auth.signOut();
         err.textContent = &quot;This account has no admin access.&quot;;
@@ -2489,35 +2529,103 @@ function adminLogin() {
   });
 }
 
+function setDisplayName(name) {
+  document.getElementById(&quot;tb-name&quot;).textContent = name;
+  document.getElementById(&quot;ad-name&quot;).textContent = name;
+  var spEl = document.getElementById(&quot;sb-profile-name&quot;);
+  if (spEl) spEl.textContent = name;
+  var mpEl = document.getElementById(&quot;mp-name-input&quot;);
+  if (mpEl &amp;&amp; document.activeElement !== mpEl) mpEl.value = name;
+  var initial = (name || &quot;A&quot;).trim().charAt(0).toUpperCase();
+  if (!document.getElementById(&quot;tb-avatar&quot;).querySelector(&quot;img&quot;)) document.getElementById(&quot;tb-avatar&quot;).textContent = initial;
+  if (!document.getElementById(&quot;ad-avatar&quot;).querySelector(&quot;img&quot;)) document.getElementById(&quot;ad-avatar&quot;).textContent = initial;
+  var spAv = document.getElementById(&quot;sb-profile-avatar&quot;);
+  if (spAv &amp;&amp; !spAv.querySelector(&quot;img&quot;)) spAv.textContent = initial;
+  var mpAv = document.getElementById(&quot;mp-avatar&quot;);
+  if (mpAv &amp;&amp; !mpAv.querySelector(&quot;img&quot;)) mpAv.textContent = initial;
+}
 function loginSuccess(name, role) {
   document.getElementById(&quot;login-screen&quot;).style.display = &quot;none&quot;;
   document.getElementById(&quot;app&quot;).classList.add(&quot;active&quot;);
-  document.getElementById(&quot;tb-name&quot;).textContent = name;
   document.getElementById(&quot;tb-role&quot;).textContent = role;
-  document.getElementById(&quot;ad-name&quot;).textContent = name;
   document.getElementById(&quot;ad-role&quot;).textContent = role;
+  setDisplayName(name);
   var initial = (name || &quot;A&quot;).trim().charAt(0).toUpperCase();
   document.getElementById(&quot;tb-avatar&quot;).textContent = initial;
   document.getElementById(&quot;ad-avatar&quot;).textContent = initial;
   document.getElementById(&quot;sb-subadmin&quot;).style.display = _isSuperAdmin ? &quot;flex&quot; : &quot;none&quot;;
   document.getElementById(&quot;ad-subadmin-item&quot;).style.display = _isSuperAdmin ? &quot;flex&quot; : &quot;none&quot;;
+  document.getElementById(&quot;sb-myprofile&quot;).style.display = &quot;flex&quot;;
+  document.getElementById(&quot;ad-myprofile-item&quot;).style.display = &quot;flex&quot;;
+  // A sub-admin's dashboard shouldn't look like the super admin's: give it
+  // its own profile card (photo, name, role) up top instead of just the
+  // platform logo, so it's immediately obvious who's signed in and as what.
+  var sbProfile = document.getElementById(&quot;sb-profile&quot;);
+  if (sbProfile) sbProfile.style.display = _isSuperAdmin ? &quot;none&quot; : &quot;flex&quot;;
+  document.getElementById(&quot;mp-role&quot;).textContent = role;
+  document.getElementById(&quot;mp-email&quot;).textContent = (document.getElementById(&quot;li-email&quot;).value || &quot;&quot;).trim().toLowerCase();
   applyPermissionRestrictions();
   _adminEmail = (document.getElementById(&quot;li-email&quot;).value || &quot;&quot;).trim().toLowerCase();
-  loadAdminPhoto();
+  loadAdminProfile();
   loadAll();
 }
 
-/* ============ ADMIN PROFILE PHOTO ============ */
+/* ============ ADMIN PROFILE (PHOTO + DISPLAY NAME) ============ */
+// Both the super admin and every sub-admin share one small profile doc,
+// keyed by their own email, for the personal details this dashboard shows
+// about *them* (as opposed to &quot;subadmins&quot; docs, which only exist for staff
+// accounts and store the access permissions a super admin assigned).
 var _adminEmail = &quot;&quot;;
-function loadAdminPhoto() {
+function loadAdminProfile() {
   if (!_adminEmail) return;
   db.collection(&quot;adminProfiles&quot;).doc(_adminEmail).get().then(function(doc){
-    if (doc.exists &amp;&amp; doc.data().photoURL) setAdminAvatar(doc.data().photoURL);
+    if (!doc.exists) return;
+    var data = doc.data();
+    if (data.photoURL) setAdminAvatar(data.photoURL);
+    if (data.name) { _currentSubAdminName = data.name; setDisplayName(data.name); }
   }).catch(function(){});
 }
+function loadAdminPhoto() { loadAdminProfile(); }
 function setAdminAvatar(url) {
-  document.getElementById(&quot;tb-avatar&quot;).innerHTML = '<img src=&quot;'+url+'&quot;/>';
-  document.getElementById(&quot;ad-avatar&quot;).innerHTML = '<img src=&quot;'+url+'&quot;/>';
+  var img = '<img src=&quot;'+url+'&quot;/>';
+  document.getElementById(&quot;tb-avatar&quot;).innerHTML = img;
+  document.getElementById(&quot;ad-avatar&quot;).innerHTML = img;
+  var spAv = document.getElementById(&quot;sb-profile-avatar&quot;);
+  if (spAv) spAv.innerHTML = img;
+  var mpAv = document.getElementById(&quot;mp-avatar&quot;);
+  if (mpAv) mpAv.innerHTML = img;
+}
+function saveDisplayName() {
+  var name = (document.getElementById(&quot;mp-name-input&quot;).value || &quot;&quot;).trim();
+  if (!name) { T(&quot;Missing Name&quot;, &quot;Enter a display name first.&quot;); return; }
+  if (!_adminEmail) return;
+  db.collection(&quot;adminProfiles&quot;).doc(_adminEmail).set({ name: name, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).then(function(){
+    _currentSubAdminName = name;
+    setDisplayName(name);
+    T(&quot;Saved&quot;, &quot;Your display name has been updated.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not save your name.&quot;); });
+}
+function subAdminChangePassword() {
+  var current = document.getElementById(&quot;mp-pw-current&quot;).value;
+  var next = document.getElementById(&quot;mp-pw-new&quot;).value;
+  var confirm2 = document.getElementById(&quot;mp-pw-confirm&quot;).value;
+  if (!current) { T(&quot;Missing Info&quot;, &quot;Enter your current password.&quot;); return; }
+  if (!next || next.length < 6) { T(&quot;Weak Password&quot;, &quot;New password must be at least 6 characters.&quot;); return; }
+  if (next !== confirm2) { T(&quot;Passwords Don't Match&quot;, &quot;Your new password entries don't match.&quot;); return; }
+  var user = auth.currentUser;
+  if (!user) return;
+  var cred = firebase.auth.EmailAuthProvider.credential(user.email, current);
+  user.reauthenticateWithCredential(cred).then(function() {
+    return user.updatePassword(next);
+  }).then(function() {
+    document.getElementById(&quot;mp-pw-current&quot;).value = &quot;&quot;;
+    document.getElementById(&quot;mp-pw-new&quot;).value = &quot;&quot;;
+    document.getElementById(&quot;mp-pw-confirm&quot;).value = &quot;&quot;;
+    T(&quot;Password Updated&quot;, &quot;Your password has been changed.&quot;);
+  }).catch(function(e) {
+    if (e.code === &quot;auth/wrong-password&quot; || e.code === &quot;auth/invalid-credential&quot;) T(&quot;Incorrect Password&quot;, &quot;Your current password is wrong.&quot;);
+    else T(&quot;Error&quot;, &quot;Could not update password. Please try again.&quot;, 6000);
+  });
 }
 // Universal image compressor (mirrors the one used on the public site).
 // Iteratively shrinks dimensions/quality until the result fits under
@@ -2584,7 +2692,7 @@ function uploadAdminPhoto(input) {
 }
 
 function adminLogout() {
-  _isSuperAdmin = false; _currentSubAdmin = &quot;&quot;; _currentSubAdminPerms = [];
+  _isSuperAdmin = false; _currentSubAdmin = &quot;&quot;; _currentSubAdminPerms = []; _currentSubAdminName = &quot;&quot;; _adminEmail = &quot;&quot;;
   auth.signOut();
   document.getElementById(&quot;app&quot;).classList.remove(&quot;active&quot;);
   document.getElementById(&quot;login-screen&quot;).style.display = &quot;flex&quot;;
@@ -2837,6 +2945,27 @@ function datesOverlap(aStart, aEnd, bStart, bEnd) { return aStart < bEnd &amp;&a
 
 /* ============ DASHBOARD ============ */
 var _chartDashB, _chartDashR;
+// Which stat cards a given permission unlocks on the Dashboard overview.
+// Super admins always see every card; sub-admins only see cards tied to a
+// section they've actually been granted access to, so &quot;Dashboard&quot; genuinely
+// reflects their role instead of the whole platform's numbers.
+var DASH_CARD_PERMS = {
+  hotels: [&quot;hotels&quot;],
+  bookingsTotal: [&quot;hotelbookings&quot;],
+  bookingsPending: [&quot;hotelbookings&quot;],
+  revenueTotal: [&quot;payments&quot;],
+  revenueToday: [&quot;payments&quot;],
+  users: [&quot;users&quot;],
+  withdrawalsPending: [&quot;withdrawals&quot;],
+  withdrawalsTotal: [&quot;withdrawals&quot;],
+  netRevenue: [&quot;payments&quot;, &quot;reports&quot;]
+};
+function dashCanSee(cardKey) {
+  if (_isSuperAdmin) return true;
+  var need = DASH_CARD_PERMS[cardKey] || [];
+  for (var i=0;i<need.length;i++) { if (_currentSubAdminPerms.indexOf(need[i]) !== -1) return true; }
+  return false;
+}
 function renderDashboard() {
   var totalRevenue = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; ? (Number(b.amountPaid)||0) : 0); }, 0);
   var today = new Date();
@@ -2846,16 +2975,41 @@ function renderDashboard() {
   var pendingWithdrawalTotal = pendingWithdrawals.reduce(function(s,w){ return s+(Number(w.amount)||0); }, 0);
   var totalWithdrawn = (_allWithdrawals||[]).filter(function(w){ return w.status===&quot;Approved&quot;; }).reduce(function(s,w){ return s+(Number(w.amount)||0); }, 0);
   var netRevenue = totalRevenue - totalWithdrawn;
-  document.getElementById(&quot;dash-stats&quot;).innerHTML =
-    statCard(&quot;&amp;#127974;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Hotels&quot;, _allHotels.length) +
-    statCard(&quot;&amp;#128197;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Bookings&quot;, _allBookings.length) +
-    statCard(&quot;&amp;#128176;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Total Revenue&quot;, NGN(totalRevenue)) +
-    statCard(&quot;&amp;#9752;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Today's Revenue&quot;, NGN(todayRevenue)) +
-    statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Bookings&quot;, pending) +
-    statCard(&quot;&amp;#128101;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Total Users&quot;, _allUsers.length) +
-    statCard(&quot;&amp;#128179;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Pending Withdrawals&quot;, NGN(pendingWithdrawalTotal)+&quot; (&quot;+pendingWithdrawals.length+&quot;)&quot;) +
-    statCard(&quot;&amp;#128181;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Withdrawn&quot;, NGN(totalWithdrawn)) +
-    statCard(&quot;&amp;#128200;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Net Revenue&quot;, NGN(netRevenue));
+
+  // Personalize the header: super admin keeps the generic platform title,
+  // a sub-admin gets greeted by name with a note on what their role covers.
+  var titleEl = document.getElementById(&quot;dash-title&quot;);
+  var subEl = document.getElementById(&quot;dash-sub&quot;);
+  if (_isSuperAdmin) {
+    titleEl.textContent = &quot;Dashboard&quot;;
+    subEl.textContent = &quot;Platform overview at a glance.&quot;;
+  } else {
+    titleEl.textContent = &quot;Welcome back, &quot; + (_currentSubAdminName || &quot;there&quot;) + &quot; \uD83D\uDC4B&quot;;
+    var scope = _currentSubAdminPerms.map(function(k){
+      var p = ADMIN_PERMISSION_PAGES.find(function(x){ return x.key===k; });
+      return p ? p.label : k;
+    }).join(&quot;, &quot;);
+    subEl.textContent = scope ? (&quot;Your overview is scoped to: &quot; + scope + &quot;.&quot;) : &quot;No sections have been assigned to your account yet.&quot;;
+  }
+
+  var cards = &quot;&quot;;
+  if (dashCanSee(&quot;hotels&quot;)) cards += statCard(&quot;&amp;#127974;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Hotels&quot;, _allHotels.length);
+  if (dashCanSee(&quot;bookingsTotal&quot;)) cards += statCard(&quot;&amp;#128197;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Bookings&quot;, _allBookings.length);
+  if (dashCanSee(&quot;revenueTotal&quot;)) cards += statCard(&quot;&amp;#128176;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Total Revenue&quot;, NGN(totalRevenue));
+  if (dashCanSee(&quot;revenueToday&quot;)) cards += statCard(&quot;&amp;#9752;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Today's Revenue&quot;, NGN(todayRevenue));
+  if (dashCanSee(&quot;bookingsPending&quot;)) cards += statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Bookings&quot;, pending);
+  if (dashCanSee(&quot;users&quot;)) cards += statCard(&quot;&amp;#128101;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Total Users&quot;, _allUsers.length);
+  if (dashCanSee(&quot;withdrawalsPending&quot;)) cards += statCard(&quot;&amp;#128179;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Pending Withdrawals&quot;, NGN(pendingWithdrawalTotal)+&quot; (&quot;+pendingWithdrawals.length+&quot;)&quot;);
+  if (dashCanSee(&quot;withdrawalsTotal&quot;)) cards += statCard(&quot;&amp;#128181;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Withdrawn&quot;, NGN(totalWithdrawn));
+  if (dashCanSee(&quot;netRevenue&quot;)) cards += statCard(&quot;&amp;#128200;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Net Revenue&quot;, NGN(netRevenue));
+  document.getElementById(&quot;dash-stats&quot;).innerHTML = cards;
+  document.getElementById(&quot;dash-empty&quot;).style.display = cards ? &quot;none&quot; : &quot;block&quot;;
+
+  var showBookingsChart = dashCanSee(&quot;bookingsTotal&quot;);
+  var showRevenueChart = dashCanSee(&quot;revenueTotal&quot;);
+  document.getElementById(&quot;dash-card-bookingschart&quot;).style.display = showBookingsChart ? &quot;&quot; : &quot;none&quot;;
+  document.getElementById(&quot;dash-card-revenuechart&quot;).style.display = showRevenueChart ? &quot;&quot; : &quot;none&quot;;
+  document.getElementById(&quot;dash-card-recent&quot;).style.display = showBookingsChart ? &quot;&quot; : &quot;none&quot;;
 
   var days = [], bCounts = [], rSums = [];
   for (var i=6;i>=0;i--) {
@@ -2865,18 +3019,24 @@ function renderDashboard() {
     bCounts.push(dayBk.length);
     rSums.push(dayBk.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot;?(Number(b.amountPaid)||0):0); }, 0));
   }
-  if (_chartDashB) _chartDashB.destroy();
-  _chartDashB = new Chart(document.getElementById(&quot;dash-chart-bookings&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:bCounts, borderColor:&quot;#2f5fdb&quot;, backgroundColor:&quot;rgba(47,95,219,.1)&quot;, fill:true, tension:.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}});
-  if (_chartDashR) _chartDashR.destroy();
-  _chartDashR = new Chart(document.getElementById(&quot;dash-chart-revenue&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:rSums, borderColor:&quot;#16a34a&quot;, backgroundColor:&quot;rgba(22,163,74,.1)&quot;, fill:true, tension:.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}}}}});
+  if (showBookingsChart) {
+    if (_chartDashB) _chartDashB.destroy();
+    _chartDashB = new Chart(document.getElementById(&quot;dash-chart-bookings&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:bCounts, borderColor:&quot;#2f5fdb&quot;, backgroundColor:&quot;rgba(47,95,219,.1)&quot;, fill:true, tension:.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}});
+  }
+  if (showRevenueChart) {
+    if (_chartDashR) _chartDashR.destroy();
+    _chartDashR = new Chart(document.getElementById(&quot;dash-chart-revenue&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:rSums, borderColor:&quot;#16a34a&quot;, backgroundColor:&quot;rgba(22,163,74,.1)&quot;, fill:true, tension:.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}}}}});
+  }
 
-  var recent = _allBookings.slice(0,5);
-  var html = '<table><tr><th>Guest</th><th>Hotel</th><th>Room</th><th>Status</th><th>Date</th></tr>';
-  recent.forEach(function(b){
-    html += '<tr><td>'+esc(b.name)+'</td><td>'+esc(b.hotelName)+'</td><td>'+esc(b.roomType||&quot;-&quot;)+'</td><td>'+pill(b.status)+'</td><td>'+fmtDate(b.createdAt)+'</td></tr>';
-  });
-  html += '</table>';
-  document.getElementById(&quot;dash-recent&quot;).innerHTML = recent.length ? html : '<div class=&quot;empty&quot;>No bookings yet.</div>';
+  if (showBookingsChart) {
+    var recent = _allBookings.slice(0,5);
+    var html = '<table><tr><th>Guest</th><th>Hotel</th><th>Room</th><th>Status</th><th>Date</th></tr>';
+    recent.forEach(function(b){
+      html += '<tr><td>'+esc(b.name)+'</td><td>'+esc(b.hotelName)+'</td><td>'+esc(b.roomType||&quot;-&quot;)+'</td><td>'+pill(b.status)+'</td><td>'+fmtDate(b.createdAt)+'</td></tr>';
+    });
+    html += '</table>';
+    document.getElementById(&quot;dash-recent&quot;).innerHTML = recent.length ? html : '<div class=&quot;empty&quot;>No bookings yet.</div>';
+  }
 }
 
 function statCard(icon, color, bg, label, val, delta) {
@@ -2992,7 +3152,7 @@ function notifyCustomerBookingUpdate(b, bookingStatus, paymentStatus, bodyText) 
       uid: uid, type: &quot;booking&quot;, bookingId: b.id, hotelName: b.hotelName,
       room: b.roomType, checkIn: b.checkIn, checkOut: b.checkOut, guests: b.guests || 1,
       amount: b.amount, paymentStatus: paymentStatus, bookingStatus: bookingStatus,
-      subject: &quot;Booking Update &mdash; &quot; + b.hotelName,
+      subject: &quot;Booking Update — &quot; + b.hotelName,
       body: bodyText, read: false,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).catch(function(e) { console.warn(&quot;inbox update write failed:&quot;, e); });
@@ -3546,7 +3706,7 @@ function renderSubAdmins() {
       : '<span style=&quot;font-size:.75rem;color:var(--muted)&quot;>No access assigned yet</span>';
     return '<div class=&quot;list-row&quot; style=&quot;flex-direction:column;align-items:stretch;gap:.5rem&quot;>' +
       '<div style=&quot;display:flex;justify-content:space-between;align-items:center;gap:.6rem&quot;>' +
-        '<div class=&quot;lr-name&quot;>'+esc(sa.username)+'</div>' +
+        '<div><div class=&quot;lr-name&quot;>'+esc(sa.name||sa.username)+'</div><div class=&quot;lr-sub&quot;>'+esc(sa.username)+'</div></div>' +
         '<div style=&quot;display:flex;gap:.4rem&quot;>' +
           '<button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;openEditSubAdminPerms(\''+sa.id+'\')&quot;>Edit Access</button>' +
           '<button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;deleteSubAdmin(\''+sa.id+'\')&quot;>Remove</button>' +
@@ -3557,9 +3717,11 @@ function renderSubAdmins() {
   }).join(&quot;&quot;) : '<div class=&quot;empty&quot;>No sub-admins yet.</div>';
 }
 function addSubAdmin() {
+  var name = document.getElementById(&quot;sa-name&quot;).value.trim();
   var u = document.getElementById(&quot;sa-user&quot;).value.trim().toLowerCase();
   var p = document.getElementById(&quot;sa-pass&quot;).value;
   var perms = readCheckedPerms(&quot;sa-new-perm&quot;);
+  if (!name) { T(&quot;Missing info&quot;, &quot;Enter the sub-admin's full name.&quot;); return; }
   if (!u || !p) { T(&quot;Missing info&quot;, &quot;Enter an email and a temporary password.&quot;); return; }
   if (p.length < 6) { T(&quot;Weak password&quot;, &quot;Password must be at least 6 characters.&quot;); return; }
   if (u === SUPER_EMAIL) { T(&quot;Warning&quot;, &quot;That email is reserved.&quot;); return; }
@@ -3574,13 +3736,18 @@ function addSubAdmin() {
     // Add them to the sub-admin allow-list (checked at login, after Firebase
     // Authentication has already verified their password), along with the
     // dashboard sections the super admin just picked for them.
-    return db.collection(&quot;subadmins&quot;).doc(u).set({ username:u, permissions:perms, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+    return db.collection(&quot;subadmins&quot;).doc(u).set({ username:u, name:name, permissions:perms, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
   }).then(function(){
-    _allSubAdmins.push({ id:u, username:u, permissions:perms });
+    // Also seed their personal profile doc so their name shows immediately
+    // on first login, before they've had a chance to visit My Profile.
+    return db.collection(&quot;adminProfiles&quot;).doc(u).set({ name:name }, { merge:true });
+  }).then(function(){
+    _allSubAdmins.push({ id:u, username:u, name:name, permissions:perms });
+    document.getElementById(&quot;sa-name&quot;).value = &quot;&quot;;
     document.getElementById(&quot;sa-user&quot;).value = &quot;&quot;;
     document.getElementById(&quot;sa-pass&quot;).value = &quot;&quot;;
     renderSubAdmins();
-    T(&quot;Sub-Admin Added&quot;, u+&quot; can now sign in with the password you set.&quot;);
+    T(&quot;Sub-Admin Added&quot;, name+&quot; can now sign in with the password you set.&quot;);
   }).catch(function(e){
     var msg = (e &amp;&amp; e.code === &quot;auth/email-already-in-use&quot;) ? &quot;That email already has an account.&quot; : &quot;Could not add sub-admin.&quot;;
     T(&quot;Error&quot;, msg);
@@ -3625,7 +3792,7 @@ function deleteSubAdmin(id) {
 var _currentSubAdminPerms = [];
 function hasPerm(page) {
   if (_isSuperAdmin) return true;
-  if (page === &quot;dashboard&quot;) return true;
+  if (page === &quot;dashboard&quot; || page === &quot;myprofile&quot;) return true;
   return _currentSubAdminPerms.indexOf(page) !== -1;
 }
 function applyPermissionRestrictions() {
@@ -3633,6 +3800,13 @@ function applyPermissionRestrictions() {
     el.style.display = hasPerm(el.dataset.page) ? &quot;&quot; : &quot;none&quot;;
   });
   document.querySelectorAll(&quot;.bnav-item[data-page]&quot;).forEach(function(el){
+    el.style.display = hasPerm(el.dataset.page) ? &quot;&quot; : &quot;none&quot;;
+  });
+  // The account drawer (opened from the avatar in the topbar) used to list
+  // every shortcut regardless of role — a sub-admin could see &quot;Manage Users&quot;,
+  // &quot;Payouts&quot;, etc. even without access. Gate it the same way as the sidebar
+  // so a sub-admin's menu genuinely matches what they're allowed to open.
+  document.querySelectorAll(&quot;.ad-item[data-page]&quot;).forEach(function(el){
     el.style.display = hasPerm(el.dataset.page) ? &quot;&quot; : &quot;none&quot;;
   });
 }
