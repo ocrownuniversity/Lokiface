@@ -1882,6 +1882,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;card&quot;>
         <div class=&quot;fg&quot;><label>Email</label><input type=&quot;email&quot; id=&quot;sa-user&quot; placeholder=&quot;e.g. staff@hotelscontinental.com&quot;/></div>
         <div class=&quot;fg&quot;><label>Temporary Password</label><input type=&quot;text&quot; id=&quot;sa-pass&quot; placeholder=&quot;Set an initial password (min 6 characters)&quot;/></div>
+        <div class=&quot;fg&quot;><label>Access Permissions (Roles)</label><div style=&quot;font-size:.76rem;color:var(--muted);margin:-.3rem 0 .6rem&quot;>Pick the sections this sub-admin should be able to open. They'll only see and access what's checked here.</div><div id=&quot;sa-new-perm-list&quot;></div></div>
         <button class=&quot;btn btn-p&quot; onclick=&quot;addSubAdmin()&quot;>&amp;#43; Add Sub-Admin</button>
       </div>
       <div class=&quot;card&quot;><div id=&quot;sa-list&quot;></div></div>
@@ -1959,6 +1960,15 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     <div class=&quot;fg&quot;><label>Start Date</label><input type=&quot;date&quot; id=&quot;pr-start&quot;/></div>
     <div class=&quot;fg&quot;><label>End Date</label><input type=&quot;date&quot; id=&quot;pr-end&quot;/></div>
     <button class=&quot;fsub&quot; onclick=&quot;savePromotion()&quot;>Create Promotion</button>
+  </div>
+</div>
+
+<div class=&quot;modal-ov&quot; id=&quot;sa-perm-modal&quot;>
+  <div class=&quot;modal&quot;>
+    <div class=&quot;modal-title&quot;>Sub-Admin Access <button class=&quot;modal-close&quot; onclick=&quot;closeModal('sa-perm-modal')&quot;>&amp;#10005;</button></div>
+    <p style=&quot;font-size:.78rem;color:var(--muted);margin:-.4rem 0 1rem&quot;>Choose which dashboard sections <b id=&quot;sa-perm-email&quot;></b> can access. Dashboard overview is always included; only a super admin can manage Sub-Admins.</p>
+    <div id=&quot;sa-perm-list&quot;></div>
+    <button class=&quot;fsub&quot; onclick=&quot;saveSubAdminPerms()&quot;>Save Access</button>
   </div>
 </div>
 
@@ -2437,7 +2447,7 @@ function adminLogin() {
 
   auth.signInWithEmailAndPassword(email, pass).then(function(cred){
     if (email === SUPER_EMAIL) {
-      _isSuperAdmin = true; _currentSubAdmin = &quot;&quot;;
+      _isSuperAdmin = true; _currentSubAdmin = &quot;&quot;; _currentSubAdminPerms = [];
       loginSuccess(&quot;Admin&quot;, &quot;Super Admin&quot;);
       resetBtn();
       return;
@@ -2448,6 +2458,7 @@ function adminLogin() {
       resetBtn();
       if (!snap.empty) {
         _isSuperAdmin = false; _currentSubAdmin = email;
+        _currentSubAdminPerms = snap.docs[0].data().permissions || [];
         loginSuccess(email, &quot;Staff Admin&quot;);
       } else {
         auth.signOut();
@@ -2490,6 +2501,7 @@ function loginSuccess(name, role) {
   document.getElementById(&quot;ad-avatar&quot;).textContent = initial;
   document.getElementById(&quot;sb-subadmin&quot;).style.display = _isSuperAdmin ? &quot;flex&quot; : &quot;none&quot;;
   document.getElementById(&quot;ad-subadmin-item&quot;).style.display = _isSuperAdmin ? &quot;flex&quot; : &quot;none&quot;;
+  applyPermissionRestrictions();
   _adminEmail = (document.getElementById(&quot;li-email&quot;).value || &quot;&quot;).trim().toLowerCase();
   loadAdminPhoto();
   loadAll();
@@ -2572,7 +2584,7 @@ function uploadAdminPhoto(input) {
 }
 
 function adminLogout() {
-  _isSuperAdmin = false; _currentSubAdmin = &quot;&quot;;
+  _isSuperAdmin = false; _currentSubAdmin = &quot;&quot;; _currentSubAdminPerms = [];
   auth.signOut();
   document.getElementById(&quot;app&quot;).classList.remove(&quot;active&quot;);
   document.getElementById(&quot;login-screen&quot;).style.display = &quot;flex&quot;;
@@ -2594,6 +2606,10 @@ function closeDrawers() {
   toggleAcctDrawer(false);
 }
 function goPage(page) {
+  if (!hasPerm(page)) {
+    T(&quot;Access Denied&quot;, &quot;You don't have access to this section. Ask a super admin to grant it.&quot;, 4000);
+    page = &quot;dashboard&quot;;
+  }
   document.querySelectorAll(&quot;.apage&quot;).forEach(function(el){ el.classList.remove(&quot;active&quot;); });
   var target = document.getElementById(&quot;page-&quot; + page);
   if (target) target.classList.add(&quot;active&quot;);
@@ -3481,15 +3497,69 @@ function renderPayments() {
   }).join(&quot;&quot;) : '<div class=&quot;empty&quot;>No payment data yet.</div>';
 }
 
-/* ============ SUB-ADMINS ============ */
+/* ============ SUB-ADMINS (ROLES / ACCESS) ============ */
+// The list of dashboard sections a super admin can grant to a sub-admin.
+// &quot;dashboard&quot; (the overview) is always available to any signed-in staff
+// account and isn't listed here; &quot;subadmins&quot; (this page) is intentionally
+// never assignable — only the super admin can manage staff access.
+var ADMIN_PERMISSION_PAGES = [
+  { key: &quot;hotels&quot;, label: &quot;Hotels&quot; },
+  { key: &quot;hotelbookings&quot;, label: &quot;Marketplace Bookings&quot; },
+  { key: &quot;users&quot;, label: &quot;Users&quot; },
+  { key: &quot;hotelverification&quot;, label: &quot;Hotel Verification&quot; },
+  { key: &quot;hotelregs&quot;, label: &quot;Hotel Registrations&quot; },
+  { key: &quot;payments&quot;, label: &quot;Payments&quot; },
+  { key: &quot;payouts&quot;, label: &quot;Payouts&quot; },
+  { key: &quot;promotions&quot;, label: &quot;Promotions&quot; },
+  { key: &quot;reports&quot;, label: &quot;Reports&quot; },
+  { key: &quot;reviews&quot;, label: &quot;Reviews&quot; },
+  { key: &quot;rooms&quot;, label: &quot;Rooms&quot; },
+  { key: &quot;withdrawals&quot;, label: &quot;Withdrawals&quot; },
+  { key: &quot;walletfundings&quot;, label: &quot;Wallet Fundings&quot; },
+  { key: &quot;settings&quot;, label: &quot;Settings&quot; }
+];
+var _saPermEditingId = null;
+
+function permCheckboxesHtml(containerClass, checkedKeys) {
+  checkedKeys = checkedKeys || [];
+  return ADMIN_PERMISSION_PAGES.map(function(p) {
+    var checked = checkedKeys.indexOf(p.key) !== -1;
+    return '<div class=&quot;toggle-row&quot;><div><div class=&quot;toggle-lbl&quot;>' + p.label + '</div></div><label class=&quot;tgl&quot;><input type=&quot;checkbox&quot; class=&quot;' + containerClass + '&quot; data-perm=&quot;' + p.key + '&quot; ' + (checked ? &quot;checked&quot; : &quot;&quot;) + '/><span class=&quot;tgl-slider&quot;></span></label></div>';
+  }).join(&quot;&quot;);
+}
+function readCheckedPerms(containerClass) {
+  var out = [];
+  document.querySelectorAll(&quot;.&quot; + containerClass + &quot;:checked&quot;).forEach(function(el) { out.push(el.getAttribute(&quot;data-perm&quot;)); });
+  return out;
+}
+
 function renderSubAdmins() {
+  var newList = document.getElementById(&quot;sa-new-perm-list&quot;);
+  if (newList) newList.innerHTML = permCheckboxesHtml(&quot;sa-new-perm&quot;);
   document.getElementById(&quot;sa-list&quot;).innerHTML = _allSubAdmins.length ? _allSubAdmins.map(function(sa){
-    return '<div class=&quot;list-row&quot;><div style=&quot;flex:1&quot;><div class=&quot;lr-name&quot;>'+esc(sa.username)+'</div></div><button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;deleteSubAdmin(\''+sa.id+'\')&quot;>Remove</button></div>';
+    var perms = sa.permissions || [];
+    var tags = perms.length
+      ? perms.map(function(k){
+          var p = ADMIN_PERMISSION_PAGES.find(function(x){ return x.key === k; });
+          return '<span style=&quot;background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:.2rem .65rem;font-size:.7rem;color:var(--text)&quot;>' + (p ? p.label : k) + '</span>';
+        }).join(&quot; &quot;)
+      : '<span style=&quot;font-size:.75rem;color:var(--muted)&quot;>No access assigned yet</span>';
+    return '<div class=&quot;list-row&quot; style=&quot;flex-direction:column;align-items:stretch;gap:.5rem&quot;>' +
+      '<div style=&quot;display:flex;justify-content:space-between;align-items:center;gap:.6rem&quot;>' +
+        '<div class=&quot;lr-name&quot;>'+esc(sa.username)+'</div>' +
+        '<div style=&quot;display:flex;gap:.4rem&quot;>' +
+          '<button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;openEditSubAdminPerms(\''+sa.id+'\')&quot;>Edit Access</button>' +
+          '<button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;deleteSubAdmin(\''+sa.id+'\')&quot;>Remove</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style=&quot;display:flex;flex-wrap:wrap;gap:.35rem&quot;>'+tags+'</div>' +
+    '</div>';
   }).join(&quot;&quot;) : '<div class=&quot;empty&quot;>No sub-admins yet.</div>';
 }
 function addSubAdmin() {
   var u = document.getElementById(&quot;sa-user&quot;).value.trim().toLowerCase();
   var p = document.getElementById(&quot;sa-pass&quot;).value;
+  var perms = readCheckedPerms(&quot;sa-new-perm&quot;);
   if (!u || !p) { T(&quot;Missing info&quot;, &quot;Enter an email and a temporary password.&quot;); return; }
   if (p.length < 6) { T(&quot;Weak password&quot;, &quot;Password must be at least 6 characters.&quot;); return; }
   if (u === SUPER_EMAIL) { T(&quot;Warning&quot;, &quot;That email is reserved.&quot;); return; }
@@ -3502,10 +3572,11 @@ function addSubAdmin() {
     return secondaryAuth.signOut();
   }).then(function(){
     // Add them to the sub-admin allow-list (checked at login, after Firebase
-    // Authentication has already verified their password).
-    return db.collection(&quot;subadmins&quot;).doc(u).set({ username:u, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+    // Authentication has already verified their password), along with the
+    // dashboard sections the super admin just picked for them.
+    return db.collection(&quot;subadmins&quot;).doc(u).set({ username:u, permissions:perms, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
   }).then(function(){
-    _allSubAdmins.push({ id:u, username:u });
+    _allSubAdmins.push({ id:u, username:u, permissions:perms });
     document.getElementById(&quot;sa-user&quot;).value = &quot;&quot;;
     document.getElementById(&quot;sa-pass&quot;).value = &quot;&quot;;
     renderSubAdmins();
@@ -3515,6 +3586,25 @@ function addSubAdmin() {
     T(&quot;Error&quot;, msg);
   });
 }
+function openEditSubAdminPerms(id) {
+  var sa = _allSubAdmins.find(function(x){ return x.id===id; });
+  if (!sa) return;
+  _saPermEditingId = id;
+  document.getElementById(&quot;sa-perm-email&quot;).textContent = sa.username;
+  document.getElementById(&quot;sa-perm-list&quot;).innerHTML = permCheckboxesHtml(&quot;sa-edit-perm&quot;, sa.permissions || []);
+  openModalEl(&quot;sa-perm-modal&quot;);
+}
+function saveSubAdminPerms() {
+  if (!_saPermEditingId) return;
+  var perms = readCheckedPerms(&quot;sa-edit-perm&quot;);
+  db.collection(&quot;subadmins&quot;).doc(_saPermEditingId).update({ permissions:perms }).then(function(){
+    var sa = _allSubAdmins.find(function(x){ return x.id===_saPermEditingId; });
+    if (sa) sa.permissions = perms;
+    renderSubAdmins();
+    closeModal(&quot;sa-perm-modal&quot;);
+    T(&quot;Access Updated&quot;, &quot;This sub-admin's dashboard access has been updated.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update access.&quot;); });
+}
 function deleteSubAdmin(id) {
   db.collection(&quot;subadmins&quot;).doc(id).delete().then(function(){
     _allSubAdmins = _allSubAdmins.filter(function(sa){ return sa.id!==id; });
@@ -3522,6 +3612,31 @@ function deleteSubAdmin(id) {
     T(&quot;Removed&quot;, &quot;Sub-admin access to the dashboard is revoked. Their Firebase Auth sign-in still exists — delete it in the Firebase Console (Authentication > Users) to remove it completely.&quot;, 5000);
   });
 }
+
+// ── PERMISSION ENFORCEMENT (client-side) ──
+// Restricts which sidebar/bottom-nav items a signed-in sub-admin sees, and
+// blocks goPage() from opening anything outside their assigned access —
+// goPage() is the single choke point every navigation click in this app goes
+// through, so this covers sidebar links, bottom-nav, and any shortcut
+// buttons elsewhere in the dashboard. This is client-side only: it cannot
+// replace Firestore Security Rules (a determined user could still call the
+// Firestore SDK directly from the browser console), so real data protection
+// still needs matching rules on the &quot;hotels&quot;, &quot;users&quot;, etc. collections.
+var _currentSubAdminPerms = [];
+function hasPerm(page) {
+  if (_isSuperAdmin) return true;
+  if (page === &quot;dashboard&quot;) return true;
+  return _currentSubAdminPerms.indexOf(page) !== -1;
+}
+function applyPermissionRestrictions() {
+  document.querySelectorAll(&quot;.sb-item[data-page]&quot;).forEach(function(el){
+    el.style.display = hasPerm(el.dataset.page) ? &quot;&quot; : &quot;none&quot;;
+  });
+  document.querySelectorAll(&quot;.bnav-item[data-page]&quot;).forEach(function(el){
+    el.style.display = hasPerm(el.dataset.page) ? &quot;&quot; : &quot;none&quot;;
+  });
+}
+
 
 /* ============ HOTEL VERIFICATION ============ */
 var HV_PILL = { &quot;Pending Review&quot;:&quot;pill-amber&quot;, &quot;Under Review&quot;:&quot;pill-purple&quot;, &quot;Verified&quot;:&quot;pill-green&quot;, &quot;Rejected&quot;:&quot;pill-red&quot; };
