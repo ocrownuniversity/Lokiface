@@ -1507,7 +1507,24 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
   <main>
     <!-- ============ DASHBOARD ============ -->
     <div class=&quot;apage active&quot; id=&quot;page-dashboard&quot;>
-      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot;>Dashboard</div><div class=&quot;ph-sub&quot;>Platform overview at a glance.</div></div>
+      <div class=&quot;ph&quot;><div class=&quot;ph-title&quot; id=&quot;dash-ph-title&quot;>Dashboard</div><div class=&quot;ph-sub&quot; id=&quot;dash-ph-sub&quot;>Platform overview at a glance.</div></div>
+      <div class=&quot;card&quot; id=&quot;sa-profile-card&quot; style=&quot;display:none&quot;>
+        <div class=&quot;card-title&quot;>My Profile</div>
+        <div style=&quot;text-align:center;margin-bottom:1rem&quot;>
+          <div id=&quot;sa-prof-avatar&quot; style=&quot;width:64px;height:64px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;color:#fff;margin:0 auto;overflow:hidden&quot;>A</div>
+          <div class=&quot;avatar-upload&quot; style=&quot;margin-top:.6rem&quot;><label for=&quot;sa-prof-photo-input&quot; style=&quot;background:var(--blue);color:#fff&quot;>&amp;#128247; Change Photo</label><input type=&quot;file&quot; id=&quot;sa-prof-photo-input&quot; accept=&quot;image/*&quot; onchange=&quot;uploadAdminPhoto(this)&quot;/></div>
+        </div>
+        <div class=&quot;fg&quot;><label>Full Name</label><input type=&quot;text&quot; id=&quot;sa-prof-name&quot; placeholder=&quot;Your full name&quot;/></div>
+        <div class=&quot;fg&quot;><label>Email</label><input type=&quot;email&quot; id=&quot;sa-prof-email&quot; disabled style=&quot;opacity:.6&quot;/></div>
+        <div class=&quot;fg&quot;><label>Phone Number</label><input type=&quot;tel&quot; id=&quot;sa-prof-phone&quot; placeholder=&quot;Your phone number&quot;/></div>
+        <button class=&quot;fsub&quot; onclick=&quot;saSaveProfile()&quot;>Save Changes</button>
+        <div style=&quot;height:1px;background:var(--border);margin:1.1rem 0&quot;></div>
+        <div class=&quot;card-title&quot; style=&quot;margin-bottom:.6rem&quot;>Change Password</div>
+        <div class=&quot;fg&quot;><label>Current Password</label><input type=&quot;password&quot; id=&quot;sa-prof-pw-current&quot; placeholder=&quot;Your current password&quot;/></div>
+        <div class=&quot;fg&quot;><label>New Password</label><input type=&quot;password&quot; id=&quot;sa-prof-pw-new&quot; placeholder=&quot;At least 6 characters&quot;/></div>
+        <div class=&quot;fg&quot;><label>Confirm New Password</label><input type=&quot;password&quot; id=&quot;sa-prof-pw-confirm&quot; placeholder=&quot;Re-enter new password&quot;/></div>
+        <button class=&quot;fsub&quot; onclick=&quot;saChangePassword()&quot;>Update Password</button>
+      </div>
       <div class=&quot;stat-grid&quot; id=&quot;dash-stats&quot;></div>
       <div class=&quot;chart-grid2&quot;>
         <div class=&quot;card&quot;><div class=&quot;card-title&quot;>Bookings (Last 7 Days)</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;dash-chart-bookings&quot;></canvas></div></div>
@@ -2501,6 +2518,17 @@ function loginSuccess(name, role) {
   document.getElementById(&quot;ad-avatar&quot;).textContent = initial;
   document.getElementById(&quot;sb-subadmin&quot;).style.display = _isSuperAdmin ? &quot;flex&quot; : &quot;none&quot;;
   document.getElementById(&quot;ad-subadmin-item&quot;).style.display = _isSuperAdmin ? &quot;flex&quot; : &quot;none&quot;;
+  // The sub-admin dashboard shouldn't look identical to the super admin's:
+  // swap the dashboard header copy and reveal a self-service profile card
+  // (name / phone / password) in the space above the stats. Super admin
+  // view is untouched.
+  document.getElementById(&quot;sa-profile-card&quot;).style.display = _isSuperAdmin ? &quot;none&quot; : &quot;block&quot;;
+  document.getElementById(&quot;dash-ph-title&quot;).textContent = _isSuperAdmin ? &quot;Dashboard&quot; : &quot;My Dashboard&quot;;
+  document.getElementById(&quot;dash-ph-sub&quot;).textContent = _isSuperAdmin ? &quot;Platform overview at a glance.&quot; : &quot;Your profile and platform overview.&quot;;
+  if (!_isSuperAdmin) {
+    var saEmailEl = document.getElementById(&quot;sa-prof-email&quot;);
+    if (saEmailEl) saEmailEl.value = _currentSubAdmin;
+  }
   applyPermissionRestrictions();
   _adminEmail = (document.getElementById(&quot;li-email&quot;).value || &quot;&quot;).trim().toLowerCase();
   loadAdminPhoto();
@@ -2512,12 +2540,76 @@ var _adminEmail = &quot;&quot;;
 function loadAdminPhoto() {
   if (!_adminEmail) return;
   db.collection(&quot;adminProfiles&quot;).doc(_adminEmail).get().then(function(doc){
-    if (doc.exists &amp;&amp; doc.data().photoURL) setAdminAvatar(doc.data().photoURL);
+    if (!doc.exists) return;
+    var d = doc.data();
+    if (d.photoURL) setAdminAvatar(d.photoURL);
+    // Name/phone are only ever shown in the sub-admin's own profile card,
+    // so leave the super admin's &quot;Admin&quot; label alone.
+    if (!_isSuperAdmin) {
+      if (d.name) {
+        document.getElementById(&quot;tb-name&quot;).textContent = d.name;
+        document.getElementById(&quot;ad-name&quot;).textContent = d.name;
+        if (!d.photoURL) {
+          var initial = d.name.trim().charAt(0).toUpperCase() || &quot;A&quot;;
+          document.getElementById(&quot;tb-avatar&quot;).textContent = initial;
+          document.getElementById(&quot;ad-avatar&quot;).textContent = initial;
+          var saAv0 = document.getElementById(&quot;sa-prof-avatar&quot;); if (saAv0) saAv0.textContent = initial;
+        }
+      }
+      var nameInput = document.getElementById(&quot;sa-prof-name&quot;); if (nameInput) nameInput.value = d.name || &quot;&quot;;
+      var phoneInput = document.getElementById(&quot;sa-prof-phone&quot;); if (phoneInput) phoneInput.value = d.phone || &quot;&quot;;
+    }
   }).catch(function(){});
 }
 function setAdminAvatar(url) {
   document.getElementById(&quot;tb-avatar&quot;).innerHTML = '<img src=&quot;'+url+'&quot;/>';
   document.getElementById(&quot;ad-avatar&quot;).innerHTML = '<img src=&quot;'+url+'&quot;/>';
+  var saAv = document.getElementById(&quot;sa-prof-avatar&quot;); if (saAv) saAv.innerHTML = '<img src=&quot;'+url+'&quot;/>';
+}
+/* ============ SUB-ADMIN: OWN PROFILE (name/phone) + PASSWORD ============ */
+// Self-service only: a sub-admin can update their own display name, phone
+// and password. It never touches their permissions (only a super admin can
+// change those, from the Sub-Admins page) and never touches the super
+// admin's account.
+function saSaveProfile() {
+  if (!_adminEmail || _isSuperAdmin) return;
+  var name = document.getElementById(&quot;sa-prof-name&quot;).value.trim();
+  var phone = document.getElementById(&quot;sa-prof-phone&quot;).value.trim();
+  if (!name) { T(&quot;Missing Info&quot;, &quot;Enter your name.&quot;); return; }
+  db.collection(&quot;adminProfiles&quot;).doc(_adminEmail).set({ name: name, phone: phone, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, {merge:true}).then(function(){
+    document.getElementById(&quot;tb-name&quot;).textContent = name;
+    document.getElementById(&quot;ad-name&quot;).textContent = name;
+    var tbAv = document.getElementById(&quot;tb-avatar&quot;);
+    var adAv = document.getElementById(&quot;ad-avatar&quot;);
+    var saAv = document.getElementById(&quot;sa-prof-avatar&quot;);
+    if (tbAv &amp;&amp; !tbAv.querySelector(&quot;img&quot;)) tbAv.textContent = name.charAt(0).toUpperCase();
+    if (adAv &amp;&amp; !adAv.querySelector(&quot;img&quot;)) adAv.textContent = name.charAt(0).toUpperCase();
+    if (saAv &amp;&amp; !saAv.querySelector(&quot;img&quot;)) saAv.textContent = name.charAt(0).toUpperCase();
+    T(&quot;Profile Updated&quot;, &quot;Your changes have been saved.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not save profile.&quot;, 5000); });
+}
+function saChangePassword() {
+  if (_isSuperAdmin) return;
+  var current = document.getElementById(&quot;sa-prof-pw-current&quot;).value;
+  var next = document.getElementById(&quot;sa-prof-pw-new&quot;).value;
+  var confirm2 = document.getElementById(&quot;sa-prof-pw-confirm&quot;).value;
+  if (!current) { T(&quot;Missing Info&quot;, &quot;Enter your current password.&quot;); return; }
+  if (!next || next.length < 6) { T(&quot;Weak Password&quot;, &quot;New password must be at least 6 characters.&quot;); return; }
+  if (next !== confirm2) { T(&quot;Passwords Don't Match&quot;, &quot;Your new password entries don't match.&quot;); return; }
+  var user = auth.currentUser;
+  if (!user) return;
+  var cred = firebase.auth.EmailAuthProvider.credential(user.email, current);
+  user.reauthenticateWithCredential(cred).then(function(){
+    return user.updatePassword(next);
+  }).then(function(){
+    document.getElementById(&quot;sa-prof-pw-current&quot;).value = &quot;&quot;;
+    document.getElementById(&quot;sa-prof-pw-new&quot;).value = &quot;&quot;;
+    document.getElementById(&quot;sa-prof-pw-confirm&quot;).value = &quot;&quot;;
+    T(&quot;Password Updated&quot;, &quot;Your password has been changed.&quot;);
+  }).catch(function(e){
+    if (e.code === &quot;auth/wrong-password&quot;) T(&quot;Incorrect Password&quot;, &quot;Your current password is wrong.&quot;);
+    else T(&quot;Error&quot;, &quot;Could not update password. Please try again.&quot;, 6000);
+  });
 }
 // Universal image compressor (mirrors the one used on the public site).
 // Iteratively shrinks dimensions/quality until the result fits under
