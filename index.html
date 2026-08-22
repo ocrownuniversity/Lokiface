@@ -1297,6 +1297,23 @@ main{padding:74px 1rem 78px;max-width:1200px;margin:0 auto}
 .chart-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 @media(max-width:640px){.chart-grid2{grid-template-columns:1fr}}
 
+/* ---- sub-admin "My Dashboard" hero + menu-style rows (replaces the old
+   bare edit-profile form that used to sit directly on the dashboard page) ---- */
+.sa-hero{background:linear-gradient(135deg,var(--navy),var(--navy2));border-radius:18px;padding:1.4rem 1.3rem;color:#fff;margin-bottom:1rem;box-shadow:var(--shadow-lg)}
+.sa-hero-top{display:flex;align-items:center;gap:1rem}
+.sa-hero-name{font-weight:800;font-size:1.15rem}
+.sa-hero-badge{display:inline-block;margin-top:.3rem;background:rgba(247,148,29,.18);color:var(--orange);border:1px solid rgba(247,148,29,.35);font-size:.68rem;font-weight:700;letter-spacing:.03em;padding:.15rem .6rem;border-radius:100px}
+.sa-menu{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:1rem}
+.sa-menu-row{display:flex;align-items:center;gap:.8rem;padding:.95rem 1.1rem;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s}
+.sa-menu-row:last-child{border-bottom:none}
+.sa-menu-row:hover{background:var(--bg)}
+.sa-menu-ico{width:34px;height:34px;border-radius:9px;background:var(--blue-dim);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.sa-menu-lbl{flex:1;font-weight:600;font-size:.86rem}
+.sa-menu-arrow{color:var(--muted2);font-size:1.1rem;transition:transform .2s}
+.sa-menu-row.open .sa-menu-arrow{transform:rotate(90deg)}
+.sa-menu-panel{display:none;padding:0 1.1rem 1.1rem}
+.sa-menu-panel.open{display:block}
+
 .toolbar{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem}
 .tb-search{flex:1;min-width:180px;position:relative}
 .tb-search input{width:100%;padding:.6rem .8rem .6rem 2.1rem;border:1.5px solid var(--border);border-radius:9px;font-size:.8rem;outline:none}
@@ -1509,26 +1526,45 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     <div class=&quot;apage active&quot; id=&quot;page-dashboard&quot;>
       <div class=&quot;ph&quot;><div class=&quot;ph-title&quot; id=&quot;dash-ph-title&quot;>Dashboard</div><div class=&quot;ph-sub&quot; id=&quot;dash-ph-sub&quot;>Platform overview at a glance.</div></div>
       <div class=&quot;card&quot; id=&quot;sa-profile-card&quot; style=&quot;display:none&quot;>
-        <div class=&quot;card-title&quot;>My Profile</div>
-        <div style=&quot;text-align:center;margin-bottom:1rem&quot;>
-          <div id=&quot;sa-prof-avatar&quot; style=&quot;width:64px;height:64px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;color:#fff;margin:0 auto;overflow:hidden&quot;>A</div>
-          <div class=&quot;avatar-upload&quot; style=&quot;margin-top:.6rem&quot;><label for=&quot;sa-prof-photo-input&quot; style=&quot;background:var(--blue);color:#fff&quot;>&amp;#128247; Change Photo</label><input type=&quot;file&quot; id=&quot;sa-prof-photo-input&quot; accept=&quot;image/*&quot; onchange=&quot;uploadAdminPhoto(this)&quot;/></div>
+        <div class=&quot;sa-hero&quot;>
+          <div class=&quot;sa-hero-top&quot;>
+            <div id=&quot;sa-prof-avatar&quot; style=&quot;width:56px;height:56px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;color:#fff;overflow:hidden;flex-shrink:0&quot;>A</div>
+            <div>
+              <div class=&quot;sa-hero-name&quot; id=&quot;sa-hero-name&quot;>Sub-Admin</div>
+              <span class=&quot;sa-hero-badge&quot;>Sub-Admin</span>
+            </div>
+          </div>
         </div>
-        <div class=&quot;fg&quot;><label>Full Name</label><input type=&quot;text&quot; id=&quot;sa-prof-name&quot; placeholder=&quot;Your full name&quot;/></div>
-        <div class=&quot;fg&quot;><label>Email</label><input type=&quot;email&quot; id=&quot;sa-prof-email&quot; disabled style=&quot;opacity:.6&quot;/></div>
-        <div class=&quot;fg&quot;><label>Phone Number</label><input type=&quot;tel&quot; id=&quot;sa-prof-phone&quot; placeholder=&quot;Your phone number&quot;/></div>
-        <button class=&quot;fsub&quot; onclick=&quot;saSaveProfile()&quot;>Save Changes</button>
-        <div style=&quot;height:1px;background:var(--border);margin:1.1rem 0&quot;></div>
-        <div class=&quot;card-title&quot; style=&quot;margin-bottom:.6rem&quot;>Change Password</div>
-        <div class=&quot;fg&quot;><label>Current Password</label><input type=&quot;password&quot; id=&quot;sa-prof-pw-current&quot; placeholder=&quot;Your current password&quot;/></div>
-        <div class=&quot;fg&quot;><label>New Password</label><input type=&quot;password&quot; id=&quot;sa-prof-pw-new&quot; placeholder=&quot;At least 6 characters&quot;/></div>
-        <div class=&quot;fg&quot;><label>Confirm New Password</label><input type=&quot;password&quot; id=&quot;sa-prof-pw-confirm&quot; placeholder=&quot;Re-enter new password&quot;/></div>
-        <button class=&quot;fsub&quot; onclick=&quot;saChangePassword()&quot;>Update Password</button>
+        <div class=&quot;sa-menu&quot;>
+          <div class=&quot;sa-menu-row&quot; onclick=&quot;saToggleMenuRow('sa-panel-profile')&quot;>
+            <div class=&quot;sa-menu-ico&quot;>&amp;#128100;</div>
+            <div class=&quot;sa-menu-lbl&quot;>Edit Profile</div>
+            <div class=&quot;sa-menu-arrow&quot;>&amp;#8250;</div>
+          </div>
+          <div class=&quot;sa-menu-panel&quot; id=&quot;sa-panel-profile&quot;>
+            <div class=&quot;avatar-upload&quot; style=&quot;margin-bottom:.8rem&quot;><label for=&quot;sa-prof-photo-input&quot; style=&quot;background:var(--blue);color:#fff&quot;>&amp;#128247; Change Photo</label><input type=&quot;file&quot; id=&quot;sa-prof-photo-input&quot; accept=&quot;image/*&quot; onchange=&quot;uploadAdminPhoto(this)&quot;/></div>
+            <div class=&quot;fg&quot;><label>Full Name</label><input type=&quot;text&quot; id=&quot;sa-prof-name&quot; placeholder=&quot;Your full name&quot;/></div>
+            <div class=&quot;fg&quot;><label>Email</label><input type=&quot;email&quot; id=&quot;sa-prof-email&quot; disabled style=&quot;opacity:.6&quot;/></div>
+            <div class=&quot;fg&quot;><label>Phone Number</label><input type=&quot;tel&quot; id=&quot;sa-prof-phone&quot; placeholder=&quot;Your phone number&quot;/></div>
+            <button class=&quot;fsub&quot; onclick=&quot;saSaveProfile()&quot;>Save Changes</button>
+          </div>
+          <div class=&quot;sa-menu-row&quot; onclick=&quot;saToggleMenuRow('sa-panel-password')&quot;>
+            <div class=&quot;sa-menu-ico&quot;>&amp;#128272;</div>
+            <div class=&quot;sa-menu-lbl&quot;>Change Password</div>
+            <div class=&quot;sa-menu-arrow&quot;>&amp;#8250;</div>
+          </div>
+          <div class=&quot;sa-menu-panel&quot; id=&quot;sa-panel-password&quot;>
+            <div class=&quot;fg&quot;><label>Current Password</label><input type=&quot;password&quot; id=&quot;sa-prof-pw-current&quot; placeholder=&quot;Your current password&quot;/></div>
+            <div class=&quot;fg&quot;><label>New Password</label><input type=&quot;password&quot; id=&quot;sa-prof-pw-new&quot; placeholder=&quot;At least 6 characters&quot;/></div>
+            <div class=&quot;fg&quot;><label>Confirm New Password</label><input type=&quot;password&quot; id=&quot;sa-prof-pw-confirm&quot; placeholder=&quot;Re-enter new password&quot;/></div>
+            <button class=&quot;fsub&quot; onclick=&quot;saChangePassword()&quot;>Update Password</button>
+          </div>
+        </div>
       </div>
       <div class=&quot;stat-grid&quot; id=&quot;dash-stats&quot;></div>
       <div class=&quot;chart-grid2&quot;>
         <div class=&quot;card&quot;><div class=&quot;card-title&quot;>Bookings (Last 7 Days)</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;dash-chart-bookings&quot;></canvas></div></div>
-        <div class=&quot;card&quot;><div class=&quot;card-title&quot;>Revenue (Last 7 Days)</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;dash-chart-revenue&quot;></canvas></div></div>
+        <div class=&quot;card&quot; id=&quot;dash-revenue-chart-card&quot;><div class=&quot;card-title&quot;>Revenue (Last 7 Days)</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;dash-chart-revenue&quot;></canvas></div></div>
       </div>
       <div class=&quot;card&quot;>
         <div class=&quot;card-title&quot;>Recent Bookings <button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage('hotelbookings')&quot;>View All</button></div>
@@ -2528,6 +2564,10 @@ function loginSuccess(name, role) {
   if (!_isSuperAdmin) {
     var saEmailEl = document.getElementById(&quot;sa-prof-email&quot;);
     if (saEmailEl) saEmailEl.value = _currentSubAdmin;
+    // Fallback display name until adminProfiles loads (below), so the hero
+    // card never shows a blank/placeholder name.
+    var saHeroFallback = document.getElementById(&quot;sa-hero-name&quot;);
+    if (saHeroFallback) saHeroFallback.textContent = _currentSubAdmin;
   }
   applyPermissionRestrictions();
   _adminEmail = (document.getElementById(&quot;li-email&quot;).value || &quot;&quot;).trim().toLowerCase();
@@ -2535,6 +2575,17 @@ function loginSuccess(name, role) {
   loadAll();
 }
 
+/* Expands/collapses one row of the sub-admin dashboard menu (Edit Profile /
+   Change Password), matching the row.open + panel.open pairing used by
+   .sa-menu-row / .sa-menu-panel in the CSS above. */
+function saToggleMenuRow(panelId) {
+  var panel = document.getElementById(panelId);
+  if (!panel) return;
+  var row = panel.previousElementSibling;
+  var willOpen = !panel.classList.contains(&quot;open&quot;);
+  panel.classList.toggle(&quot;open&quot;, willOpen);
+  if (row) row.classList.toggle(&quot;open&quot;, willOpen);
+}
 /* ============ ADMIN PROFILE PHOTO ============ */
 var _adminEmail = &quot;&quot;;
 function loadAdminPhoto() {
@@ -2549,6 +2600,7 @@ function loadAdminPhoto() {
       if (d.name) {
         document.getElementById(&quot;tb-name&quot;).textContent = d.name;
         document.getElementById(&quot;ad-name&quot;).textContent = d.name;
+        var saHeroN0 = document.getElementById(&quot;sa-hero-name&quot;); if (saHeroN0) saHeroN0.textContent = d.name;
         if (!d.photoURL) {
           var initial = d.name.trim().charAt(0).toUpperCase() || &quot;A&quot;;
           document.getElementById(&quot;tb-avatar&quot;).textContent = initial;
@@ -2579,6 +2631,7 @@ function saSaveProfile() {
   db.collection(&quot;adminProfiles&quot;).doc(_adminEmail).set({ name: name, phone: phone, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, {merge:true}).then(function(){
     document.getElementById(&quot;tb-name&quot;).textContent = name;
     document.getElementById(&quot;ad-name&quot;).textContent = name;
+    var saHeroN = document.getElementById(&quot;sa-hero-name&quot;); if (saHeroN) saHeroN.textContent = name;
     var tbAv = document.getElementById(&quot;tb-avatar&quot;);
     var adAv = document.getElementById(&quot;ad-avatar&quot;);
     var saAv = document.getElementById(&quot;sa-prof-avatar&quot;);
@@ -2938,16 +2991,27 @@ function renderDashboard() {
   var pendingWithdrawalTotal = pendingWithdrawals.reduce(function(s,w){ return s+(Number(w.amount)||0); }, 0);
   var totalWithdrawn = (_allWithdrawals||[]).filter(function(w){ return w.status===&quot;Approved&quot;; }).reduce(function(s,w){ return s+(Number(w.amount)||0); }, 0);
   var netRevenue = totalRevenue - totalWithdrawn;
-  document.getElementById(&quot;dash-stats&quot;).innerHTML =
-    statCard(&quot;&amp;#127974;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Hotels&quot;, _allHotels.length) +
-    statCard(&quot;&amp;#128197;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Bookings&quot;, _allBookings.length) +
-    statCard(&quot;&amp;#128176;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Total Revenue&quot;, NGN(totalRevenue)) +
-    statCard(&quot;&amp;#9752;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Today's Revenue&quot;, NGN(todayRevenue)) +
-    statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Bookings&quot;, pending) +
-    statCard(&quot;&amp;#128101;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Total Users&quot;, _allUsers.length) +
-    statCard(&quot;&amp;#128179;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Pending Withdrawals&quot;, NGN(pendingWithdrawalTotal)+&quot; (&quot;+pendingWithdrawals.length+&quot;)&quot;) +
-    statCard(&quot;&amp;#128181;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Withdrawn&quot;, NGN(totalWithdrawn)) +
-    statCard(&quot;&amp;#128200;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Net Revenue&quot;, NGN(netRevenue));
+  // Sub-admins don't get to see money figures on their overview: revenue,
+  // withdrawals and net revenue are all skipped for them, leaving only the
+  // operational stats (hotels, bookings, pending, users).
+  var cards = [
+    statCard(&quot;&amp;#127974;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Hotels&quot;, _allHotels.length),
+    statCard(&quot;&amp;#128197;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Bookings&quot;, _allBookings.length)
+  ];
+  if (_isSuperAdmin) {
+    cards.push(statCard(&quot;&amp;#128176;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Total Revenue&quot;, NGN(totalRevenue)));
+    cards.push(statCard(&quot;&amp;#9752;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Today's Revenue&quot;, NGN(todayRevenue)));
+  }
+  cards.push(statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Bookings&quot;, pending));
+  cards.push(statCard(&quot;&amp;#128101;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Total Users&quot;, _allUsers.length));
+  if (_isSuperAdmin) {
+    cards.push(statCard(&quot;&amp;#128179;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Pending Withdrawals&quot;, NGN(pendingWithdrawalTotal)+&quot; (&quot;+pendingWithdrawals.length+&quot;)&quot;));
+    cards.push(statCard(&quot;&amp;#128181;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Withdrawn&quot;, NGN(totalWithdrawn)));
+    cards.push(statCard(&quot;&amp;#128200;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Net Revenue&quot;, NGN(netRevenue)));
+  }
+  document.getElementById(&quot;dash-stats&quot;).innerHTML = cards.join(&quot;&quot;);
+  var revChartCard = document.getElementById(&quot;dash-revenue-chart-card&quot;);
+  if (revChartCard) revChartCard.style.display = _isSuperAdmin ? &quot;&quot; : &quot;none&quot;;
 
   var days = [], bCounts = [], rSums = [];
   for (var i=6;i>=0;i--) {
@@ -2959,8 +3023,10 @@ function renderDashboard() {
   }
   if (_chartDashB) _chartDashB.destroy();
   _chartDashB = new Chart(document.getElementById(&quot;dash-chart-bookings&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:bCounts, borderColor:&quot;#2f5fdb&quot;, backgroundColor:&quot;rgba(47,95,219,.1)&quot;, fill:true, tension:.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}});
-  if (_chartDashR) _chartDashR.destroy();
-  _chartDashR = new Chart(document.getElementById(&quot;dash-chart-revenue&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:rSums, borderColor:&quot;#16a34a&quot;, backgroundColor:&quot;rgba(22,163,74,.1)&quot;, fill:true, tension:.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}}}}});
+  if (_isSuperAdmin) {
+    if (_chartDashR) _chartDashR.destroy();
+    _chartDashR = new Chart(document.getElementById(&quot;dash-chart-revenue&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:rSums, borderColor:&quot;#16a34a&quot;, backgroundColor:&quot;rgba(22,163,74,.1)&quot;, fill:true, tension:.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}}}}});
+  }
 
   var recent = _allBookings.slice(0,5);
   var html = '<table><tr><th>Guest</th><th>Hotel</th><th>Room</th><th>Status</th><th>Date</th></tr>';
@@ -4854,6 +4920,52 @@ function renderBkCard(b, id) {
     '</div>' +
     cd + rb + '<div class="receipt-wrap" id="receipt-' + id + '"></div></div>';
 }
+// Card renderer for marketplace bookings (Firestore collection
+// "hotelBookings"), which uses a slightly different schema than the legacy
+// "bookings" collection above (amount instead of amountPaid, a hotelName
+// since a customer can book at any hotel on the platform, and paymentMethod
+// covering Paystack / Wallet / Bank Transfer).
+function renderHotelBkCard(b, id) {
+  var bc = b.status === "Approved" ? "bA" : b.status === "Rejected" ? "bR" : b.status === "CheckedOut" ? "bCO" : "bP";
+  var sl = b.status === "CheckedOut" ? "Checked Out" : (b.status || "Pending");
+  var cd = (b.status === "Approved" && b.accessCode) ?
+    '<div class="bkcode"><div><div class="bkcl">One-Time Access Code</div><div class="bkcv">' + b.accessCode + '</div></div><div class="bkcs">Status: ' + (b.codeStatus || "active") + '<br/>Valid: ' + b.checkIn + ' to ' + b.checkOut + '</div></div>' : "";
+  var rb = (b.status === "Approved" || b.status === "CheckedOut") ?
+    '<button class="ab absv" style="margin-top:.6rem;width:100%" data-id="' + id + '" onclick="showHotelBookingReceipt(this.dataset.id)">&#129531; View Receipt</button>' : "";
+  var payLbl = b.paymentMethod === "wallet" ? "Wallet" : b.paymentMethod === "manual" ? "Bank Transfer" : "Paystack";
+  return '<div class="bkc"><div class="bkh"><div class="bkn">' + esc(b.hotelName || "") + '</div><div class="badge ' + bc + '">' + sl + '</div></div>' +
+    '<div class="bkm"><div><div class="bml">Room</div><div class="bmv">' + esc(b.roomType || "") + '</div></div>' +
+    '<div><div class="bml">Room No.</div><div class="bmv">' + esc(b.roomNumber || "-") + '</div></div>' +
+    '<div><div class="bml">Check-in</div><div class="bmv">' + esc(b.checkIn || "") + '</div></div>' +
+    '<div><div class="bml">Check-out</div><div class="bmv">' + esc(b.checkOut || "") + '</div></div>' +
+    '<div><div class="bml">Payment</div><div class="bmv">' + payLbl + '</div></div>' +
+    '<div><div class="bml">Amount</div><div class="bmv" style="color:var(--green);font-weight:700">&#8358;' + (b.amount ? b.amount.toLocaleString() : "0") + '</div></div>' +
+    (b.paymentRef ? '<div><div class="bml">Payment Ref</div><div class="bmv" style="font-size:.7rem">' + esc(b.paymentRef) + '</div></div>' : "") +
+    '</div>' +
+    cd + rb + '<div class="receipt-wrap" id="receipt-' + id + '"></div></div>';
+}
+function showHotelBookingReceipt(id) {
+  db.collection("hotelBookings").doc(id).get().then(function(d) {
+    if (!d.exists) return;
+    var b = d.data();
+    var nights = Math.max(1, Math.round((new Date(b.checkOut) - new Date(b.checkIn)) / (1000*60*60*24)));
+    var ppn = Math.round((b.amount || 0) / nights);
+    var rw = document.getElementById("receipt-" + id);
+    rw.style.display = "block";
+    rw.innerHTML = '<div class="receipt-header"><div class="receipt-logo">' + esc(b.hotelName || "Hotels Continental") + '</div></div>' +
+      '<div class="receipt-rows">' +
+      '<div class="receipt-row"><span class="receipt-lbl">Guest</span><span class="receipt-val">' + esc(b.name || "") + '</span></div>' +
+      '<div class="receipt-row"><span class="receipt-lbl">Room</span><span class="receipt-val">' + esc(b.roomType || "") + '</span></div>' +
+      '<div class="receipt-row"><span class="receipt-lbl">Room No.</span><span class="receipt-val">' + esc(b.roomNumber || "-") + '</span></div>' +
+      '<div class="receipt-row"><span class="receipt-lbl">Check-in</span><span class="receipt-val">' + esc(b.checkIn || "") + '</span></div>' +
+      '<div class="receipt-row"><span class="receipt-lbl">Check-out</span><span class="receipt-val">' + esc(b.checkOut || "") + '</span></div>' +
+      '<div class="receipt-row"><span class="receipt-lbl">Nights</span><span class="receipt-val">' + nights + '</span></div>' +
+      '<div class="receipt-row"><span class="receipt-lbl">Rate/Night</span><span class="receipt-val">&#x20A6;' + ppn.toLocaleString() + '</span></div>' +
+      '<div class="receipt-row" style="font-weight:700"><span class="receipt-lbl" style="color:var(--text)">Total</span><span class="receipt-val" style="color:var(--gold)">&#x20A6;' + (b.amount || 0).toLocaleString() + '</span></div></div>' +
+      (b.accessCode ? '<div class="receipt-code"><div class="receipt-code-lbl">Access Code</div><div class="receipt-code-val">' + b.accessCode + '</div></div>' : "") +
+      '<div class="receipt-footer">Thank you for booking with ' + esc(b.hotelName || "us") + '!</div>';
+  });
+}
 function showReceipt(id) {
   db.collection("bookings").doc(id).get().then(function(d) {
     if (!d.exists) return;
@@ -5904,12 +6016,16 @@ function accLoadMenuBadges() {
   db.collection("messages").where("uid", "==", uid).get().then(function(snap) {
     var el = document.getElementById("acc-sb-inbox-badge");
     if (!el) return;
-    if (snap.size) { el.textContent = snap.size; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
+    // Only count messages not yet marked read=true; a message is treated as
+    // unread unless its "read" field is explicitly true.
+    var unread = snap.docs.filter(function(d) { return d.data().read !== true; }).length;
+    if (unread) { el.textContent = unread; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
   }).catch(function() {});
   db.collection("notifications").where("uid", "==", uid).get().then(function(snap) {
     var el = document.getElementById("acc-sb-notif-badge");
     if (!el) return;
-    if (snap.size) { el.textContent = snap.size; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
+    var unread = snap.docs.filter(function(d) { return d.data().read !== true; }).length;
+    if (unread) { el.textContent = unread; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
   }).catch(function() {});
 }
 
@@ -5944,14 +6060,37 @@ function accRenderStatic(body, title, text) {
   body.innerHTML = '<div class="lcard"><div class="fst">' + title + '</div><p style="font-size:.85rem;color:var(--muted);line-height:1.8">' + text + '</p></div>';
 }
 
+// "My Bookings" needs to show TWO different booking sources that this app
+// writes to: the legacy single-hotel "bookings" collection (used by the
+// original booking form / access-code lookup) and the newer multi-hotel
+// marketplace "hotelBookings" collection (used by openHotelBooking / the
+// "Book Now" flow on a hotel's room list, i.e. Paystack / Wallet / Bank
+// Transfer bookings). Previously only "bookings" was queried here, so any
+// marketplace booking (like the ones from the room listing pages) never
+// appeared, even though it had already been written to Firestore and shown
+// up correctly in the inbox message that gets sent alongside it.
 function accRenderBookings(body) {
-  var email = (_accProfile && _accProfile.email || "").toLowerCase();
-  db.collection("bookings").where("email", "==", email).get().then(function(snap) {
-    if (snap.empty) { body.innerHTML = '<div class="emst"><span class="ei">&#128197;</span>No bookings yet.</div>'; return; }
-    var docs = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+  var uid = _accUser ? _accUser.uid : "";
+  var email = (_accProfile && _accProfile.email || (_accUser && _accUser.email) || "").toLowerCase();
+  Promise.all([
+    email ? db.collection("bookings").where("email", "==", email).get() : Promise.resolve({ docs: [] }),
+    email ? db.collection("hotelBookings").where("email", "==", email).get() : Promise.resolve({ docs: [] }),
+    uid ? db.collection("hotelBookings").where("uid", "==", uid).get() : Promise.resolve({ docs: [] })
+  ]).then(function(results) {
+    var legacy = results[0].docs.map(function(d) { var o = d.data(); o.id = d.id; o._src = "legacy"; return o; });
+    var marketByEmail = results[1].docs.map(function(d) { var o = d.data(); o.id = d.id; o._src = "hotel"; return o; });
+    var marketByUid = results[2].docs.map(function(d) { var o = d.data(); o.id = d.id; o._src = "hotel"; return o; });
+    var seen = {};
+    var market = [];
+    marketByEmail.concat(marketByUid).forEach(function(b) { if (!seen[b.id]) { seen[b.id] = true; market.push(b); } });
+    var docs = legacy.concat(market);
+    if (!docs.length) { body.innerHTML = '<div class="emst"><span class="ei">&#128197;</span>No bookings yet.</div>'; return; }
     docs.sort(function(a, b) { return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
-    body.innerHTML = docs.map(function(b) { return renderBkCard(b, b.id); }).join("");
-  }).catch(function() { body.innerHTML = '<div class="emst"><span class="ei">&#9888;</span>Could not load bookings.</div>'; });
+    body.innerHTML = docs.map(function(b) { return b._src === "hotel" ? renderHotelBkCard(b, b.id) : renderBkCard(b, b.id); }).join("");
+  }).catch(function(e) {
+    console.error("load bookings failed:", e);
+    body.innerHTML = '<div class="emst"><span class="ei">&#9888;</span>Could not load bookings.</div>';
+  });
 }
 
 function accRenderPayments(body) {
@@ -6213,6 +6352,10 @@ function accSubmitWithdrawal() {
   });
 }
 
+// Renders the inbox, then marks every currently-unread message as read=true
+// in Firestore (batched) and refreshes the sidebar badge count so the "2"
+// unread count disappears once the messages have actually been viewed,
+// instead of recomputing from the total message count every time.
 function accRenderInbox(body) {
   var uid = _accUser ? _accUser.uid : "";
   db.collection("messages").where("uid", "==", uid).get().then(function(snap) {
@@ -6220,16 +6363,24 @@ function accRenderInbox(body) {
     var docs = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
     docs.sort(function(a, b) { return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
     body.innerHTML = docs.map(accInboxRow).join("");
+    var unreadDocs = snap.docs.filter(function(d) { return d.data().read !== true; });
+    if (unreadDocs.length) {
+      var batch = db.batch();
+      unreadDocs.forEach(function(d) { batch.update(d.ref, { read: true }); });
+      batch.commit().then(function() { accLoadMenuBadges(); }).catch(function(e) { console.warn("mark inbox read failed:", e); });
+    }
   }).catch(function() { body.innerHTML = '<div class="emst"><span class="ei">&#9993;</span>Your inbox is empty.</div>'; });
 }
 // Booking messages (type === "booking") carry structured fields sent
 // automatically whenever a booking is created or updated by the admin;
-// anything else falls back to the plain subject/body layout.
+// anything else falls back to the plain subject/body layout. Unread
+// messages get a subtle highlighted background until they're opened.
 function accInboxRow(m) {
+  var unreadStyle = m.read === true ? "" : "background:var(--gold-dim);";
   if (m.type !== "booking") {
-    return '<div class="lcard"><div class="fst" style="font-size:.95rem">' + esc(m.subject || "Message") + '</div><p style="font-size:.82rem;color:var(--muted)">' + esc(m.body || "") + '</p></div>';
+    return '<div class="lcard" style="' + unreadStyle + '"><div class="fst" style="font-size:.95rem">' + esc(m.subject || "Message") + '</div><p style="font-size:.82rem;color:var(--muted)">' + esc(m.body || "") + '</p></div>';
   }
-  return '<div class="lcard">' +
+  return '<div class="lcard" style="' + unreadStyle + '">' +
     '<div class="fst" style="font-size:.95rem">' + esc(m.subject || "Booking Update") + '</div>' +
     (m.body ? '<p style="font-size:.82rem;color:var(--muted);margin:.2rem 0 .6rem">' + esc(m.body) + '</p>' : '') +
     '<div style="font-size:.78rem;color:var(--muted);line-height:1.8;background:var(--surface2);border-radius:8px;padding:.7rem .85rem">' +
@@ -6428,6 +6579,14 @@ function openHotelDetail(hotelId) {
   });
 }
 function openHotelBooking(roomId) {
+  // Booking a room requires a registered, signed-in account. Guests are sent
+  // to the Sign Up tab of the account page instead of the booking form.
+  if (!_accUser) {
+    T("Please Sign In", "You need an account to book a room. Please sign up or sign in to continue.", 6000);
+    SP("account");
+    accSetTab("signup");
+    return;
+  }
   _mpCurrentRoom = (_mpCurrentHotel.rooms || []).find(function(r) { return r.id === roomId; });
   if (!_mpCurrentRoom) return;
   document.getElementById("hb-title").textContent = "Book " + _mpCurrentRoom.name + " — " + _mpCurrentHotel.name;
@@ -6437,6 +6596,14 @@ function openHotelBooking(roomId) {
   document.getElementById("hb-form").style.display = "block";
   document.getElementById("hb-success").style.display = "none";
   ["hb-name","hb-phone","hb-email"].forEach(function(id) { document.getElementById(id).value = ""; });
+  // Pre-fill from the signed-in account's saved profile, if available.
+  if (_accProfile) {
+    document.getElementById("hb-name").value = _accProfile.name || "";
+    document.getElementById("hb-phone").value = _accProfile.phone || "";
+    document.getElementById("hb-email").value = _accProfile.email || (_accUser ? _accUser.email : "") || "";
+  } else if (_accUser) {
+    document.getElementById("hb-email").value = _accUser.email || "";
+  }
   document.getElementById("hb-guests").value = "1";
   var td = new Date().toISOString().split("T")[0];
   document.getElementById("hb-cin").min = td;
@@ -6508,12 +6675,19 @@ function hbReceiptChange(input) {
   }, { maxBytes: 500000, maxDim: 1000, minDim: 300, onError: function() { T("Error", "Could not process that receipt image."); } });
 }
 function hotelBookInitiatePayment() {
+  if (!_accUser) {
+    T("Please Sign In", "You need an account to book a room. Please sign up or sign in to continue.", 6000);
+    SP("account");
+    accSetTab("signup");
+    return;
+  }
   var name = document.getElementById("hb-name").value.trim();
   var phone = document.getElementById("hb-phone").value.trim();
   var email = document.getElementById("hb-email").value.trim();
   var cin = document.getElementById("hb-cin").value;
   var cout = document.getElementById("hb-cout").value;
   var guests = parseInt(document.getElementById("hb-guests").value, 10) || 1;
+  email = email.toLowerCase();
   var td = new Date().toISOString().split("T")[0];
   var ok = true;
   function ve(id, pass) { var e = document.getElementById(id); if (pass) e.classList.remove("show"); else { e.classList.add("show"); ok = false; } }
@@ -6551,7 +6725,16 @@ function hotelBookInitiatePayment() {
       onClose: function() { T("Payment Cancelled", "You closed the payment window."); }
     });
     handler.openIframe();
-  }).catch(function() { T("Error", "Could not check room availability."); });
+  }).catch(function(e) {
+    // A "failed-precondition" code here means Firestore needs a composite
+    // index for the hotelId+roomId+status query below — Firestore's error
+    // normally includes a direct console link to auto-create it. A
+    // "permission-denied" code means the Security Rules block reading
+    // hotelBookings/rooms for a signed-in customer. Logging the real error
+    // makes the actual cause visible instead of a generic message.
+    console.error("room availability check failed:", e);
+    T("Error", "Could not check room availability" + (e && e.code ? " (" + e.code + ")" : "") + ". Please try again.", 6000);
+  });
 }
 
 // ── BOOKING NOTIFICATIONS ──────────────────────────────────────────
@@ -6606,6 +6789,7 @@ function submitManualHotelBooking(total, name, phone, email, cin, cout, guests) 
   var bookingData = {
     hotelId: _mpCurrentHotel.id, hotelName: _mpCurrentHotel.name,
     roomId: _mpCurrentRoom.id, roomType: _mpCurrentRoom.name, roomNumber: "",
+    uid: _accUser ? _accUser.uid : "",
     name: name, phone: phone, email: email, checkIn: cin, checkOut: cout, guests: guests || 1,
     amount: total, hotelShare: hotelShare, platformShare: platformShare,
     status: "Pending", paymentStatus: "unpaid", paymentMethod: "manual",
@@ -6653,7 +6837,14 @@ function payHotelBookingFromWallet(total, name, phone, email, cin, cout, guests)
           T("Error", "Could not debit your wallet. Please try again.", 6000);
         });
     });
-  }).catch(function() { T("Error", "Could not check your wallet balance."); });
+  }).catch(function(e) {
+    // A permission-denied error here almost always means the Firestore
+    // Security Rules on the "users" collection don't allow a signed-in
+    // customer to read their own document. Logging the real error (instead
+    // of only a generic message) makes that diagnosable from the console.
+    console.error("wallet balance check failed:", e);
+    T("Error", "Could not check your wallet balance" + (e && e.code ? " (" + e.code + ")" : "") + ". Please try again.", 6000);
+  });
 }
 function finalizeWalletHotelBooking(payRef, total, name, phone, email, cin, cout, roomNum, guests) {
   var hotelShare = Math.round(total * 0.8);
@@ -6663,6 +6854,7 @@ function finalizeWalletHotelBooking(payRef, total, name, phone, email, cin, cout
   var bookingData = {
     hotelId: _mpCurrentHotel.id, hotelName: _mpCurrentHotel.name,
     roomId: _mpCurrentRoom.id, roomType: _mpCurrentRoom.name, roomNumber: roomNum || "",
+    uid: _accUser ? _accUser.uid : "",
     name: name, phone: phone, email: email, checkIn: cin, checkOut: cout, guests: guests || 1,
     amount: total, hotelShare: hotelShare, platformShare: platformShare,
     status: "Approved", paymentStatus: "paid", paymentRef: payRef, paymentMethod: "wallet",
@@ -6710,6 +6902,7 @@ function finalizeHotelBooking(payRef, total, name, phone, email, cin, cout, gues
     var bookingData = {
       hotelId: _mpCurrentHotel.id, hotelName: _mpCurrentHotel.name,
       roomId: _mpCurrentRoom.id, roomType: _mpCurrentRoom.name, roomNumber: roomNum || "",
+      uid: _accUser ? _accUser.uid : "",
       name: name, phone: phone, email: email, checkIn: cin, checkOut: cout, guests: guests || 1,
       amount: total, hotelShare: hotelShare, platformShare: platformShare,
       status: "Approved", paymentStatus: "paid", paymentRef: payRef, paymentMethod: "paystack",
