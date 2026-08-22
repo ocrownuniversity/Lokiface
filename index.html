@@ -1541,6 +1541,9 @@ if(type==='data')window._dataPlanActiveTab='HOT';
 document.getElementById('svc-body').innerHTML=svcForm(type);
 openM('m-svc');
 if(type==='result') fetchWAECPlans();
+if(type==='airtime'||type==='data'){
+setTimeout(()=>{ if(typeof selNetFromDropdown==='function') selNetFromDropdown('MTN'); },60);
+}
 }
 // ── Redesigned Airtime/Data UI helpers (visual only — no purchase logic here) ──
 const NET_UI_COLORS = {
@@ -1664,15 +1667,49 @@ let idx=options.findIndex(o=>o.value===String(price)&&(o.dataset.code||'')===cod
 if(idx<0) idx=options.findIndex(o=>o.value===String(price)&&(o.dataset.code||'')===code);
 if(idx>=0){ sel.selectedIndex=idx; updateDataAmt(sel); }
 }
-function svcNetworkButtons(nets){
-return `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">${nets.map(n=>{
-const c=NET_UI_COLORS[n]||{border:'var(--g200)'};
-return `<button onclick="selNet(this)" style="padding:10px 2px;border:1.5px solid var(--g200);border-left:4px solid ${c.border};border-radius:10px;background:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;color:#111;transition:all .18s">${n}</button>`;
-}).join('')}</div>`;
+const NET_BADGES = {
+'MTN'    : { bg:'#ffcc00', color:'#000', label:'MTN' },
+'Airtel' : { bg:'#ed1b24', color:'#fff', label:'airtel' },
+'Glo'    : { bg:'#65b32e', color:'#fff', label:'glo' },
+'9mobile': { bg:'#0a8754', color:'#fff', label:'9' }
+};
+// Collapsed "current network" bar (matches reference screenshot) with a
+// dropdown to switch. All the real selection logic still lives in the
+// existing selNet() — this just drives a hidden proxy button through it,
+// so plan-fetching/purchase behavior is 100% unchanged.
+function svcNetworkButtons(nets,defaultNet){
+defaultNet=defaultNet||nets[0];
+const b=NET_BADGES[defaultNet]||{bg:'#e5e7eb',color:'#111',label:defaultNet.slice(0,3).toUpperCase()};
+return `<div style="position:relative;margin-bottom:16px">
+<button type="button" onclick="toggleNetDropdown()" id="net-bar-btn" style="width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--g200);border-radius:12px;background:#fff;cursor:pointer;font-family:'Inter',sans-serif">
+<span id="net-bar-badge" style="width:34px;height:34px;border-radius:9px;background:${b.bg};color:${b.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;letter-spacing:-.02em">${b.label}</span>
+<span id="net-bar-name" style="font-size:14px;font-weight:800;color:#111;flex:1;text-align:left">${defaultNet}</span>
+<span style="font-size:11px;color:var(--g400)">&#9662;</span>
+</button>
+<div id="net-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1.5px solid var(--g200);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:20;overflow:hidden">
+${nets.map(n=>{const nb=NET_BADGES[n]||{bg:'#e5e7eb',color:'#111',label:n.slice(0,3).toUpperCase()};return `<button type="button" onclick="selNetFromDropdown('${n}')" style="width:100%;display:flex;align-items:center;gap:10px;padding:11px 12px;border:none;background:#fff;cursor:pointer;font-family:'Inter',sans-serif;border-bottom:1px solid #f8fafc"><span style="width:28px;height:28px;border-radius:8px;background:${nb.bg};color:${nb.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">${nb.label}</span><span style="font-size:13px;font-weight:700;color:#111">${n}</span></button>`;}).join('')}
+</div>
+<div style="display:none"><button id="sel-net-hidden">${defaultNet}</button></div>
+</div>`;
+}
+function toggleNetDropdown(){
+const dd=document.getElementById('net-dropdown');
+if(dd)dd.style.display=(dd.style.display==='none'||!dd.style.display)?'block':'none';
+}
+function selNetFromDropdown(netName){
+const hidden=document.getElementById('sel-net-hidden');
+if(hidden){ hidden.textContent=netName; selNet(hidden); }
+const b=NET_BADGES[netName]||{bg:'#e5e7eb',color:'#111',label:netName.slice(0,3).toUpperCase()};
+const badgeEl=document.getElementById('net-bar-badge');
+const nameEl=document.getElementById('net-bar-name');
+if(badgeEl){badgeEl.style.background=b.bg;badgeEl.style.color=b.color;badgeEl.textContent=b.label;}
+if(nameEl)nameEl.textContent=netName;
+const dd=document.getElementById('net-dropdown');
+if(dd)dd.style.display='none';
 }
 function svcForm(t){
 const nets=['MTN','Airtel','Glo','9mobile'];
-const nbtns=svcNetworkButtons(nets);
+const nbtns=svcNetworkButtons(nets,'MTN');
 const qk=(amts)=>`<div style="display:flex;gap:6px;margin-top:8px">${amts.map(a=>`<button onclick="document.getElementById('s-amt').value=${a}" style="flex:1;padding:7px 2px;border:1.5px solid var(--g200);border-radius:8px;background:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--g200)'">NGN ${a>=1000?(a/1000)+'K':a}</button>`).join('')}</div>`;
 if(t==='airtime')return`${svcPromoBanner('&#9889;','Instant Airtime Top-Up','Delivered in seconds &middot; earn cashback on every purchase')}${nbtns}<div style="margin-bottom:16px"><label style="font-size:12px;font-weight:600;color:var(--g600);margin-bottom:6px;display:block">Phone Number</label><input class="inp" id="s-phone" type="tel" placeholder="080XXXXXXXX"/></div><div style="font-size:14px;font-weight:800;margin-bottom:2px;color:#111">Top Up</div>${airtimePresetGrid([100,200,300,400,500,1000])}<div style="margin-bottom:6px"><label style="font-size:12px;font-weight:600;color:var(--g600);margin-bottom:6px;display:block">Custom Amount</label><div style="display:flex;gap:8px;align-items:stretch"><input class="inp" id="s-amt" type="number" placeholder="Enter amount" style="flex:1" oninput="clearAirtimePresetHighlight()"/><button onclick="procSvc('airtime')" class="btn-g" style="padding:0 24px;border-radius:11px;font-size:14px;font-weight:800;white-space:nowrap">Pay</button></div></div>`;
 if(t==='data')return`${svcPromoBanner('&#128246;','Fast &amp; Reliable Data','Stay connected on every network &middot; best prices guaranteed')}${nbtns}<div style="margin-bottom:16px"><label style="font-size:12px;font-weight:600;color:var(--g600);margin-bottom:6px;display:block">Phone Number</label><input class="inp" id="s-phone" type="tel" placeholder="080XXXXXXXX" oninput="fetchDataPlans()"/></div><div style="font-size:14px;font-weight:800;margin-bottom:10px;color:#111">Data Plans</div><div id="data-loading" style="display:none;font-size:12px;color:var(--g500);padding:6px 2px;margin-bottom:8px">&#8987; Fetching plans...</div><div id="data-plan-placeholder" style="text-align:center;padding:26px 10px;color:var(--g400);font-size:12px;background:#f8fafc;border-radius:12px;margin-bottom:8px">&#128241; Select a network above to see available data plans</div><select class="inp" id="s-amt" onchange="updateDataAmt(this)" style="display:none"><option value="">-- Select network first --</option></select><div id="data-plan-cards" style="display:none;margin-bottom:8px"></div><div id="data-info" style="display:none;background:var(--green-xl);border:1px solid #bbf7d0;border-radius:9px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--green-d)"></div><button onclick="procSvc('data')" class="btn-g" style="width:100%;padding:13px;border-radius:11px;font-size:15px;margin-top:6px">Buy Data</button>`;
