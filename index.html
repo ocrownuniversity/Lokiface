@@ -135,6 +135,14 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .rev-room{font-size:.7rem;color:var(--muted2)}
 .rev-avg{display:flex;align-items:center;gap:1.5rem;margin-top:1.5rem;padding:1.25rem;background:var(--surface2);border-radius:12px;border:1px solid var(--border)}
 .rev-big{font-family:'Playfair Display',serif;font-size:3.5rem;color:var(--gold);line-height:1}
+.rev-cats{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.7rem}
+.rev-cat-chip{font-size:.65rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:.15rem .55rem;color:var(--muted)}
+.rev-reply{margin-top:.75rem;padding:.6rem .7rem;background:var(--surface2);border-radius:10px;border-left:3px solid var(--gold)}
+.rev-reply-label{font-size:.68rem;font-weight:700;color:var(--gold);margin-bottom:.2rem}
+.rev-reply-text{font-size:.78rem;color:var(--muted);line-height:1.5}
+.rev-cat-breakdown{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);width:100%}
+.rev-cat-bar-row{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);padding:.25rem 0}
+.rev-avg{flex-wrap:wrap}
 .map-wrap{border-radius:16px;overflow:hidden;border:1px solid var(--border);margin-top:2rem}
 .map-wrap iframe{width:100%;height:380px;border:none;display:block}
 .map-info{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-top:1.25rem}
@@ -262,6 +270,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .receipt-code-val{font-family:'Playfair Display',serif;font-size:2.2rem;color:var(--gold2);letter-spacing:.3em}
 .receipt-footer{text-align:center;margin-top:1.25rem;font-size:.75rem;color:var(--muted);border-top:1px dashed var(--border);padding-top:1rem}
 .star-row{display:flex;gap:.3rem;margin-bottom:.6rem}
+.rv-cat-rows .star-btn{font-size:1.25rem}
+.rv-cat-rows label{font-size:.78rem;margin-bottom:.15rem;display:block}
 .star-btn{font-size:1.6rem;background:none;border:none;cursor:pointer;color:#ddd;transition:all .15s;line-height:1}
 .star-btn.lit{color:var(--gold)}
 .star-btn:active{transform:scale(.8)}
@@ -371,8 +381,9 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 .pill2{display:inline-block;padding:.2rem .6rem;border-radius:100px;font-size:.66rem;font-weight:700}
 .mp-card{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;transition:transform .15s}
 .mp-card:hover{transform:translateY(-3px)}
-.mp-card .mp-img{width:100%;height:150px;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;font-size:2.2rem;overflow:hidden}
+.mp-card .mp-img{width:100%;height:150px;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;font-size:2.2rem;overflow:hidden;position:relative}
 .mp-card .mp-img img{width:100%;height:100%;object-fit:cover}
+.mp-badge{position:absolute;top:.5rem;left:.5rem;background:var(--gold);color:#fff;font-size:.65rem;font-weight:700;padding:.2rem .55rem;border-radius:20px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
 .mp-card .mp-body{padding:.9rem 1rem}
 </style>
 </head>
@@ -692,14 +703,62 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
           <label>Room Type Stayed In</label>
           <select id="rv-room"><option value="">-- Select Room --</option><option>Single</option><option>Double</option><option>VIP</option><option>Deluxe</option><option>Executive</option><option>Family</option><option>Honeymoon</option></select>
         </div>
-        <div class="fg">
-          <label>Rating</label>
-          <div class="star-row">
-            <button class="star-btn" onclick="setRating(1)">&#9733;</button>
-            <button class="star-btn" onclick="setRating(2)">&#9733;</button>
-            <button class="star-btn" onclick="setRating(3)">&#9733;</button>
-            <button class="star-btn" onclick="setRating(4)">&#9733;</button>
-            <button class="star-btn" onclick="setRating(5)">&#9733;</button>
+        <div class="fg rv-cat-rows">
+          <label>Cleanliness</label>
+          <div class="star-row" data-cat="cleanliness">
+            <button class="star-btn" onclick="setRating('cleanliness',1)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('cleanliness',2)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('cleanliness',3)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('cleanliness',4)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('cleanliness',5)">&#9733;</button>
+          </div>
+          <label>Comfort</label>
+          <div class="star-row" data-cat="comfort">
+            <button class="star-btn" onclick="setRating('comfort',1)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('comfort',2)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('comfort',3)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('comfort',4)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('comfort',5)">&#9733;</button>
+          </div>
+          <label>Staff</label>
+          <div class="star-row" data-cat="staff">
+            <button class="star-btn" onclick="setRating('staff',1)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('staff',2)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('staff',3)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('staff',4)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('staff',5)">&#9733;</button>
+          </div>
+          <label>Location</label>
+          <div class="star-row" data-cat="location">
+            <button class="star-btn" onclick="setRating('location',1)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('location',2)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('location',3)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('location',4)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('location',5)">&#9733;</button>
+          </div>
+          <label>Food</label>
+          <div class="star-row" data-cat="food">
+            <button class="star-btn" onclick="setRating('food',1)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('food',2)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('food',3)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('food',4)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('food',5)">&#9733;</button>
+          </div>
+          <label>Internet</label>
+          <div class="star-row" data-cat="internet">
+            <button class="star-btn" onclick="setRating('internet',1)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('internet',2)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('internet',3)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('internet',4)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('internet',5)">&#9733;</button>
+          </div>
+          <label style="font-weight:700">Overall Experience</label>
+          <div class="star-row" data-cat="overall">
+            <button class="star-btn" onclick="setRating('overall',1)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('overall',2)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('overall',3)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('overall',4)">&#9733;</button>
+            <button class="star-btn" onclick="setRating('overall',5)">&#9733;</button>
           </div>
         </div>
         <div class="fg"><label>Your Review</label><textarea id="rv-text" placeholder="Tell us about your stay..."></textarea></div>
@@ -1102,6 +1161,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       <div class="hd-sb-item" data-t="bookings" onclick="hdSetTab('bookings')"><span class="ic">&#128197;</span>Bookings</div>
       <div class="hd-sb-item" data-t="notifications" onclick="hdSetTab('notifications')"><span class="ic">&#128276;</span>Notifications<span id="hd-sb-notif-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
       <div class="hd-sb-item" data-t="wallet" onclick="hdSetTab('wallet')"><span class="ic">&#128176;</span>Wallet</div>
+      <div class="hd-sb-item" data-t="toppick" onclick="hdSetTab('toppick')"><span class="ic">&#11088;</span>Top Pick</div>
       <div class="hd-sb-item" data-t="settings" onclick="hdSetTab('settings')"><span class="ic">&#9881;</span>Settings</div>
     </div>
     <div class="hd-sb-foot"><button class="hd-sb-logout" onclick="accLogout()">&#128682; Log Out</button></div>
@@ -1160,6 +1220,14 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         <div class="fst" style="margin:1.2rem 0 .4rem" id="hd-wallet-tx-list">Recent Transactions</div>
         <div id="hd-wallet-tx"></div>
         <div class="wal-secure"><span style="font-size:1.3rem">&#128274;</span><div><b>Your wallet is secure</b>All transactions are encrypted and your funds are safe with us.</div></div>
+      </div>
+      <div id="hd-tab-toppick" class="hd-tab" style="display:none">
+        <div class="fc" style="text-align:center;padding:1.6rem 1.2rem">
+          <div style="font-size:2.2rem;margin-bottom:.4rem">&#11088;</div>
+          <div class="fst" style="margin-bottom:.3rem">Top Pick Placement</div>
+          <p style="font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:1rem">Get featured at the top of hotel search results and the homepage, ahead of non-subscribed hotels, for <strong>&#8358;5,000/month</strong>.</p>
+          <div id="hd-toppick-status"></div>
+        </div>
       </div>
       <div id="hd-tab-settings" class="hd-tab" style="display:none">
         <div class="lcard" style="text-align:center">
@@ -1335,7 +1403,7 @@ main{padding:74px 1rem 78px;max-width:1200px;margin:0 auto}
 .chart-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 @media(max-width:640px){.chart-grid2{grid-template-columns:1fr}}
 
-/* ---- sub-admin &#39;My Dashboard&#39; hero + menu-style rows (replaces the old
+/* ---- sub-admin 'My Dashboard' hero + menu-style rows (replaces the old
    bare edit-profile form that used to sit directly on the dashboard page) ---- */
 .sa-hero{background:linear-gradient(135deg,var(--navy),var(--navy2));border-radius:18px;padding:1.4rem 1.3rem;color:#fff;margin-bottom:1rem;box-shadow:var(--shadow-lg)}
 .sa-hero-top{display:flex;align-items:center;gap:1rem}
@@ -1461,6 +1529,15 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 .rv-stars{color:var(--amber);font-size:.95rem}
 .rv-text{font-size:.82rem;color:var(--text);margin-top:.5rem;line-height:1.6}
 .rv-meta{font-size:.7rem;color:var(--muted);margin-top:.4rem}
+.rv-cats{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem}
+.rv-cat-chip{font-size:.68rem;background:var(--blue-dim);color:var(--blue);border-radius:20px;padding:.15rem .6rem;font-weight:600}
+.rv-reply{margin-top:.6rem;padding:.6rem .7rem;background:var(--blue-dim);border-radius:10px;border-left:3px solid var(--blue)}
+.rv-reply-label{font-size:.68rem;font-weight:700;color:var(--blue);margin-bottom:.2rem;display:flex;justify-content:space-between;align-items:center;gap:.5rem}
+.rv-reply-text{font-size:.8rem;color:var(--text);white-space:pre-wrap}
+.rv-reply-form{margin-top:.6rem}
+.rv-reply-form textarea{width:100%;min-height:56px;font-size:.78rem;padding:.5rem .6rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;resize:vertical;box-sizing:border-box}
+.rv-reply-form button{margin-top:.4rem}
+.rv-meta-actions{margin-top:.5rem}
 </style>
 </head>
 <body>
@@ -2950,6 +3027,17 @@ function renderReviewsStats() {
     statCard(&quot;&amp;#127942;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;5-Star Reviews&quot;, five) +
     statCard(&quot;&amp;#9888;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Low Ratings (\u22642)&quot;, low);
 }
+var RV_CAT_LABELS = {cleanliness:&quot;Cleanliness&quot;,comfort:&quot;Comfort&quot;,staff:&quot;Staff&quot;,location:&quot;Location&quot;,food:&quot;Food&quot;,internet:&quot;Internet&quot;};
+function rvCatChips(r) {
+  var c = r.ratings;
+  if (!c) return &quot;&quot;;
+  var chips = Object.keys(RV_CAT_LABELS).map(function(k){
+    var v = c[k];
+    if (!v) return &quot;&quot;;
+    return '<span class=&quot;rv-cat-chip&quot;>'+RV_CAT_LABELS[k]+': '+v+'&amp;#9733;</span>';
+  }).join(&quot;&quot;);
+  return chips ? '<div class=&quot;rv-cats&quot;>'+chips+'</div>' : &quot;&quot;;
+}
 function renderReviews() {
   if (!document.getElementById(&quot;reviews-list&quot;)) return;
   var q = (document.getElementById(&quot;rv-search&quot;).value||&quot;&quot;).toLowerCase();
@@ -2962,12 +3050,40 @@ function renderReviews() {
   var html = list.map(function(r){
     var stars = &quot;&quot;;
     for (var i=1;i<=5;i++) stars += i<=(r.rating||0) ? &quot;&amp;#9733;&quot; : &quot;&amp;#9734;&quot;;
+    var replyBlock = r.ownerReply
+      ? '<div class=&quot;rv-reply&quot;><div class=&quot;rv-reply-label&quot;><span>&amp;#127974; Response from Hotels Continental</span><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;toggleReplyForm(\''+r.id+'\')&quot;>Edit</button></div><div class=&quot;rv-reply-text&quot;>'+esc(r.ownerReply)+'</div></div>'
+      : '<div class=&quot;rv-meta-actions&quot;><button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;toggleReplyForm(\''+r.id+'\')&quot;>&amp;#128172; Reply</button></div>';
+    var replyForm = '<div class=&quot;rv-reply-form&quot; id=&quot;rv-reply-form-'+r.id+'&quot; style=&quot;display:none&quot;>'+
+      '<textarea id=&quot;rv-reply-input-'+r.id+'&quot; placeholder=&quot;Write a response as Hotels Continental...&quot;>'+esc(r.ownerReply||&quot;&quot;)+'</textarea>'+
+      '<button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;submitReviewReply(\''+r.id+'\')&quot;>Post Reply</button></div>';
     return '<div class=&quot;rv-card&quot;><div class=&quot;rv-top&quot;><div><div class=&quot;lr-name&quot;>'+esc(r.name||&quot;Guest&quot;)+'</div><div class=&quot;lr-sub&quot;>'+esc(r.room||&quot;-&quot;)+'</div></div><div class=&quot;rv-stars&quot;>'+stars+'</div></div>'+
       '<div class=&quot;rv-text&quot;>'+esc(r.text||&quot;&quot;)+'</div>'+
-      '<div class=&quot;rv-meta&quot;>'+fmtDate(r.createdAt)+' &amp;middot; <button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;deleteReview(\''+r.id+'\')&quot;>Delete</button></div></div>';
+      rvCatChips(r)+
+      '<div class=&quot;rv-meta&quot;>'+fmtDate(r.createdAt)+' &amp;middot; <button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;deleteReview(\''+r.id+'\')&quot;>Delete</button></div>'+
+      replyBlock+replyForm+
+      '</div>';
   }).join(&quot;&quot;);
   document.getElementById(&quot;reviews-list&quot;).innerHTML = list.length ? html : '<div class=&quot;empty&quot;>No reviews found.</div>';
   renderReviewsStats();
+}
+function toggleReplyForm(id) {
+  var el = document.getElementById(&quot;rv-reply-form-&quot;+id);
+  if (!el) return;
+  el.style.display = el.style.display === &quot;none&quot; ? &quot;block&quot; : &quot;none&quot;;
+}
+function submitReviewReply(id) {
+  var input = document.getElementById(&quot;rv-reply-input-&quot;+id);
+  var text = input ? input.value.trim() : &quot;&quot;;
+  if (!text) { T(&quot;Warning&quot;, &quot;Please write a reply before posting.&quot;); return; }
+  db.collection(&quot;reviews&quot;).doc(id).update({
+    ownerReply: text,
+    ownerReplyAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    var r = _allReviews.find(function(x){ return x.id===id; });
+    if (r) { r.ownerReply = text; r.ownerReplyAt = new Date(); }
+    renderReviews();
+    T(&quot;Reply Posted&quot;, &quot;Your response is now visible with the review.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not post reply.&quot;); });
 }
 function deleteReview(id) {
   db.collection(&quot;reviews&quot;).doc(id).delete().then(function(){
@@ -3059,6 +3175,8 @@ function datesOverlap(aStart, aEnd, bStart, bEnd) { return aStart < bEnd &amp;&a
 var _chartDashB, _chartDashR;
 function renderDashboard() {
   var totalRevenue = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; ? (Number(b.amountPaid)||0) : 0); }, 0);
+  var totalCommission = (_allHotelBookings||[]).reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; ? (Number(b.platformShare)||0) : 0); }, 0);
+  var topPickCount = _allHotels.filter(isTopPickActive).length;
   var today = new Date();
   var todayRevenue = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; &amp;&amp; isSameDay(bkDate(b), today) ? (Number(b.amountPaid)||0) : 0); }, 0);
   var pending = _allBookings.filter(function(b){ return b.status===&quot;Pending&quot;; }).length;
@@ -3076,6 +3194,8 @@ function renderDashboard() {
   if (_isSuperAdmin) {
     cards.push(statCard(&quot;&amp;#128176;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Total Revenue&quot;, NGN(totalRevenue)));
     cards.push(statCard(&quot;&amp;#9752;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Today's Revenue&quot;, NGN(todayRevenue)));
+    cards.push(statCard(&quot;&amp;#128184;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Commission Earned&quot;, NGN(totalCommission)));
+    cards.push(statCard(&quot;&amp;#11088;&quot;, &quot;var(--orange)&quot;, &quot;rgba(247,148,29,.12)&quot;, &quot;Top Pick Hotels&quot;, topPickCount));
   }
   cards.push(statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Bookings&quot;, pending));
   cards.push(statCard(&quot;&amp;#128101;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Total Users&quot;, _allUsers.length));
@@ -3225,7 +3345,7 @@ function notifyCustomerBookingUpdate(b, bookingStatus, paymentStatus, bodyText) 
       uid: uid, type: &quot;booking&quot;, bookingId: b.id, hotelName: b.hotelName,
       room: b.roomType, checkIn: b.checkIn, checkOut: b.checkOut, guests: b.guests || 1,
       amount: b.amount, paymentStatus: paymentStatus, bookingStatus: bookingStatus,
-      subject: &quot;Booking Update &mdash; &quot; + b.hotelName,
+      subject: &quot;Booking Update — &quot; + b.hotelName,
       body: bodyText, read: false,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).catch(function(e) { console.warn(&quot;inbox update write failed:&quot;, e); });
@@ -3294,6 +3414,11 @@ function hotelRevenue(hotelId) {
 function hotelBookingCount(hotelId) {
   return _allBookings.filter(function(b){ return b.hotelId===hotelId; }).length;
 }
+function isTopPickActive(h) {
+  if (!h || !h.topPick || !h.topPickExpiry) return false;
+  var exp = h.topPickExpiry.toDate ? h.topPickExpiry.toDate() : new Date(h.topPickExpiry);
+  return exp.getTime() > Date.now();
+}
 function renderHotels() {
   var q = (document.getElementById(&quot;hotels-search&quot;).value||&quot;&quot;).toLowerCase();
   var statusF = document.getElementById(&quot;hotels-status-filter&quot;).value;
@@ -3304,7 +3429,7 @@ function renderHotels() {
   });
   var html = &quot;&quot;;
   list.forEach(function(h){
-    html += '<div class=&quot;list-row&quot;><div class=&quot;avatar-sm&quot;>&amp;#127974;</div><div style=&quot;flex:1&quot;><div class=&quot;lr-name&quot;>'+esc(h.name)+'</div><div class=&quot;lr-sub&quot;>'+esc(h.location||&quot;-&quot;)+' &amp;middot; '+hotelBookingCount(h.id)+' bookings &amp;middot; '+NGN(hotelRevenue(h.id))+'</div></div>'+pill(h.status||&quot;Active&quot;)+'<button class=&quot;kebab&quot; title=&quot;Cycle status (Active / Pending / Blocked)&quot; onclick=&quot;cycleHotelStatus(\''+h.id+'\')&quot;>&amp;#8942;</button><button class=&quot;kebab&quot; title=&quot;Delete permanently&quot; style=&quot;color:var(--red)&quot; onclick=&quot;deleteHotelPermanently(\''+h.id+'\')&quot;>&amp;#128465;</button></div>';
+    html += '<div class=&quot;list-row&quot;><div class=&quot;avatar-sm&quot;>&amp;#127974;</div><div style=&quot;flex:1&quot;><div class=&quot;lr-name&quot;>'+esc(h.name)+(isTopPickActive(h) ? ' <span class=&quot;pill&quot; style=&quot;background:var(--orange);color:#fff&quot;>&amp;#11088; Top Pick</span>' : '')+'</div><div class=&quot;lr-sub&quot;>'+esc(h.location||&quot;-&quot;)+' &amp;middot; '+hotelBookingCount(h.id)+' bookings &amp;middot; '+NGN(hotelRevenue(h.id))+'</div></div>'+pill(h.status||&quot;Active&quot;)+'<button class=&quot;kebab&quot; title=&quot;Cycle status (Active / Pending / Blocked)&quot; onclick=&quot;cycleHotelStatus(\''+h.id+'\')&quot;>&amp;#8942;</button><button class=&quot;kebab&quot; title=&quot;Delete permanently&quot; style=&quot;color:var(--red)&quot; onclick=&quot;deleteHotelPermanently(\''+h.id+'\')&quot;>&amp;#128465;</button></div>';
   });
   document.getElementById(&quot;hotels-list&quot;).innerHTML = list.length ? html : '<div class=&quot;empty&quot;>No hotels found.</div>';
 }
@@ -4602,7 +4727,7 @@ var EJS_SVC = "service_munqxoi";
 var EJS_TPL = "template_nm4cjm9";
 
 // STATE
-var _rating = 0;
+var _ratings = {cleanliness:0,comfort:0,staff:0,location:0,food:0,internet:0,overall:0};
 var _cS = null;
 var _cT = null;
 var PRICES = {Single:18000,Double:28000,VIP:55000,Deluxe:38000,Executive:32000,Family:48000,Honeymoon:65000};
@@ -5124,22 +5249,31 @@ function showReceipt(id) {
 }
 
 // REVIEWS
-function setRating(r) {
-  _rating = r;
-  document.querySelectorAll(".star-btn").forEach(function(b, i) { b.classList[i < r ? "add" : "remove"]("lit"); });
+var RV_CATS = ["cleanliness","comfort","staff","location","food","internet","overall"];
+var RV_CAT_LABELS = {cleanliness:"Cleanliness",comfort:"Comfort",staff:"Staff",location:"Location",food:"Food",internet:"Internet"};
+function setRating(cat, r) {
+  _ratings[cat] = r;
+  var row = document.querySelector('.star-row[data-cat="' + cat + '"]');
+  if (!row) return;
+  row.querySelectorAll(".star-btn").forEach(function(b, i) { b.classList[i < r ? "add" : "remove"]("lit"); });
 }
 function submitReview() {
   var name = document.getElementById("rv-name").value.trim();
   var room = document.getElementById("rv-room").value;
   var text = document.getElementById("rv-text").value.trim();
-  if (!name || !room || !text || _rating === 0) { T("Warning", "Please fill all fields and select a rating."); return; }
-  db.collection("reviews").add({name:name, room:room, text:text, rating:_rating, createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  var missing = RV_CATS.filter(function(c) { return !_ratings[c]; });
+  if (!name || !room || !text || missing.length) { T("Warning", "Please fill all fields and rate every category, including Overall Experience."); return; }
+  db.collection("reviews").add({
+    name: name, room: room, text: text,
+    rating: _ratings.overall,
+    ratings: {cleanliness:_ratings.cleanliness, comfort:_ratings.comfort, staff:_ratings.staff, location:_ratings.location, food:_ratings.food, internet:_ratings.internet, overall:_ratings.overall},
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(function() {
     T("Thank you!", "Your review has been submitted.");
     document.getElementById("rv-name").value = "";
     document.getElementById("rv-room").value = "";
     document.getElementById("rv-text").value = "";
-    setRating(0);
+    RV_CATS.forEach(function(c) { setRating(c, 0); });
     loadHomeReviews();
   }).catch(function(e) { T("Error", "Could not submit review.", 5000); console.error(e); });
 }
@@ -5149,17 +5283,35 @@ function loadHomeReviews() {
     var ce = document.getElementById("hrc");
     if (snap.empty) { el.innerHTML = '<div class="emst"><span class="ei">&#11088;</span>Be the first to leave a review!</div>'; if (ce) ce.textContent = "0"; return; }
     var total = 0; var html = "";
+    var catTotals = {cleanliness:0,comfort:0,staff:0,location:0,food:0,internet:0}; var catCounts = {cleanliness:0,comfort:0,staff:0,location:0,food:0,internet:0};
     snap.docs.forEach(function(d) {
       var r = d.data(); total += r.rating;
       var st = "";
       for (var i = 0; i < 5; i++) st += (i < r.rating ? "&#9733;" : "&#9734;");
-      html += '<div class="rev-card"><div class="rev-stars">' + st + '</div><div class="rev-text">"' + r.text + '"</div><div class="rev-author">' + r.name + '</div><div class="rev-room">' + r.room + ' Suite</div></div>';
+      var catChips = "";
+      if (r.ratings) {
+        catChips = '<div class="rev-cats">' + Object.keys(RV_CAT_LABELS).map(function(k) {
+          var v = r.ratings[k];
+          if (!v) return "";
+          catTotals[k] += v; catCounts[k]++;
+          return '<span class="rev-cat-chip">' + RV_CAT_LABELS[k] + ' ' + v + '&#9733;</span>';
+        }).join("") + '</div>';
+      }
+      var replyHtml = r.ownerReply ? '<div class="rev-reply"><div class="rev-reply-label">&#127974; Response from Hotels Continental</div><div class="rev-reply-text">' + r.ownerReply + '</div></div>' : "";
+      html += '<div class="rev-card"><div class="rev-stars">' + st + '</div><div class="rev-text">"' + r.text + '"</div><div class="rev-author">' + r.name + '</div><div class="rev-room">' + r.room + ' Suite</div>' + catChips + replyHtml + '</div>';
     });
     el.innerHTML = html;
     var avg = (total / snap.docs.length).toFixed(1);
     if (ce) ce.textContent = snap.docs.length + "+";
     var ae = document.getElementById("rev-avg-wrap");
-    if (ae) ae.innerHTML = '<div class="rev-avg"><div class="rev-big">' + avg + '</div><div><div style="color:var(--gold);font-size:1.1rem">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Based on ' + snap.docs.length + ' review(s)</div></div></div>';
+    if (ae) {
+      var breakdown = Object.keys(RV_CAT_LABELS).map(function(k) {
+        if (!catCounts[k]) return "";
+        return '<div class="rev-cat-bar-row"><span>' + RV_CAT_LABELS[k] + '</span><span>' + (catTotals[k] / catCounts[k]).toFixed(1) + '&#9733;</span></div>';
+      }).join("");
+      ae.innerHTML = '<div class="rev-avg"><div class="rev-big">' + avg + '</div><div><div style="color:var(--gold);font-size:1.1rem">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Based on ' + snap.docs.length + ' review(s)</div></div></div>' +
+        (breakdown ? '<div class="rev-cat-breakdown">' + breakdown + '</div>' : "");
+    }
   }).catch(function(e) { console.error(e); });
 }
 
@@ -6698,6 +6850,7 @@ function loadMarketplaceHotels() {
   document.getElementById("mp-list").innerHTML = '<div class="empty">Loading hotels...</div>';
   return db.collection("hotels").where("status", "==", "Active").get().then(function(snap) {
     _mpHotels = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+    _mpHotels.sort(function(a, b) { return (isTopPickActive(b) ? 1 : 0) - (isTopPickActive(a) ? 1 : 0); });
     renderMarketplaceList();
   }).catch(function() {
     document.getElementById("mp-list").innerHTML = '<div class="empty">Could not load hotels right now.</div>';
@@ -6716,7 +6869,7 @@ function loadHomeMarketplace() {
     if (!_mpHotels.length) { wrap.innerHTML = '<div class="empty">No partner hotels are live yet. Check back soon!</div>'; return; }
     wrap.innerHTML = _mpHotels.slice(0, 6).map(function(h) {
       return '<div class="mp-card" onclick="openHotelDetail(\'' + h.id + '\')">' +
-        '<div class="mp-img">' + (h.coverImage ? '<img src="' + h.coverImage + '"/>' : '&#127974;') + '</div>' +
+        '<div class="mp-img">' + (h.coverImage ? '<img src="' + h.coverImage + '"/>' : '&#127974;') + (isTopPickActive(h) ? '<span class="mp-badge">&#11088; Top Pick</span>' : '') + '</div>' +
         '<div class="mp-body"><div style="font-family:\'Playfair Display\',serif;font-size:1.05rem">' + esc(h.name) + '</div>' +
         '<div style="font-size:.78rem;color:var(--muted);margin-top:.2rem">' + esc(h.location || "") + '</div></div>' +
       '</div>';
@@ -6728,7 +6881,7 @@ function renderMarketplaceList() {
   if (!_mpHotels.length) { wrap.innerHTML = '<div class="empty">No partner hotels are live yet. Check back soon!</div>'; return; }
   wrap.innerHTML = _mpHotels.map(function(h) {
     return '<div class="mp-card" onclick="openHotelDetail(\'' + h.id + '\')">' +
-      '<div class="mp-img">' + (h.coverImage ? '<img src="' + h.coverImage + '"/>' : '&#127974;') + '</div>' +
+      '<div class="mp-img">' + (h.coverImage ? '<img src="' + h.coverImage + '"/>' : '&#127974;') + (isTopPickActive(h) ? '<span class="mp-badge">&#11088; Top Pick</span>' : '') + '</div>' +
       '<div class="mp-body"><div style="font-family:\'Playfair Display\',serif;font-size:1.05rem">' + esc(h.name) + '</div>' +
       '<div style="font-size:.78rem;color:var(--muted);margin-top:.2rem">' + esc(h.location || "") + '</div></div>' +
     '</div>';
@@ -6745,7 +6898,7 @@ function openHotelDetail(hotelId) {
       (gallery.length > 1 ? '<div class="hd-gallery-strip">' + gallery.slice(1, 5).map(function(url) { return '<img src="' + url + '"/>'; }).join("") + '</div>' : '') +
     '</div>' : '';
   document.getElementById("mpd-header").innerHTML =
-    '<div class="phero"><div class="ptag">' + esc(h.location || "") + '</div><h1 class="ptitle">' + esc(h.name || "Hotel") + '</h1>' +
+    '<div class="phero"><div class="ptag">' + esc(h.location || "") + (isTopPickActive(h) ? ' &middot; <span style="color:var(--gold);font-weight:700">&#11088; Top Pick</span>' : '') + '</div><h1 class="ptitle">' + esc(h.name || "Hotel") + '</h1>' +
     (h.description ? '<p class="psub">' + esc(h.description) + '</p>' : '') + '</div>' + galleryHtml;
   document.getElementById("mpd-rooms").innerHTML = '<div class="empty">Loading rooms...</div>';
   db.collection("hotels").doc(hotelId).collection("rooms").get().then(function(snap) {
@@ -6967,8 +7120,16 @@ function sendBookingInboxMessage(email, m) {
     if (!snap.empty) write(snap.docs[0].id);
   }).catch(function() {});
 }
+// Platform commission: tiered 10%-15% based on room price, per the
+// business model (cheaper rooms carry a higher percentage, premium rooms a
+// lower one — a ₦50,000 room lands exactly on the 10% tier as specified).
+function getCommissionRate(price) {
+  if (price >= 50000) return 0.10;
+  if (price >= 20000) return 0.12;
+  return 0.15;
+}
 function submitManualHotelBooking(total, name, phone, email, cin, cout, guests) {
-  var hotelShare = Math.round(total * 0.8);
+  var hotelShare = Math.round(total * (1 - getCommissionRate(total)));
   var platformShare = total - hotelShare;
   var bookingData = {
     hotelId: _mpCurrentHotel.id, hotelName: _mpCurrentHotel.name,
@@ -7031,7 +7192,7 @@ function payHotelBookingFromWallet(total, name, phone, email, cin, cout, guests)
   });
 }
 function finalizeWalletHotelBooking(payRef, total, name, phone, email, cin, cout, roomNum, guests) {
-  var hotelShare = Math.round(total * 0.8);
+  var hotelShare = Math.round(total * (1 - getCommissionRate(total)));
   var platformShare = total - hotelShare;
   var exp = new Date(cout + "T23:59:59");
   var code = String(Math.floor(100000 + Math.random() * 900000));
@@ -7078,7 +7239,7 @@ function findAvailableHotelRoomNumber(hotelId, roomId, checkIn, checkOut) {
   });
 }
 function finalizeHotelBooking(payRef, total, name, phone, email, cin, cout, guests) {
-  var hotelShare = Math.round(total * 0.8);
+  var hotelShare = Math.round(total * (1 - getCommissionRate(total)));
   var platformShare = total - hotelShare;
   var exp = new Date(cout + "T23:59:59");
   findAvailableHotelRoomNumber(_mpCurrentHotel.id, _mpCurrentRoom.id, cin, cout).then(function(roomNum) {
@@ -7159,6 +7320,7 @@ function hdSetTab(tab) {
   document.querySelectorAll(".hd-tab").forEach(function(el) { el.style.display = "none"; });
   document.getElementById("hd-tab-" + tab).style.display = "block";
   if (tab === "settings") hdRenderSettings();
+  if (tab === "toppick") hdRenderTopPick();
   // Opening the Notifications tab means the owner has now seen these, so
   // clear the unread badge automatically instead of requiring a manual
   // "Mark as Read" click on every single notification.
@@ -7426,6 +7588,74 @@ function hdRequestWithdrawal() {
     T("Withdrawal Requested", "Your request has been sent to the admin for approval.");
     hdLoadWithdrawals();
   }).catch(function() { T("Error", "Could not submit withdrawal request."); });
+}
+
+// ── TOP PICK SUBSCRIPTION (₦5,000/month featured placement) ──
+var TOP_PICK_FEE = 5000;
+var TOP_PICK_DAYS = 30;
+function isTopPickActive(h) {
+  if (!h || !h.topPick || !h.topPickExpiry) return false;
+  var exp = h.topPickExpiry.toDate ? h.topPickExpiry.toDate() : new Date(h.topPickExpiry);
+  return exp.getTime() > Date.now();
+}
+function hdRenderTopPick() {
+  var h = _hotelProfile || {};
+  var el = document.getElementById("hd-toppick-status");
+  if (!el) return;
+  if (isTopPickActive(h)) {
+    var exp = h.topPickExpiry.toDate ? h.topPickExpiry.toDate() : new Date(h.topPickExpiry);
+    el.innerHTML =
+      '<div class="pill pill-green" style="font-size:.85rem;padding:.4rem .9rem;margin-bottom:.8rem">&#11088; Top Pick Active</div>' +
+      '<p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem">Your hotel is featured until <strong>' + exp.toLocaleDateString("en-GB", {day:"2-digit", month:"long", year:"numeric"}) + '</strong>.</p>' +
+      '<button class="fsub" id="hd-toppick-btn" onclick="hdSubscribeTopPick()">Renew Now &mdash; &#8358;' + TOP_PICK_FEE.toLocaleString() + '</button>';
+  } else {
+    el.innerHTML =
+      '<div class="pill pill-amber" style="font-size:.85rem;padding:.4rem .9rem;margin-bottom:.8rem">Not Featured</div>' +
+      '<button class="fsub" id="hd-toppick-btn" onclick="hdSubscribeTopPick()">Subscribe Now &mdash; &#8358;' + TOP_PICK_FEE.toLocaleString() + '/month</button>';
+  }
+}
+function hdSubscribeTopPick() {
+  var h = _hotelProfile || {};
+  var email = h.email || h.ownerEmail || "";
+  if (!email) { T("Missing Email", "We couldn't find an email on file for your hotel. Contact the admin to update it.", 6000); return; }
+  var btn = document.getElementById("hd-toppick-btn");
+  if (btn) btn.disabled = true;
+  var handler = PaystackPop.setup({
+    key: PAYSTACK_KEY,
+    email: email,
+    amount: TOP_PICK_FEE * 100,
+    currency: "NGN",
+    ref: "HCTOPPICK_" + Date.now(),
+    metadata: { hotelId: _hotelSession, type: "top_pick_subscription" },
+    callback: function(response) {
+      var base = isTopPickActive(h) ? (h.topPickExpiry.toDate ? h.topPickExpiry.toDate() : new Date(h.topPickExpiry)) : new Date();
+      var newExpiry = new Date(base.getTime());
+      newExpiry.setDate(newExpiry.getDate() + TOP_PICK_DAYS);
+      db.collection("topPickPayments").add({
+        hotelId: _hotelSession, hotelName: h.name || "", amount: TOP_PICK_FEE,
+        reference: response.reference, status: "paid",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        return db.collection("hotels").doc(_hotelSession).update({
+          topPick: true,
+          topPickExpiry: firebase.firestore.Timestamp.fromDate(newExpiry)
+        });
+      }).then(function() {
+        _hotelProfile.topPick = true;
+        _hotelProfile.topPickExpiry = firebase.firestore.Timestamp.fromDate(newExpiry);
+        T("You're Featured!", "Your hotel is now a Top Pick until " + newExpiry.toLocaleDateString("en-GB", {day:"2-digit", month:"long", year:"numeric"}) + ".");
+        hdRenderTopPick();
+      }).catch(function() {
+        T("Error", "Payment received but activation failed. Contact support with ref: " + response.reference, 8000);
+        if (btn) btn.disabled = false;
+      });
+    },
+    onClose: function() {
+      if (btn) btn.disabled = false;
+      T("Payment Cancelled", "You closed the payment window.");
+    }
+  });
+  handler.openIframe();
 }
 
 // ── HOTEL SETTINGS (profile photo, hotel info, gallery, password) ──
