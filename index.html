@@ -1193,7 +1193,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 </div>
 
 <!-- ADMIN -->
-<div class="page" id="page-admin" style="padding-top:0">
+<div class="page" id="page-admin" style="padding-top:62px">
   <iframe id="admin-frame" title="Hotels Continental Admin" loading="lazy" style="display:block;width:100%;border:none;height:calc(100vh - 62px);background:#f4f6fb" srcdoc="<!DOCTYPE html>
 <html lang=&quot;en&quot;>
 <head>
@@ -5907,6 +5907,7 @@ function accSignup() {
     auth.createUserWithEmailAndPassword(email, pass).then(function(cred) {
       return db.collection("users").doc(cred.user.uid).set({
         name: name, email: email, phone: phone, photoURL: "",
+        role: "customer", status: "active",
         referralCode: cred.user.uid.slice(0, 8).toUpperCase(),
         referredBy: validReferrer ? refCode : "",
         referralRewarded: false,
@@ -5973,6 +5974,7 @@ function accGoogleSignIn() {
       db.collection("users").doc(user.uid).set({
         name: user.displayName || "", email: user.email || "", phone: user.phoneNumber || "",
         photoURL: user.photoURL || "",
+        role: "customer", status: "active",
         referralCode: user.uid.slice(0, 8).toUpperCase(),
         referredBy: validReferrer ? refCode : "",
         referralRewarded: false,
