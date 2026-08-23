@@ -167,7 +167,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .fg input,.fg select,.fg textarea{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.72rem .88rem;color:var(--text);font-family:'Jost',sans-serif;font-size:.86rem;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
 .amn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem}
 .amn-chk{display:flex;align-items:center;gap:.45rem;font-size:.78rem;color:var(--text);background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.5rem .6rem;cursor:pointer}
-.amn-chk input{width:auto;accent-color:var(--gold)}
+.amn-chk input{width:auto;accent-color:var(--gold);-webkit-appearance:checkbox;appearance:auto;flex-shrink:0;cursor:pointer}
+.amn-chk{user-select:none}
+.amn-chk:has(input:checked){border-color:var(--gold);background:var(--gold-dim)}
 .mp-filterbar{background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1.2rem;display:flex;flex-direction:column;gap:.8rem}
 .mp-filter-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem}
 .mp-filter-row input,.mp-filter-row select{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:.6rem .7rem;font-family:'Jost',sans-serif;font-size:.8rem;color:var(--text);outline:none}
@@ -7969,22 +7971,38 @@ function hdSubscribeTopPick() {
       var base = isTopPickActive(h) ? (h.topPickExpiry.toDate ? h.topPickExpiry.toDate() : new Date(h.topPickExpiry)) : new Date();
       var newExpiry = new Date(base.getTime());
       newExpiry.setDate(newExpiry.getDate() + TOP_PICK_DAYS);
-      db.collection("topPickPayments").add({
-        hotelId: _hotelSession, hotelName: h.name || "", amount: TOP_PICK_FEE,
-        reference: response.reference, status: "paid",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
+      // Activate the hotel's Top Pick placement first (this is the part the
+      // guest-facing marketplace actually reads), then log the payment. If
+      // activation fails we retry once automatically before giving up, since
+      // Firestore write failures right after a payment are often a transient
+      // network hiccup rather than a real permissions problem.
+      var activate = function() {
         return db.collection("hotels").doc(_hotelSession).update({
           topPick: true,
           topPickExpiry: firebase.firestore.Timestamp.fromDate(newExpiry)
         });
+      };
+      activate().catch(function(err) {
+        console.warn("Top Pick activation retry after error:", err);
+        return new Promise(function(resolve) { setTimeout(resolve, 1200); }).then(activate);
       }).then(function() {
         _hotelProfile.topPick = true;
         _hotelProfile.topPickExpiry = firebase.firestore.Timestamp.fromDate(newExpiry);
         T("You're Featured!", "Your hotel is now a Top Pick until " + newExpiry.toLocaleDateString("en-GB", {day:"2-digit", month:"long", year:"numeric"}) + ".");
         hdRenderTopPick();
-      }).catch(function() {
-        T("Error", "Payment received but activation failed. Contact support with ref: " + response.reference, 8000);
+        return db.collection("topPickPayments").add({
+          hotelId: _hotelSession, hotelName: h.name || "", amount: TOP_PICK_FEE,
+          reference: response.reference, status: "paid",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(function(logErr) {
+          // Activation already succeeded above, so this is just the payment
+          // log entry failing to save — not worth alarming the hotel owner.
+          console.warn("Top Pick payment log failed to save:", logErr);
+        });
+      }).catch(function(err) {
+        console.error("Top Pick activation failed:", err);
+        var reason = (err && err.code) ? " (" + err.code + ")" : "";
+        T("Error", "Payment received but activation failed" + reason + ". Contact support with ref: " + response.reference, 8000);
         if (btn) btn.disabled = false;
       });
     },
