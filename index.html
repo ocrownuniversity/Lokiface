@@ -165,6 +165,31 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .fg{margin-bottom:.95rem}
 .fg label{display:block;font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.38rem}
 .fg input,.fg select,.fg textarea{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.72rem .88rem;color:var(--text);font-family:'Jost',sans-serif;font-size:.86rem;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
+.amn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem}
+.amn-chk{display:flex;align-items:center;gap:.45rem;font-size:.78rem;color:var(--text);background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.5rem .6rem;cursor:pointer}
+.amn-chk input{width:auto;accent-color:var(--gold)}
+.mp-filterbar{background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1.2rem;display:flex;flex-direction:column;gap:.8rem}
+.mp-filter-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem}
+.mp-filter-row input,.mp-filter-row select{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:.6rem .7rem;font-family:'Jost',sans-serif;font-size:.8rem;color:var(--text);outline:none}
+.mp-cat-badge{display:inline-block;background:var(--gold-dim);color:var(--gold);font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:100px;padding:.15rem .6rem;margin-top:.3rem}
+.mp-amn-row{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.4rem}
+.mp-amn-tag{font-size:.62rem;color:var(--muted);background:var(--surface2);border-radius:6px;padding:.15rem .45rem}
+.mp-price{color:var(--gold);font-weight:700;font-size:.82rem;margin-top:.35rem}
+.mp-clear-btn{background:transparent;border:1.5px solid var(--gold-border);color:var(--gold);border-radius:8px;padding:.55rem .9rem;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.chat-thread{display:flex;align-items:center;gap:.7rem;padding:.85rem;border-radius:10px;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;margin-bottom:.6rem}
+.chat-thread:hover{border-color:var(--gold-border)}
+.chat-thread-name{font-weight:700;font-size:.86rem}
+.chat-thread-last{font-size:.76rem;color:var(--muted);margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.chat-thread-dot{width:9px;height:9px;border-radius:50%;background:var(--gold);flex-shrink:0}
+.chat-box{display:flex;flex-direction:column;height:60vh;min-height:340px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;overflow:hidden}
+.chat-msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.55rem}
+.chat-bubble{max-width:75%;padding:.6rem .85rem;border-radius:12px;font-size:.82rem;line-height:1.5}
+.chat-bubble.mine{align-self:flex-end;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;border-bottom-right-radius:3px}
+.chat-bubble.theirs{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:3px}
+.chat-bubble-time{font-size:.6rem;opacity:.7;margin-top:.25rem}
+.chat-input-row{display:flex;gap:.5rem;padding:.7rem;border-top:1px solid var(--border);background:var(--surface)}
+.chat-input-row input{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:100px;padding:.65rem 1rem;font-family:'Jost',sans-serif;font-size:.85rem;color:var(--text);outline:none}
+.chat-send-btn{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;border:none;border-radius:100px;width:42px;height:42px;flex-shrink:0;cursor:pointer;font-size:1rem}
 .fg textarea{resize:vertical;min-height:80px}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)}
 .pw-wrap{position:relative}
@@ -826,6 +851,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         <div class="hd-sb-item on" data-k="overview" onclick="accShowMenu();accToggleSidebar(false)"><span class="ic">&#127968;</span>Overview</div>
         <div class="hd-sb-item" data-k="bookings" onclick="accOpenSub('bookings')"><span class="ic">&#128197;</span>My Bookings</div>
         <div class="hd-sb-item" data-k="wishlist" onclick="accOpenSub('wishlist')"><span class="ic">&#9825;</span>My Wishlist</div>
+        <div class="hd-sb-item" data-k="chats" onclick="accOpenSub('chats')"><span class="ic">&#128172;</span>Messages<span id="acc-sb-chat-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
         <div class="hd-sb-item" data-k="profile" onclick="accOpenSub('profile')"><span class="ic">&#128100;</span>My Profile</div>
         <div class="hd-sb-item" data-k="payments" onclick="accOpenSub('payments')"><span class="ic">&#128179;</span>Payments &amp; Wallet</div>
         <div class="hd-sb-item" data-k="inbox" onclick="accOpenSub('inbox')"><span class="ic">&#9993;</span>Inbox<span id="acc-sb-inbox-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
@@ -966,7 +992,12 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
               </div>
             </div>
             <div class="fg"><label>Number of Rooms</label><input type="number" id="hr-rooms" min="1" placeholder="e.g. 24"/></div>
+            <div class="fg"><label>Hotel Category</label><select id="hr-category"></select></div>
             <div class="fg"><label>Short Description (optional)</label><textarea id="hr-desc" rows="3" placeholder="Tell us a little about your hotel" style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:.62rem .85rem;font-family:'Jost',sans-serif;font-size:.82rem;color:var(--text);outline:none;resize:vertical"></textarea></div>
+            <div class="fg">
+              <label>Amenities</label>
+              <div class="amn-grid" id="hr-amenities"></div>
+            </div>
 
             <div class="fg" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-top:.5rem">
               <label style="display:block;font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem">&#128247; Hotel Photos</label>
@@ -1054,6 +1085,25 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       <div class="ptag">Marketplace</div>
       <h1 class="ptitle">Partner Hotels</h1>
       <p class="psub">Browse hotels registered on our platform and book directly.</p>
+    </div>
+    <div class="mp-filterbar">
+      <div class="mp-filter-row">
+        <input type="text" id="mp-search" placeholder="Search hotel name or location..." oninput="renderMarketplaceList()"/>
+        <select id="mp-category-filter" onchange="renderMarketplaceList()"></select>
+        <input type="number" id="mp-price-min" placeholder="Min price/night" min="0" oninput="renderMarketplaceList()"/>
+        <input type="number" id="mp-price-max" placeholder="Max price/night" min="0" oninput="renderMarketplaceList()"/>
+        <select id="mp-sort" onchange="renderMarketplaceList()">
+          <option value="">Sort: Recommended</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="name-asc">Name: A-Z</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem">Amenities</div>
+        <div class="amn-grid" id="mp-amenities-filter" onchange="renderMarketplaceList()"></div>
+      </div>
+      <button class="mp-clear-btn" onclick="clearMarketplaceFilters()" style="align-self:flex-start">&#10005; Clear Filters</button>
     </div>
     <div id="mp-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.1rem"></div>
   </div>
@@ -1160,6 +1210,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       <div class="hd-sb-item" data-t="rooms" onclick="hdSetTab('rooms')"><span class="ic">&#128716;</span>Rooms</div>
       <div class="hd-sb-item" data-t="bookings" onclick="hdSetTab('bookings')"><span class="ic">&#128197;</span>Bookings</div>
       <div class="hd-sb-item" data-t="notifications" onclick="hdSetTab('notifications')"><span class="ic">&#128276;</span>Notifications<span id="hd-sb-notif-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
+      <div class="hd-sb-item" data-t="messages" onclick="hdSetTab('messages')"><span class="ic">&#128172;</span>Messages<span id="hd-sb-chat-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
       <div class="hd-sb-item" data-t="wallet" onclick="hdSetTab('wallet')"><span class="ic">&#128176;</span>Wallet</div>
       <div class="hd-sb-item" data-t="toppick" onclick="hdSetTab('toppick')"><span class="ic">&#11088;</span>Top Pick</div>
       <div class="hd-sb-item" data-t="settings" onclick="hdSetTab('settings')"><span class="ic">&#9881;</span>Settings</div>
@@ -1203,6 +1254,19 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
           <div id="hd-notif-list"></div>
         </div>
       </div>
+      <div id="hd-tab-messages" class="hd-tab" style="display:none">
+        <div class="card" id="hd-msg-list-wrap">
+          <div class="card-title">Guest Messages</div>
+          <div id="hd-msg-threads"></div>
+        </div>
+        <div class="card" id="hd-msg-thread-wrap" style="display:none">
+          <button class="btn btn-o btn-sm" style="margin-bottom:.8rem" onclick="hdBackToThreadList()">&#8592; Back to Messages</button>
+          <div class="card-title" id="hd-msg-thread-title"></div>
+          <div class="chat-box"><div class="chat-msgs" id="hd-chat-msgs"></div>
+            <div class="chat-input-row"><input type="text" id="hd-chat-input" placeholder="Type a reply..." onkeypress="if(event.key==='Enter')hdSendChatMessage()"/>
+            <button class="chat-send-btn" onclick="hdSendChatMessage()">&#10148;</button></div></div>
+        </div>
+      </div>
       <div id="hd-tab-wallet" class="hd-tab" style="display:none">
         <div id="hd-wallet-hero"></div>
         <div id="hd-wallet-qa"></div>
@@ -1239,7 +1303,12 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
           <div class="fg"><label>Hotel Name</label><input type="text" id="hds-name" disabled style="opacity:.6"/><div style="font-size:.68rem;color:var(--muted);margin-top:.3rem">Contact the platform admin to change your registered hotel name.</div></div>
           <div class="fg"><label>Location</label><input type="text" id="hds-location" placeholder="e.g. Victoria Island, Lagos"/></div>
           <div class="fg"><label>Phone Number</label><input type="tel" id="hds-phone" placeholder="Contact phone number"/></div>
+          <div class="fg"><label>Hotel Category</label><select id="hds-category"></select></div>
           <div class="fg"><label>About / Description</label><textarea id="hds-description" rows="4" placeholder="Tell guests about your hotel"></textarea></div>
+          <div class="fg">
+            <label>Amenities</label>
+            <div class="amn-grid" id="hds-amenities"></div>
+          </div>
           <button class="fsub" onclick="hdSaveInfo()">Save Changes</button>
         </div>
         <div class="fc" style="margin:1.1rem 0">
@@ -4288,10 +4357,12 @@ function openHRDetail(id) {
     '<div><div class=&quot;lr-sub&quot;>Email</div><div class=&quot;lr-name&quot;>'+esc(r.email||&quot;-&quot;)+'</div></div>'+
     '<div><div class=&quot;lr-sub&quot;>Phone</div><div class=&quot;lr-name&quot;>'+esc(r.phone||&quot;-&quot;)+'</div></div>'+
     '<div><div class=&quot;lr-sub&quot;>Number of Rooms</div><div class=&quot;lr-name&quot;>'+esc(r.rooms||&quot;-&quot;)+'</div></div>'+
+    '<div><div class=&quot;lr-sub&quot;>Category</div><div class=&quot;lr-name&quot;>'+esc(r.category||&quot;-&quot;)+'</div></div>'+
     '<div><div class=&quot;lr-sub&quot;>Address</div><div class=&quot;lr-name&quot;>'+esc(r.address||&quot;-&quot;)+'</div></div>'+
     '<div><div class=&quot;lr-sub&quot;>City / Country</div><div class=&quot;lr-name&quot;>'+esc(r.city||&quot;-&quot;)+', '+esc(r.country||&quot;Nigeria&quot;)+'</div></div>'+
     '</div>'+
     (r.description ? '<div style=&quot;margin-top:1rem&quot;><div class=&quot;lr-sub&quot;>Description</div><div class=&quot;lr-name&quot; style=&quot;font-weight:400&quot;>'+esc(r.description)+'</div></div>' : '') +
+    (r.amenities &amp;&amp; r.amenities.length ? '<div style=&quot;margin-top:1rem&quot;><div class=&quot;lr-sub&quot;>Amenities</div><div class=&quot;lr-name&quot; style=&quot;font-weight:400&quot;>'+esc(r.amenities.join(&quot;, &quot;))+'</div></div>' : '') +
     galleryBlock+
     '<div class=&quot;card-title&quot; style=&quot;margin-top:1.2rem&quot;>Submitted Documents</div>'+docs+actions;
   goPage(&quot;hrdetail&quot;);
@@ -4302,6 +4373,7 @@ function approveHotelReg(id) {
   var hotelData = {
     name: r.hotelName, location: (r.city||&quot;&quot;)+&quot;, &quot;+(r.country||&quot;Nigeria&quot;), status:&quot;Active&quot;,
     ownerName: r.ownerName||&quot;&quot;, ownerEmail: r.email||&quot;&quot;, email: r.email||&quot;&quot;, country: r.country||&quot;Nigeria&quot;,
+    category: r.category||&quot;&quot;, amenities: r.amenities||[],
     description: r.description||&quot;&quot;, verificationStatus:&quot;Verified&quot;, govIdURL: r.govIdURL||&quot;&quot;, bizDocURL: r.bizDocURL||&quot;&quot;,
     docsSubmitted: [&quot;Business Registration&quot;,&quot;Government ID&quot;],
     walletBalance: 0, totalEarned: 0, totalWithdrawn: 0,
@@ -5614,6 +5686,8 @@ function submitHotelRegistration() {
   var city = document.getElementById("hr-city").value.trim();
   var country = document.getElementById("hr-country").value;
   var rooms = document.getElementById("hr-rooms").value.trim();
+  var category = document.getElementById("hr-category").value;
+  var amenities = getCheckedAmenities("hr-amenities");
   var description = document.getElementById("hr-desc").value.trim();
   var govFile = document.getElementById("hr-govid-file").files[0];
   var bizFile = document.getElementById("hr-bizdoc-file").files[0];
@@ -5647,7 +5721,7 @@ function submitHotelRegistration() {
           var ownerUid = cred.user.uid;
           var regData = {
             hotelName: hotelName, ownerName: ownerName, phone: phone, email: email,
-            address: address, city: city, country: country, rooms: rooms, description: description,
+            address: address, city: city, country: country, rooms: rooms, category: category, amenities: amenities, description: description,
             govIdURL: govDataUrl, govIdName: govFile.name,
             bizDocURL: bizDataUrl, bizDocName: bizFile.name,
             ownerUid: ownerUid, status: "Pending",
@@ -5681,6 +5755,8 @@ function resetHotelRegistration() {
     document.getElementById(id).value = "";
   });
   document.getElementById("hr-country").selectedIndex = 0;
+  document.getElementById("hr-category").selectedIndex = 0;
+  document.querySelectorAll('input[data-group="hr-amenities"]').forEach(function(el) { el.checked = false; });
   document.getElementById("hr-govid-file").value = "";
   document.getElementById("hr-bizdoc-file").value = "";
   document.getElementById("hr-govid-preview").style.display = "none";
@@ -6313,6 +6389,12 @@ function accLoadMenuBadges() {
     var unread = snap.docs.filter(function(d) { return d.data().read !== true; }).length;
     if (unread) { el.textContent = unread; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
   }).catch(function() {});
+  db.collection("hotelChats").where("uid", "==", uid).get().then(function(snap) {
+    var el = document.getElementById("acc-sb-chat-badge");
+    if (!el) return;
+    var unread = snap.docs.filter(function(d) { return d.data().unreadUser === true; }).length;
+    if (unread) { el.textContent = unread; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
+  }).catch(function() {});
 }
 
 function accOpenSub(key) {
@@ -6322,7 +6404,7 @@ function accOpenSub(key) {
   accToggleSidebar(false);
   var titles = {
     bookings: "My Bookings", wishlist: "My Wishlist", profile: "My Profile",
-    payments: "Payments & Wallet", inbox: "Inbox", notifications: "Notifications",
+    payments: "Payments & Wallet", inbox: "Inbox", notifications: "Notifications", chats: "Messages",
     refer: "Refer & Earn", help: "Help & Support", about: "About Hotels Continental",
     terms: "Terms & Conditions", privacy: "Privacy Policy"
   };
@@ -6334,6 +6416,7 @@ function accOpenSub(key) {
   else if (key === "profile") accRenderProfile(body);
   else if (key === "payments") accRenderPayments(body);
   else if (key === "inbox") accRenderInbox(body);
+  else if (key === "chats") { if (_accChatUnsub) { _accChatUnsub(); _accChatUnsub = null; } accRenderChats(body); }
   else if (key === "notifications") accRenderNotifications(body);
   else if (key === "refer") accRenderRefer(body);
   else if (key === "help") accRenderStatic(body, "Need a hand?", "Call or WhatsApp us on <a href=\"tel:09123213212\" style=\"color:var(--gold)\">09123213212</a>, or email <a href=\"mailto:HotelsContinental@gmail.com\" style=\"color:var(--gold)\">HotelsContinental@gmail.com</a>. Our team is available 24/7.");
@@ -6705,6 +6788,97 @@ function accRenderInbox(body) {
     }
   }).catch(function() { body.innerHTML = '<div class="emst"><span class="ei">&#9993;</span>Your inbox is empty.</div>'; });
 }
+
+// ═══════════════════════════════════════════
+// IN-APP CHAT: customer <-> hotel messaging.
+// Thread doc id is deterministic: hotelId + "__" + uid, so both sides
+// always land on the same document. Each thread has a "messages"
+// subcollection ordered by createdAt.
+// ═══════════════════════════════════════════
+function chatThreadId(hotelId, uid) { return hotelId + "__" + uid; }
+var _accChatUnsub = null;
+var _accChatCurrent = null;
+
+function ensureChatThread(hotelId, hotelName) {
+  var uid = _accUser.uid;
+  var tid = chatThreadId(hotelId, uid);
+  return db.collection("hotelChats").doc(tid).set({
+    hotelId: hotelId, hotelName: hotelName || "Hotel", uid: uid,
+    userName: (_accProfile && _accProfile.name) || _accUser.displayName || "Guest",
+    userEmail: _accUser.email || ""
+  }, { merge: true }).then(function() { return tid; });
+}
+
+function openHotelChatFromDetail(hotelId, hotelName) {
+  if (!_accUser) { T("Please Sign In", "You need an account to chat with a hotel.", 6000); SP("account"); accSetTab("signup"); return; }
+  ensureChatThread(hotelId, hotelName).then(function() {
+    SP("account");
+    accShowMenu();
+    accOpenSub("chats");
+    setTimeout(function() { accOpenChatThread(hotelId, hotelName); }, 50);
+  });
+}
+
+function accRenderChats(body) {
+  var uid = _accUser ? _accUser.uid : "";
+  db.collection("hotelChats").where("uid", "==", uid).get().then(function(snap) {
+    if (snap.empty) { body.innerHTML = '<div class="emst"><span class="ei">&#128172;</span>No conversations yet. Open a hotel\'s page and tap "Chat with Hotel" to start one.</div>'; return; }
+    var threads = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+    threads.sort(function(a, b) { return (b.lastAt ? b.lastAt.toMillis() : 0) - (a.lastAt ? a.lastAt.toMillis() : 0); });
+    body.innerHTML = threads.map(function(t) {
+      return '<div class="chat-thread" onclick="accOpenChatThread(\'' + t.hotelId + '\', \'' + esc(t.hotelName || "Hotel").replace(/'/g, "\\'") + '\')">' +
+        (t.unreadUser ? '<span class="chat-thread-dot"></span>' : '<span style="width:9px"></span>') +
+        '<div><div class="chat-thread-name">' + esc(t.hotelName || "Hotel") + '</div>' +
+        '<div class="chat-thread-last">' + esc(t.lastMessage || "No messages yet") + '</div></div>' +
+      '</div>';
+    }).join("");
+  }).catch(function() { body.innerHTML = '<div class="emst"><span class="ei">&#128172;</span>Could not load your messages.</div>'; });
+}
+
+function accOpenChatThread(hotelId, hotelName) {
+  var uid = _accUser.uid;
+  var tid = chatThreadId(hotelId, uid);
+  _accChatCurrent = { hotelId: hotelId, hotelName: hotelName, tid: tid };
+  document.getElementById("acc-sub-title").textContent = hotelName || "Chat";
+  var body = document.getElementById("acc-sub-body");
+  body.innerHTML =
+    '<button class="sagain" style="margin-bottom:.8rem" onclick="accOpenSub(\'chats\')">&#8592; Back to Messages</button>' +
+    '<div class="chat-box"><div class="chat-msgs" id="acc-chat-msgs"><div class="emst"><span class="ei">&#8987;</span>Loading...</div></div>' +
+    '<div class="chat-input-row"><input type="text" id="acc-chat-input" placeholder="Type a message..." onkeypress="if(event.key===\'Enter\')accSendChatMessage()"/>' +
+    '<button class="chat-send-btn" onclick="accSendChatMessage()">&#10148;</button></div></div>';
+
+  db.collection("hotelChats").doc(tid).set({ unreadUser: false }, { merge: true }).catch(function() {});
+  accLoadMenuBadges();
+
+  if (_accChatUnsub) { _accChatUnsub(); _accChatUnsub = null; }
+  _accChatUnsub = db.collection("hotelChats").doc(tid).collection("messages").orderBy("createdAt", "asc").onSnapshot(function(snap) {
+    var msgsEl = document.getElementById("acc-chat-msgs");
+    if (!msgsEl) return;
+    if (snap.empty) { msgsEl.innerHTML = '<div class="emst"><span class="ei">&#128172;</span>Say hello! Ask about rooms, prices or availability.</div>'; return; }
+    msgsEl.innerHTML = snap.docs.map(function(d) {
+      var m = d.data();
+      var mine = m.sender === "user";
+      var time = m.createdAt ? m.createdAt.toDate().toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+      return '<div class="chat-bubble ' + (mine ? "mine" : "theirs") + '">' + esc(m.text) + '<div class="chat-bubble-time">' + time + '</div></div>';
+    }).join("");
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }, function() {});
+}
+
+function accSendChatMessage() {
+  var input = document.getElementById("acc-chat-input");
+  var text = input.value.trim();
+  if (!text || !_accChatCurrent) return;
+  input.value = "";
+  var tid = _accChatCurrent.tid;
+  db.collection("hotelChats").doc(tid).collection("messages").add({
+    sender: "user", text: text, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    return db.collection("hotelChats").doc(tid).set({
+      lastMessage: text, lastAt: firebase.firestore.FieldValue.serverTimestamp(), lastSender: "user", unreadHotel: true
+    }, { merge: true });
+  }).catch(function() { T("Error", "Could not send your message. Please try again."); });
+}
 // Booking messages (type === "booking") carry structured fields sent
 // automatically whenever a booking is created or updated by the admin;
 // anything else falls back to the plain subject/body layout. Unread
@@ -6846,15 +7020,55 @@ var _hbPayMethod = "paystack";
 var _hbWalletBalRaw = 0;
 var _hbReceiptData = null;
 
+// Shared hotel categories & amenities used at registration, hotel settings,
+// and the customer-facing Browse Hotels filters.
+var HOTEL_CATEGORIES = ["Budget","Standard","Premium","Executive","Resort","Apartment Hotel","Villa","Guest House","Hostel"];
+var HOTEL_AMENITIES = ["Free WiFi","Swimming Pool","Breakfast Included","Air Conditioning","Gym","Spa","Restaurant","Parking","Family Friendly","Pet Friendly","Business Facilities","Beachfront"];
+function amenityChecklistHtml(prefix, selected) {
+  selected = selected || [];
+  return HOTEL_AMENITIES.map(function(a) {
+    var id = prefix + "-" + a.replace(/[^a-zA-Z0-9]/g, "");
+    var checked = selected.indexOf(a) > -1 ? "checked" : "";
+    return '<label class="amn-chk"><input type="checkbox" value="' + a + '" data-group="' + prefix + '" id="' + id + '" ' + checked + '/><span>' + a + '</span></label>';
+  }).join("");
+}
+function getCheckedAmenities(prefix) {
+  return Array.prototype.slice.call(document.querySelectorAll('input[data-group="' + prefix + '"]:checked')).map(function(el) { return el.value; });
+}
+function categoryOptionsHtml(selected) {
+  return '<option value="">-- Select Category --</option>' + HOTEL_CATEGORIES.map(function(c) {
+    return '<option value="' + c + '"' + (c === selected ? " selected" : "") + '>' + c + '</option>';
+  }).join("");
+}
+
 function loadMarketplaceHotels() {
   document.getElementById("mp-list").innerHTML = '<div class="empty">Loading hotels...</div>';
   return db.collection("hotels").where("status", "==", "Active").get().then(function(snap) {
     _mpHotels = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
     _mpHotels.sort(function(a, b) { return (isTopPickActive(b) ? 1 : 0) - (isTopPickActive(a) ? 1 : 0); });
+    // Pull each hotel's cheapest room price so guests can see a starting
+    // price on the listing card, and so the price filter has something to
+    // filter against.
+    return Promise.all(_mpHotels.map(function(h) {
+      return db.collection("hotels").doc(h.id).collection("rooms").get().then(function(rs) {
+        var prices = rs.docs.map(function(d) { return d.data().price || 0; }).filter(function(p) { return p > 0; });
+        h.minPrice = prices.length ? Math.min.apply(null, prices) : null;
+      }).catch(function() { h.minPrice = null; });
+    }));
+  }).then(function() {
     renderMarketplaceList();
   }).catch(function() {
     document.getElementById("mp-list").innerHTML = '<div class="empty">Could not load hotels right now.</div>';
   });
+}
+function clearMarketplaceFilters() {
+  document.getElementById("mp-search").value = "";
+  document.getElementById("mp-category-filter").value = "";
+  document.getElementById("mp-price-min").value = "";
+  document.getElementById("mp-price-max").value = "";
+  document.getElementById("mp-sort").value = "";
+  document.querySelectorAll('input[data-group="mp-amenities-filter"]').forEach(function(el) { el.checked = false; });
+  renderMarketplaceList();
 }
 function loadHomeMarketplace() {
   var wrap = document.getElementById("home-mp-list");
@@ -6879,11 +7093,48 @@ function loadHomeMarketplace() {
 function renderMarketplaceList() {
   var wrap = document.getElementById("mp-list");
   if (!_mpHotels.length) { wrap.innerHTML = '<div class="empty">No partner hotels are live yet. Check back soon!</div>'; return; }
-  wrap.innerHTML = _mpHotels.map(function(h) {
+
+  var searchEl = document.getElementById("mp-search");
+  var catEl = document.getElementById("mp-category-filter");
+  var minEl = document.getElementById("mp-price-min");
+  var maxEl = document.getElementById("mp-price-max");
+  var sortEl = document.getElementById("mp-sort");
+  var search = searchEl ? searchEl.value.trim().toLowerCase() : "";
+  var category = catEl ? catEl.value : "";
+  var minPrice = minEl && minEl.value ? parseFloat(minEl.value) : null;
+  var maxPrice = maxEl && maxEl.value ? parseFloat(maxEl.value) : null;
+  var sortBy = sortEl ? sortEl.value : "";
+  var wantedAmenities = document.querySelectorAll('input[data-group="mp-amenities-filter"]:checked');
+  wantedAmenities = Array.prototype.slice.call(wantedAmenities).map(function(el) { return el.value; });
+
+  var list = _mpHotels.filter(function(h) {
+    if (search && (h.name || "").toLowerCase().indexOf(search) === -1 && (h.location || "").toLowerCase().indexOf(search) === -1) return false;
+    if (category && h.category !== category) return false;
+    if (minPrice !== null && (h.minPrice === null || h.minPrice === undefined || h.minPrice < minPrice)) return false;
+    if (maxPrice !== null && (h.minPrice === null || h.minPrice === undefined || h.minPrice > maxPrice)) return false;
+    if (wantedAmenities.length) {
+      var have = h.amenities || [];
+      for (var i = 0; i < wantedAmenities.length; i++) { if (have.indexOf(wantedAmenities[i]) === -1) return false; }
+    }
+    return true;
+  });
+
+  if (sortBy === "price-asc") list.sort(function(a, b) { return (a.minPrice || 0) - (b.minPrice || 0); });
+  else if (sortBy === "price-desc") list.sort(function(a, b) { return (b.minPrice || 0) - (a.minPrice || 0); });
+  else if (sortBy === "name-asc") list.sort(function(a, b) { return (a.name || "").localeCompare(b.name || ""); });
+  else list.sort(function(a, b) { return (isTopPickActive(b) ? 1 : 0) - (isTopPickActive(a) ? 1 : 0); });
+
+  if (!list.length) { wrap.innerHTML = '<div class="empty">No hotels match your filters. Try clearing some.</div>'; return; }
+
+  wrap.innerHTML = list.map(function(h) {
+    var amnRow = (h.amenities && h.amenities.length) ? '<div class="mp-amn-row">' + h.amenities.slice(0, 4).map(function(a) { return '<span class="mp-amn-tag">' + esc(a) + '</span>'; }).join("") + (h.amenities.length > 4 ? '<span class="mp-amn-tag">+' + (h.amenities.length - 4) + '</span>' : '') + '</div>' : '';
+    var priceRow = (h.minPrice ? '<div class="mp-price">From &#8358;' + h.minPrice.toLocaleString() + '/night</div>' : '');
     return '<div class="mp-card" onclick="openHotelDetail(\'' + h.id + '\')">' +
       '<div class="mp-img">' + (h.coverImage ? '<img src="' + h.coverImage + '"/>' : '&#127974;') + (isTopPickActive(h) ? '<span class="mp-badge">&#11088; Top Pick</span>' : '') + '</div>' +
       '<div class="mp-body"><div style="font-family:\'Playfair Display\',serif;font-size:1.05rem">' + esc(h.name) + '</div>' +
-      '<div style="font-size:.78rem;color:var(--muted);margin-top:.2rem">' + esc(h.location || "") + '</div></div>' +
+      '<div style="font-size:.78rem;color:var(--muted);margin-top:.2rem">' + esc(h.location || "") + '</div>' +
+      (h.category ? '<span class="mp-cat-badge">' + esc(h.category) + '</span>' : '') +
+      priceRow + amnRow + '</div>' +
     '</div>';
   }).join("");
 }
@@ -6899,7 +7150,9 @@ function openHotelDetail(hotelId) {
     '</div>' : '';
   document.getElementById("mpd-header").innerHTML =
     '<div class="phero"><div class="ptag">' + esc(h.location || "") + (isTopPickActive(h) ? ' &middot; <span style="color:var(--gold);font-weight:700">&#11088; Top Pick</span>' : '') + '</div><h1 class="ptitle">' + esc(h.name || "Hotel") + '</h1>' +
-    (h.description ? '<p class="psub">' + esc(h.description) + '</p>' : '') + '</div>' + galleryHtml;
+    (h.description ? '<p class="psub">' + esc(h.description) + '</p>' : '') +
+    '<button class="btn bo" style="margin-top:.8rem" onclick="openHotelChatFromDetail(\'' + h.id + '\', \'' + esc(h.name || "Hotel").replace(/'/g, "\\'") + '\')">&#128172; Chat with Hotel</button>' +
+    '</div>' + galleryHtml;
   document.getElementById("mpd-rooms").innerHTML = '<div class="empty">Loading rooms...</div>';
   db.collection("hotels").doc(hotelId).collection("rooms").get().then(function(snap) {
     var rooms = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
@@ -7308,6 +7561,7 @@ function openHotelDash() {
     hdLoadBookings();
     hdLoadWithdrawals();
     hdListenNotifications();
+    hdLoadChatBadge();
   }
 }
 function hdToggleSidebar(open) {
@@ -7325,6 +7579,7 @@ function hdSetTab(tab) {
   // clear the unread badge automatically instead of requiring a manual
   // "Mark as Read" click on every single notification.
   if (tab === "notifications") hdMarkAllNotifRead(true);
+  if (tab === "messages") hdLoadMessageThreads();
   hdToggleSidebar(false);
 }
 function hdLoadRooms() {
@@ -7483,6 +7738,89 @@ function pillMini(status) {
 function hdMarkNotifRead(id) {
   db.collection("hotelNotifications").doc(id).update({ read: true }).catch(function() { T("Error", "Could not mark this notification as read."); });
 }
+
+// ═══════════════════════════════════════════
+// IN-APP CHAT (hotel side): mirrors the customer accOpenChatThread flow.
+// A thread doc id is hotelId + "__" + uid; hotels only ever query their own
+// hotelId, so guests' threads with other hotels never surface here.
+// ═══════════════════════════════════════════
+var _hdChatUnsub = null;
+var _hdChatCurrentTid = null;
+
+function hdLoadChatBadge() {
+  if (!_hotelSession) return;
+  db.collection("hotelChats").where("hotelId", "==", _hotelSession).get().then(function(snap) {
+    var badge = document.getElementById("hd-sb-chat-badge");
+    if (!badge) return;
+    var unread = snap.docs.filter(function(d) { return d.data().unreadHotel === true; }).length;
+    if (unread) { badge.textContent = unread; badge.style.display = "inline-flex"; } else { badge.style.display = "none"; }
+  }).catch(function() {});
+}
+
+function hdLoadMessageThreads() {
+  document.getElementById("hd-msg-list-wrap").style.display = "block";
+  document.getElementById("hd-msg-thread-wrap").style.display = "none";
+  var wrap = document.getElementById("hd-msg-threads");
+  wrap.innerHTML = '<div class="empty">Loading messages...</div>';
+  db.collection("hotelChats").where("hotelId", "==", _hotelSession).get().then(function(snap) {
+    if (snap.empty) { wrap.innerHTML = '<div class="empty">No guest messages yet. Guests can start a chat from your hotel\'s page.</div>'; return; }
+    var threads = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+    threads.sort(function(a, b) { return (b.lastAt ? b.lastAt.toMillis() : 0) - (a.lastAt ? a.lastAt.toMillis() : 0); });
+    wrap.innerHTML = threads.map(function(t) {
+      return '<div class="chat-thread" onclick="hdOpenChatThread(\'' + t.id + '\', \'' + esc(t.userName || "Guest").replace(/'/g, "\\'") + '\')">' +
+        (t.unreadHotel ? '<span class="chat-thread-dot"></span>' : '<span style="width:9px"></span>') +
+        '<div><div class="chat-thread-name">' + esc(t.userName || "Guest") + '</div>' +
+        '<div class="chat-thread-last">' + esc(t.lastMessage || "No messages yet") + '</div></div>' +
+      '</div>';
+    }).join("");
+  }).catch(function() { wrap.innerHTML = '<div class="empty">Could not load messages.</div>'; });
+}
+
+function hdOpenChatThread(tid, userName) {
+  _hdChatCurrentTid = tid;
+  document.getElementById("hd-msg-list-wrap").style.display = "none";
+  document.getElementById("hd-msg-thread-wrap").style.display = "block";
+  document.getElementById("hd-msg-thread-title").textContent = userName || "Guest";
+  document.getElementById("hd-chat-msgs").innerHTML = '<div class="empty">Loading...</div>';
+
+  db.collection("hotelChats").doc(tid).set({ unreadHotel: false }, { merge: true }).catch(function() {});
+  hdLoadChatBadge();
+
+  if (_hdChatUnsub) { _hdChatUnsub(); _hdChatUnsub = null; }
+  _hdChatUnsub = db.collection("hotelChats").doc(tid).collection("messages").orderBy("createdAt", "asc").onSnapshot(function(snap) {
+    var msgsEl = document.getElementById("hd-chat-msgs");
+    if (!msgsEl) return;
+    if (snap.empty) { msgsEl.innerHTML = '<div class="empty">No messages yet.</div>'; return; }
+    msgsEl.innerHTML = snap.docs.map(function(d) {
+      var m = d.data();
+      var mine = m.sender === "hotel";
+      var time = m.createdAt ? m.createdAt.toDate().toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+      return '<div class="chat-bubble ' + (mine ? "mine" : "theirs") + '">' + esc(m.text) + '<div class="chat-bubble-time">' + time + '</div></div>';
+    }).join("");
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }, function() {});
+}
+
+function hdBackToThreadList() {
+  if (_hdChatUnsub) { _hdChatUnsub(); _hdChatUnsub = null; }
+  hdLoadMessageThreads();
+}
+
+function hdSendChatMessage() {
+  var input = document.getElementById("hd-chat-input");
+  var text = input.value.trim();
+  if (!text || !_hdChatCurrentTid) return;
+  input.value = "";
+  var tid = _hdChatCurrentTid;
+  db.collection("hotelChats").doc(tid).collection("messages").add({
+    sender: "hotel", text: text, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    return db.collection("hotelChats").doc(tid).set({
+      lastMessage: text, lastAt: firebase.firestore.FieldValue.serverTimestamp(), lastSender: "hotel", unreadUser: true
+    }, { merge: true });
+  }).catch(function() { T("Error", "Could not send your reply. Please try again."); });
+}
+
 function hdMarkAllNotifRead(silent) {
   var unread = _hdNotifications.filter(function(n) { return !n.read; });
   if (!unread.length) return;
@@ -7667,6 +8005,8 @@ function hdRenderSettings() {
   document.getElementById("hds-name").value = h.name || "";
   document.getElementById("hds-location").value = h.location || "";
   document.getElementById("hds-phone").value = h.phone || "";
+  document.getElementById("hds-category").innerHTML = categoryOptionsHtml(h.category || "");
+  document.getElementById("hds-amenities").innerHTML = amenityChecklistHtml("hds-amenities", h.amenities || []);
   document.getElementById("hds-description").value = h.description || "";
   _hdGallery = (h.gallery && h.gallery.length) ? h.gallery.slice() : (h.coverImage ? [h.coverImage] : []);
   hdRenderGalleryPreview();
@@ -7721,9 +8061,11 @@ function hdSaveInfo() {
   if (!_hotelSession) return;
   var location = document.getElementById("hds-location").value.trim();
   var phone = document.getElementById("hds-phone").value.trim();
+  var category = document.getElementById("hds-category").value;
+  var amenities = getCheckedAmenities("hds-amenities");
   var description = document.getElementById("hds-description").value.trim();
-  db.collection("hotels").doc(_hotelSession).set({ location: location, phone: phone, description: description }, { merge: true }).then(function() {
-    _hotelProfile.location = location; _hotelProfile.phone = phone; _hotelProfile.description = description;
+  db.collection("hotels").doc(_hotelSession).set({ location: location, phone: phone, category: category, amenities: amenities, description: description }, { merge: true }).then(function() {
+    _hotelProfile.location = location; _hotelProfile.phone = phone; _hotelProfile.category = category; _hotelProfile.amenities = amenities; _hotelProfile.description = description;
     T("Saved", "Your hotel information has been updated.");
   }).catch(function() { T("Error", "Could not save changes."); });
 }
@@ -7753,6 +8095,23 @@ function hdChangePassword() {
 function statCardMain(icon, color, bg, label, val) {
   return '<div class="stat-card"><div class="stat-top"><div class="stat-ico" style="background:' + bg + ';color:' + color + '">' + icon + '</div><div class="stat-lbl">' + label + '</div></div><div class="stat-val">' + val + '</div></div>';
 }
+
+// Populate category/amenity pickers used on the registration form, the
+// hotel dashboard settings tab, and the customer-facing filter bar.
+(function initCategoryAmenityUI() {
+  var hrCat = document.getElementById("hr-category");
+  if (hrCat) hrCat.innerHTML = categoryOptionsHtml();
+  var hrAmn = document.getElementById("hr-amenities");
+  if (hrAmn) hrAmn.innerHTML = amenityChecklistHtml("hr-amenities");
+  var hdsCat = document.getElementById("hds-category");
+  if (hdsCat) hdsCat.innerHTML = categoryOptionsHtml();
+  var hdsAmn = document.getElementById("hds-amenities");
+  if (hdsAmn) hdsAmn.innerHTML = amenityChecklistHtml("hds-amenities");
+  var mpCat = document.getElementById("mp-category-filter");
+  if (mpCat) mpCat.innerHTML = '<option value="">All Categories</option>' + HOTEL_CATEGORIES.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join("");
+  var mpAmn = document.getElementById("mp-amenities-filter");
+  if (mpAmn) mpAmn.innerHTML = amenityChecklistHtml("mp-amenities-filter");
+})();
 </script>
 </body>
 </html>
