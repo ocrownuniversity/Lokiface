@@ -201,6 +201,39 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .arbody{font-size:.78rem;color:var(--muted);line-height:1.7;white-space:pre-line}
 .hxout{max-width:660px;margin:0 auto;padding:2.2rem 1.25rem}
 .lcard{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.6rem;margin-bottom:1.6rem;box-shadow:var(--shadow)}
+/* ── Wallet screens (customer "Payments & Wallet" and hotel partner "Wallet")
+   share this exact card layout: dark hero balance card, a row of round
+   quick-action buttons, a 4-tile overview grid, and a transaction list with
+   colored direction icons. Built as generic classes so both pages reuse the
+   same markup/JS helpers instead of duplicating styles. ── */
+.wal-hero{background:linear-gradient(135deg,var(--ink) 0%,#173a6b 100%);border-radius:18px;padding:1.5rem 1.4rem;color:#fff;margin-bottom:1.1rem;box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+.wal-hero-top{display:flex;align-items:center;justify-content:space-between;gap:.6rem}
+.wal-hero-lbl{font-size:.68rem;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.09em;display:flex;align-items:center;gap:.4rem}
+.wal-eye{cursor:pointer;opacity:.75;font-size:.85rem;background:none;border:none;color:#fff}
+.wal-add-btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);color:#fff;font-size:.72rem;font-weight:600;padding:.45rem .85rem;border-radius:100px;cursor:pointer;white-space:nowrap}
+.wal-add-btn:hover{background:rgba(255,255,255,.22)}
+.wal-bal{font-family:'Playfair Display',serif;font-size:2.15rem;margin:.35rem 0 1rem;letter-spacing:.01em}
+.wal-split{display:flex;gap:1.6rem;font-size:.76rem;color:rgba(255,255,255,.85);flex-wrap:wrap}
+.wal-split b{display:block;font-size:.92rem;color:#fff;margin-top:.15rem;font-weight:600}
+.wal-qa-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:1.1rem}
+.wal-qa-btn{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:.85rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.4rem;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s}
+.wal-qa-btn:active{transform:scale(.95)}
+.wal-qa-ico{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.05rem}
+.wal-qa-lbl{font-size:.66rem;font-weight:600;color:var(--text);text-align:center;line-height:1.2}
+.wal-ov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.55rem;margin-bottom:1.1rem}
+@media(max-width:520px){.wal-ov-grid{grid-template-columns:repeat(2,1fr)}}
+.wal-ov-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:.85rem .7rem;box-shadow:var(--shadow)}
+.wal-ov-ico{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.8rem;margin-bottom:.5rem}
+.wal-ov-val{font-weight:700;font-size:.86rem;color:var(--text)}
+.wal-ov-lbl{font-size:.64rem;color:var(--muted);margin-top:.15rem}
+.wal-tx-row{display:flex;align-items:center;gap:.75rem;padding:.75rem 0;border-bottom:1px solid var(--border)}
+.wal-tx-row:last-child{border-bottom:none}
+.wal-tx-ico{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.wal-tx-title{font-weight:600;font-size:.84rem}
+.wal-tx-sub{font-size:.7rem;color:var(--muted);margin-top:.1rem}
+.wal-tx-amt{font-weight:700;font-size:.84rem;white-space:nowrap;text-align:right}
+.wal-secure{background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:13px;padding:.9rem 1rem;display:flex;align-items:center;gap:.7rem;font-size:.76rem;color:var(--text);margin-top:1.1rem}
+.wal-secure b{display:block;font-size:.8rem;margin-bottom:.1rem}
 .bkc{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:1.1rem;margin-bottom:.75rem;box-shadow:var(--shadow);animation:fu .4s ease}
 .bkh{display:flex;align-items:flex-start;justify-content:space-between;gap:.55rem;flex-wrap:wrap}
 .bkn{font-family:'Playfair Display',serif;font-size:1.15rem}
@@ -559,9 +592,9 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
             <div id="manual-pay-section" style="display:none;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem">
               <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:.75rem">&#127968; Bank Transfer Details</div>
               <div style="display:flex;flex-direction:column;gap:.4rem;font-size:.82rem">
-                <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Bank</span><span style="font-weight:600">Opay</span></div>
-                <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Number</span><span style="font-weight:600;font-family:monospace">8150898386</span></div>
-                <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Name</span><span style="font-weight:600">Oladeji Opeyemi Ridwan</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Bank</span><span style="font-weight:600" id="pay-bank-name">Opay</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Number</span><span style="font-weight:600;font-family:monospace" id="pay-bank-accnum">8150898386</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Name</span><span style="font-weight:600" id="pay-bank-accname">Oladeji Opeyemi Ridwan</span></div>
               </div>
               <div style="margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--border)">
                 <label style="display:block;font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.38rem">Upload Payment Receipt</label>
@@ -1111,8 +1144,11 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         </div>
       </div>
       <div id="hd-tab-wallet" class="hd-tab" style="display:none">
-        <div class="stat-grid" id="hd-wallet-stats"></div>
-        <div class="fc" style="margin:1.1rem 0">
+        <div id="hd-wallet-hero"></div>
+        <div id="hd-wallet-qa"></div>
+        <div class="fst" style="margin:1.2rem 0 .6rem">Wallet Overview</div>
+        <div id="hd-wallet-overview"></div>
+        <div class="fc" style="margin:1.1rem 0" id="hd-withdraw-form">
           <div class="fst" style="margin-bottom:.8rem">Request Withdrawal</div>
           <div class="fg"><label>Amount (&#8358;)</label><input type="number" id="hdw-amount" placeholder="Amount to withdraw"/></div>
           <div class="fg"><label>Bank Name</label><input type="text" id="hdw-bank" placeholder="e.g. GTBank, Access Bank, Zenith Bank"/></div>
@@ -1121,7 +1157,9 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
           <p style="font-size:.72rem;color:var(--muted);margin:-.3rem 0 .9rem;line-height:1.5">This must be your hotel's official company account &mdash; the account name should match your registered hotel name (<strong id="hdw-hotelname-hint">your hotel</strong>) so the admin can verify it's really you before releasing funds.</p>
           <button class="fsub" onclick="hdRequestWithdrawal()">Request Withdrawal</button>
         </div>
-        <div class="card"><div class="card-title">Withdrawal History</div><div id="hd-withdrawals-list"></div></div>
+        <div class="fst" style="margin:1.2rem 0 .4rem" id="hd-wallet-tx-list">Recent Transactions</div>
+        <div id="hd-wallet-tx"></div>
+        <div class="wal-secure"><span style="font-size:1.3rem">&#128274;</span><div><b>Your wallet is secure</b>All transactions are encrypted and your funds are safe with us.</div></div>
       </div>
       <div id="hd-tab-settings" class="hd-tab" style="display:none">
         <div class="lcard" style="text-align:center">
@@ -1710,6 +1748,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
           <div class=&quot;st-nav-item&quot; data-sec=&quot;homepage&quot; onclick=&quot;setSettingsSection('homepage')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#127760;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Homepage Content</span><span class=&quot;st-nav-sub&quot;>Hero text &amp;amp; stats</span></span></div>
           <div class=&quot;st-nav-item&quot; data-sec=&quot;company&quot; onclick=&quot;setSettingsSection('company')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#127970;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Company Profile</span><span class=&quot;st-nav-sub&quot;>Update company details</span></span></div>
           <div class=&quot;st-nav-item&quot; data-sec=&quot;localization&quot; onclick=&quot;setSettingsSection('localization')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#127760;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Localization</span><span class=&quot;st-nav-sub&quot;>Language, timezone, currency</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;bankaccount&quot; onclick=&quot;setSettingsSection('bankaccount')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#127974;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Company Bank Account</span><span class=&quot;st-nav-sub&quot;>Manual funding &amp;amp; booking transfers</span></span></div>
           <div class=&quot;st-nav-item&quot; data-sec=&quot;payment&quot; onclick=&quot;setSettingsSection('payment')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128179;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Payment Settings</span><span class=&quot;st-nav-sub&quot;>Payment methods &amp;amp; fees</span></span></div>
           <div class=&quot;st-nav-item&quot; data-sec=&quot;email&quot; onclick=&quot;setSettingsSection('email')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#9993;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Email Settings</span><span class=&quot;st-nav-sub&quot;>Email templates &amp;amp; SMTP</span></span></div>
           <div class=&quot;st-nav-item&quot; data-sec=&quot;sms&quot; onclick=&quot;setSettingsSection('sms')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128172;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>SMS Settings</span><span class=&quot;st-nav-sub&quot;>SMS gateway &amp;amp; templates</span></span></div>
@@ -1756,6 +1795,17 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
                 <div class=&quot;fg&quot;><label>Stat 2 Value</label><input type=&quot;text&quot; id=&quot;st-home-stat2-value&quot; placeholder=&quot;24/7&quot;/></div>
                 <div class=&quot;fg&quot;><label>Stat 3 Label</label><input type=&quot;text&quot; id=&quot;st-home-stat3-label&quot; placeholder=&quot;Secure Access&quot;/></div>
                 <div class=&quot;fg&quot;><label>Stat 3 Value</label><input type=&quot;text&quot; id=&quot;st-home-stat3-value&quot; placeholder=&quot;100%&quot;/></div>
+              </div>
+            </div>
+          </div>
+          <div id=&quot;st-bankaccount&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Company Bank Account <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('bankaccount')&quot;>Save Changes</button></div>
+              <div style=&quot;font-size:.76rem;color:var(--muted);margin:-.4rem 0 1rem&quot;>This account is shown to customers wherever they need to make a manual bank transfer &amp;mdash; funding their wallet, booking a room by bank transfer, and the legacy booking page. Change it any time and it updates everywhere at once.</div>
+              <div class=&quot;fgrid2&quot;>
+                <div class=&quot;fg&quot;><label>Bank Name</label><input type=&quot;text&quot; id=&quot;st-bank-bankName&quot; placeholder=&quot;e.g. Opay, GTBank, Access Bank&quot; value=&quot;Opay&quot;/></div>
+                <div class=&quot;fg&quot;><label>Account Number</label><input type=&quot;text&quot; id=&quot;st-bank-accountNumber&quot; placeholder=&quot;10-digit account number&quot; maxlength=&quot;10&quot; inputmode=&quot;numeric&quot; value=&quot;8150898386&quot;/></div>
+                <div class=&quot;fg&quot; style=&quot;grid-column:1/-1&quot;><label>Account Name</label><input type=&quot;text&quot; id=&quot;st-bank-accountName&quot; placeholder=&quot;Name on the account&quot; value=&quot;Oladeji Opeyemi Ridwan&quot;/></div>
               </div>
             </div>
           </div>
@@ -4358,6 +4408,7 @@ function renderSettings() {
   }).join(&quot;&quot;);
   applySettingsToForm(_settings.general);
   applySettingsToForm(_settings.homepage, &quot;st-home-&quot;);
+  applySettingsToForm(_settings.bankAccount, &quot;st-bank-&quot;);
   applySettingsToForm(_settings.company);
   applySettingsToForm(_settings.localization);
   applySettingsToForm(_settings.email);
@@ -4408,6 +4459,13 @@ function collectHomepageSettings() {
     &quot;stat2-value&quot;: document.getElementById(&quot;st-home-stat2-value&quot;).value,
     &quot;stat3-label&quot;: document.getElementById(&quot;st-home-stat3-label&quot;).value,
     &quot;stat3-value&quot;: document.getElementById(&quot;st-home-stat3-value&quot;).value
+  };
+}
+function collectBankAccountSettings() {
+  return {
+    &quot;bankName&quot;: document.getElementById(&quot;st-bank-bankName&quot;).value,
+    &quot;accountNumber&quot;: document.getElementById(&quot;st-bank-accountNumber&quot;).value,
+    &quot;accountName&quot;: document.getElementById(&quot;st-bank-accountName&quot;).value
   };
 }
 function collectCompanySettings() {
@@ -4476,6 +4534,7 @@ function saveSettings(section) {
   var update = {};
   if (section === &quot;general&quot;) { _settings.general = collectGeneralSettings(); update.general = _settings.general; }
   if (section === &quot;homepage&quot;) { _settings.homepage = collectHomepageSettings(); update.homepage = _settings.homepage; }
+  if (section === &quot;bankaccount&quot;) { _settings.bankAccount = collectBankAccountSettings(); update.bankAccount = _settings.bankAccount; }
   if (section === &quot;company&quot;) { _settings.company = collectCompanySettings(); update.company = _settings.company; }
   if (section === &quot;localization&quot;) { _settings.localization = collectLocalizationSettings(); update.localization = _settings.localization; }
   if (section === &quot;email&quot;) { _settings.email = collectEmailSettings(); update.email = _settings.email; }
@@ -4692,6 +4751,22 @@ function applyPublicBranding(logo) {
   var lc = document.querySelector("#loader .lc");
   if (lc) lc.innerHTML = '<img src="' + logo + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
 }
+// Company bank account details shown wherever a customer needs to make a
+// manual bank transfer (legacy booking page, marketplace room booking, and
+// wallet funding). Defaults match what used to be hardcoded in three
+// separate places; Admin -> Settings -> Company Bank Account can change
+// these at any time and every one of those three screens picks it up.
+var _bankDetails = { bankName: "Opay", accountNumber: "8150898386", accountName: "Oladeji Opeyemi Ridwan" };
+function bankDetailsRowsHTML() {
+  return '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Bank</span><span style="font-weight:600">' + esc(_bankDetails.bankName) + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Number</span><span style="font-weight:600;font-family:monospace">' + esc(_bankDetails.accountNumber) + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Name</span><span style="font-weight:600">' + esc(_bankDetails.accountName) + '</span></div>';
+}
+function applyBankDetailsToStaticBlock() {
+  var n = document.getElementById("pay-bank-name"); if (n) n.textContent = _bankDetails.bankName;
+  var a = document.getElementById("pay-bank-accnum"); if (a) a.textContent = _bankDetails.accountNumber;
+  var m = document.getElementById("pay-bank-accname"); if (m) m.textContent = _bankDetails.accountName;
+}
 db.collection("config").doc("settings").get().then(function(doc) {
   var logo = doc.exists && doc.data().company && doc.data().company["company-logo"];
   applyPublicBranding(logo);
@@ -4708,6 +4783,11 @@ db.collection("config").doc("settings").get().then(function(doc) {
     if (val) { var vEl = document.getElementById("hst" + n + "v"); if (vEl) vEl.textContent = val; }
   });
   window._homeStat1Overridden = !!home["stat1-value"];
+  var bank = (doc.exists && doc.data().bankAccount) || {};
+  if (bank.bankName) _bankDetails.bankName = bank.bankName;
+  if (bank.accountNumber) _bankDetails.accountNumber = bank.accountNumber;
+  if (bank.accountName) _bankDetails.accountName = bank.accountName;
+  applyBankDetailsToStaticBlock();
 }).catch(function() {});
 
 // RIPPLE
@@ -6145,13 +6225,52 @@ function accRenderBookings(body) {
   });
 }
 
+// ── Shared wallet UI builders (customer "Payments & Wallet" and hotel
+// partner "Wallet" both use this same card layout: dark hero balance card,
+// a row of round quick-action buttons, a 4-tile overview grid, and a
+// transaction list with colored direction icons) ──
+function walEyeToggle(scope) {
+  var el = document.getElementById(scope + "-bal-val");
+  var eye = document.getElementById(scope + "-eye");
+  if (!el) return;
+  var hidden = el.dataset.hidden === "1";
+  if (hidden) { el.textContent = el.dataset.real; el.dataset.hidden = "0"; if (eye) eye.innerHTML = "&#128065;"; }
+  else { el.textContent = "\u2022\u2022\u2022\u2022\u2022\u2022"; el.dataset.hidden = "1"; if (eye) eye.innerHTML = "&#128584;"; }
+}
+function walHeroHTML(scope, opts) {
+  var totalStr = "\u20a6" + Math.round(opts.total).toLocaleString();
+  return '<div class="wal-hero">' +
+    '<div class="wal-hero-top"><div class="wal-hero-lbl">Total Balance <button class="wal-eye" id="' + scope + '-eye" onclick="walEyeToggle(\'' + scope + '\')">&#128065;</button></div>' +
+    (opts.addOnclick ? '<button class="wal-add-btn" onclick="' + opts.addOnclick + '">' + (opts.addLabel || "+ Add Money") + '</button>' : '') +
+    '</div>' +
+    '<div class="wal-bal" id="' + scope + '-bal-val" data-real="' + totalStr + '" data-hidden="0">' + totalStr + '</div>' +
+    '<div class="wal-split"><div>Available Balance<b>\u20a6' + Math.round(opts.available).toLocaleString() + '</b></div><div>Pending Balance<b>\u20a6' + Math.round(opts.pending).toLocaleString() + '</b></div></div>' +
+    '</div>';
+}
+function walQaRowHTML(items) {
+  return '<div class="wal-qa-row">' + items.map(function(it) {
+    return '<div class="wal-qa-btn" onclick="' + it.onclick + '"><div class="wal-qa-ico" style="background:' + it.bg + ';color:' + it.color + '">' + it.icon + '</div><div class="wal-qa-lbl">' + it.label + '</div></div>';
+  }).join("") + '</div>';
+}
+function walOverviewHTML(items) {
+  return '<div class="wal-ov-grid">' + items.map(function(it) {
+    return '<div class="wal-ov-card"><div class="wal-ov-ico" style="background:' + it.bg + ';color:' + it.color + '">' + it.icon + '</div><div class="wal-ov-val">' + it.value + '</div><div class="wal-ov-lbl">' + it.label + '</div></div>';
+  }).join("") + '</div>';
+}
+function walTxRowHTML(it) {
+  var amtColor = it.positive ? "var(--green)" : "var(--red)";
+  var sign = it.positive ? "+" : "-";
+  return '<div class="wal-tx-row"><div class="wal-tx-ico" style="background:' + it.bg + ';color:' + it.color + '">' + it.icon + '</div>' +
+    '<div style="flex:1;min-width:0"><div class="wal-tx-title">' + esc(it.title) + '</div><div class="wal-tx-sub">' + esc(it.sub) + '</div></div>' +
+    '<div class="wal-tx-amt" style="color:' + amtColor + '">' + sign + '\u20a6' + Math.round(it.amount).toLocaleString() + '</div></div>';
+}
 function accRenderPayments(body) {
   var uid = _accUser ? _accUser.uid : "";
   var email = (_accProfile && _accProfile.email || "").toLowerCase();
   Promise.all([
     db.collection("users").doc(uid).get(),
     db.collection("walletFundings").where("uid", "==", uid).get(),
-    db.collection("bookings").where("email", "==", email).get(),
+    db.collection("hotelBookings").where("uid", "==", uid).get(),
     db.collection("withdrawals").where("uid", "==", uid).where("type", "==", "user").get()
   ]).then(function(results) {
     var udoc = results[0];
@@ -6159,57 +6278,68 @@ function accRenderPayments(body) {
     if (_accProfile) _accProfile.walletBalance = bal;
 
     var fundings = results[1].docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
-    fundings.sort(function(a, b) { return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
-
-    var payDocs = results[2].docs.map(function(d) { return d.data(); }).filter(function(b) { return b.paymentStatus === "paid"; });
-    var totalSpent = payDocs.reduce(function(s, b) { return s + (b.amountPaid || 0); }, 0);
-
+    var walletBookings = results[2].docs.map(function(d) { var o = d.data(); o.id = d.id; return o; }).filter(function(b) { return b.paymentMethod === "wallet"; });
     var withdrawals = results[3].docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
-    withdrawals.sort(function(a, b) { return (b.requestedAt ? b.requestedAt.toMillis() : 0) - (a.requestedAt ? a.requestedAt.toMillis() : 0); });
 
-    var html = '<div class="lcard" style="background:linear-gradient(135deg,var(--ink),#132b52);color:#fff;border:none">' +
-      '<div style="font-size:.7rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em">Wallet Balance</div>' +
-      '<div style="font-family:\'Playfair Display\',serif;font-size:2.1rem;color:var(--gold2);margin:.2rem 0 .9rem">&#8358;' + Math.round(bal).toLocaleString() + '</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">' +
-      '<button class="btn bg" onclick="accToggleFundWallet()" id="fw-toggle-btn">&#43; Fund Wallet</button>' +
-      '<button class="btn bo" style="color:var(--gold2);border-color:rgba(255,255,255,.3)" onclick="accToggleWithdraw()" id="wd-toggle-btn">&#128176; Withdraw</button>' +
-      '</div></div>' +
-      '<div id="fw-panel" style="display:none">' + fwPanelHTML() + '</div>' +
-      '<div id="wd-panel" style="display:none">' + wdPanelHTML() + '</div>';
+    var pendingFundings = fundings.filter(function(f) { return f.status === "pending"; });
+    var pendingWithdrawals = withdrawals.filter(function(w) { return w.status === "Pending"; });
+    var pendingAmt = pendingFundings.reduce(function(s, f) { return s + (Number(f.amount) || 0); }, 0)
+      + pendingWithdrawals.reduce(function(s, w) { return s + (Number(w.amount) || 0); }, 0);
 
-    if (fundings.length) {
-      html += '<div class="fst" style="margin-top:.4rem">Wallet Transactions</div>';
-      html += fundings.map(function(f) {
-        var st = f.status === "paid" ? "Successful" : f.status === "pending" ? "Pending Approval" : "Rejected";
-        var stColor = f.status === "paid" ? "var(--green)" : f.status === "pending" ? "#b5820a" : "var(--red)";
-        return '<div class="bkc"><div class="bkh"><div class="bkn">Wallet Funding &middot; ' + (f.method === "manual" ? "Bank Transfer" : "Paystack") + '</div>' +
-          '<span class="badge" style="background:transparent;border:1px solid ' + stColor + ';color:' + stColor + '">' + st + '</span></div>' +
-          '<div class="bmv">&#8358;' + Math.round(f.amount || 0).toLocaleString() + '</div>' +
-          '<div class="rev-room">' + (f.createdAt ? new Date(f.createdAt.toMillis()).toLocaleDateString() : "-") + (f.status === "pending" ? " &middot; awaiting admin approval" : "") + '</div></div>';
-      }).join("");
-    }
+    // Build one merged, time-sorted transaction feed out of three different
+    // Firestore collections (wallet fundings = money in, wallet-paid room
+    // bookings + approved withdrawals = money out) since there's no single
+    // "transactions" collection in this app.
+    var tx = [];
+    fundings.forEach(function(f) {
+      if (f.status === "paid") tx.push({ t: f.createdAt, positive: true, amount: f.amount || 0, icon: "&#8595;", color: "var(--green)", bg: "var(--green-bg)", title: "Money Added", sub: (f.method === "manual" ? "Bank Transfer" : "Paystack") + (f.createdAt ? " \u00b7 " + new Date(f.createdAt.toMillis()).toLocaleDateString() : "") });
+      else if (f.status === "pending") tx.push({ t: f.createdAt, positive: true, amount: f.amount || 0, icon: "&#8987;", color: "#b5820a", bg: "rgba(181,130,10,.1)", title: "Money Added (Pending)", sub: "Awaiting admin approval" });
+    });
+    walletBookings.forEach(function(b) {
+      tx.push({ t: b.createdAt, positive: false, amount: b.amount || 0, icon: "&#8593;", color: "var(--red)", bg: "var(--red-bg)", title: "Hotel Booking Payment", sub: esc(b.hotelName || "") + " \u00b7 " + esc(b.roomType || "") });
+    });
+    withdrawals.forEach(function(w) {
+      if (w.status === "Approved") tx.push({ t: w.requestedAt, positive: false, amount: w.amount || 0, icon: "&#127974;", color: "var(--blue)", bg: "var(--blue-bg)", title: "Bank Transfer", sub: "To " + esc(w.bankName || "-") });
+      else if (w.status === "Rejected") tx.push({ t: w.requestedAt, positive: true, amount: w.amount || 0, icon: "&#8635;", color: "var(--gold)", bg: "var(--gold-dim)", title: "Withdrawal Refunded", sub: "Request was declined \u00b7 refunded to wallet" });
+      else tx.push({ t: w.requestedAt, positive: false, amount: w.amount || 0, icon: "&#8987;", color: "#b5820a", bg: "rgba(181,130,10,.1)", title: "Withdrawal (Pending)", sub: "To " + esc(w.bankName || "-") + " \u00b7 awaiting approval" });
+    });
+    tx.sort(function(a, b) { return (b.t ? b.t.toMillis() : 0) - (a.t ? a.t.toMillis() : 0); });
 
-    if (withdrawals.length) {
-      html += '<div class="fst" style="margin-top:1.2rem">Withdrawal Requests</div>';
-      html += withdrawals.map(function(w) {
-        var st = w.status === "Approved" ? "Paid" : w.status === "Rejected" ? "Rejected" : "Pending";
-        var stColor = w.status === "Approved" ? "var(--green)" : w.status === "Rejected" ? "var(--red)" : "#b5820a";
-        return '<div class="bkc"><div class="bkh"><div class="bkn">Withdrawal &middot; ' + esc(w.bankName || "-") + '</div>' +
-          '<span class="badge" style="background:transparent;border:1px solid ' + stColor + ';color:' + stColor + '">' + st + '</span></div>' +
-          '<div class="bmv">&#8358;' + Math.round(w.amount || 0).toLocaleString() + '</div>' +
-          '<div class="rev-room">' + (w.requestedAt ? new Date(w.requestedAt.toMillis()).toLocaleDateString() : "-") + (w.status === "Rejected" ? " &middot; refunded to wallet" : w.status === "Pending" ? " &middot; awaiting admin approval" : "") + '</div></div>';
-      }).join("");
-    }
+    var now = new Date();
+    var moneyInMonth = 0, moneyOutMonth = 0;
+    tx.forEach(function(t) {
+      if (!t.t) return;
+      var d = new Date(t.t.toMillis());
+      if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return;
+      if (t.positive) moneyInMonth += t.amount; else moneyOutMonth += t.amount;
+    });
 
-    html += '<div class="fst" style="margin-top:1.2rem">Booking Payments</div>';
-    if (!payDocs.length) {
-      html += '<div class="emst"><span class="ei">&#128179;</span>No booking payments yet.</div>';
-    } else {
-      html += '<div class="lcard"><div class="fst">Total Spent</div><div style="font-family:\'Playfair Display\',serif;font-size:2rem;color:var(--gold)">&#8358;' + Math.round(totalSpent).toLocaleString() + '</div></div>';
-      payDocs.forEach(function(b) {
-        html += '<div class="bkc"><div class="bkh"><div class="bkn">' + (b.roomType || "-") + '</div><div class="badge bA">' + (b.paymentMethod || "paystack") + '</div></div><div class="bmv">&#8358;' + Math.round(b.amountPaid || 0).toLocaleString() + '</div><div class="rev-room">Ref: ' + (b.paymentRef || "-") + '</div></div>';
-      });
-    }
+    var html = walHeroHTML("acc-wal", { total: bal + pendingAmt, available: bal, pending: pendingAmt, addLabel: "+ Add Money", addOnclick: "accToggleFundWallet()" });
+
+    html += walQaRowHTML([
+      { icon: "&#128179;", color: "var(--gold)", bg: "var(--gold-dim)", label: "Add Money", onclick: "accToggleFundWallet()" },
+      { icon: "&#128176;", color: "var(--green)", bg: "var(--green-bg)", label: "Withdraw", onclick: "accToggleWithdraw()" },
+      { icon: "&#127974;", color: "var(--blue)", bg: "var(--blue-bg)", label: "Bank Transfer", onclick: "accToggleFundWallet();accSelectFundMethod('manual')" },
+      { icon: "&#128337;", color: "var(--muted)", bg: "var(--surface2)", label: "Transaction History", onclick: "document.getElementById('acc-wal-tx-list').scrollIntoView({behavior:'smooth'})" }
+    ]);
+
+    html += '<div id="fw-panel" style="display:none">' + fwPanelHTML() + '</div>';
+    html += '<div id="wd-panel" style="display:none">' + wdPanelHTML() + '</div>';
+
+    html += '<div class="fst" style="margin:1.2rem 0 .6rem">Wallet Overview</div>';
+    html += walOverviewHTML([
+      { icon: "&#8595;", color: "var(--green)", bg: "var(--green-bg)", value: "\u20a6" + Math.round(moneyInMonth).toLocaleString(), label: "Money In This Month" },
+      { icon: "&#8593;", color: "var(--red)", bg: "var(--red-bg)", value: "\u20a6" + Math.round(moneyOutMonth).toLocaleString(), label: "Money Out This Month" },
+      { icon: "&#8987;", color: "#b5820a", bg: "rgba(181,130,10,.1)", value: "\u20a6" + Math.round(pendingAmt).toLocaleString(), label: "Pending Transactions" },
+      { icon: "&#128202;", color: "var(--blue)", bg: "var(--blue-bg)", value: tx.length, label: "Total Transactions" }
+    ]);
+
+    html += '<div class="fst" style="margin:1.2rem 0 .4rem" id="acc-wal-tx-list">Recent Transactions</div>';
+    html += tx.length
+      ? '<div class="lcard" style="padding:.3rem 1.1rem">' + tx.slice(0, 20).map(walTxRowHTML).join("") + '</div>'
+      : '<div class="emst"><span class="ei">&#128179;</span>No transactions yet.</div>';
+
+    html += '<div class="wal-secure"><span style="font-size:1.3rem">&#128274;</span><div><b>Your wallet is secure</b>All transactions are encrypted and your funds are safe with us.</div></div>';
 
     body.innerHTML = html;
   }).catch(function(e) { console.error(e); body.innerHTML = '<div class="emst"><span class="ei">&#9888;</span>Could not load payments.</div>'; });
@@ -6229,9 +6359,7 @@ function fwPanelHTML() {
     '<div id="fw-manual-section" style="display:none;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem">' +
     '<div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:.75rem">&#127968; Bank Transfer Details</div>' +
     '<div style="display:flex;flex-direction:column;gap:.4rem;font-size:.82rem">' +
-    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Bank</span><span style="font-weight:600">Opay</span></div>' +
-    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Number</span><span style="font-weight:600;font-family:monospace">8150898386</span></div>' +
-    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Name</span><span style="font-weight:600">Oladeji Opeyemi Ridwan</span></div>' +
+    bankDetailsRowsHTML() +
     '</div>' +
     '<div style="margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--border)">' +
     '<label style="display:block;font-size:.68rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.38rem">Upload Payment Receipt</label>' +
@@ -6695,10 +6823,7 @@ function hbSelectPayMethod(method) {
   wl.style.background = method === "wallet" ? "var(--gold-dim)" : "var(--surface2)";
   document.getElementById("hb-manual-section").style.display = method === "manual" ? "block" : "none";
   document.getElementById("hb-wallet-section").style.display = method === "wallet" ? "block" : "none";
-  document.getElementById("hb-bank-details").innerHTML =
-    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Bank</span><span style="font-weight:600">Opay</span></div>' +
-    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Number</span><span style="font-weight:600;font-family:monospace">8150898386</span></div>' +
-    '<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Account Name</span><span style="font-weight:600">Oladeji Opeyemi Ridwan</span></div>';
+  document.getElementById("hb-bank-details").innerHTML = bankDetailsRowsHTML();
   if (method === "wallet") hbRefreshWalletBalance();
   document.getElementById("hbsub").textContent = method === "manual" ? "Submit Booking Request" : method === "wallet" ? "Pay from Wallet & Confirm" : "Pay & Confirm Booking";
 }
@@ -7119,6 +7244,7 @@ function hdLoadBookings() {
     _hdBookings.sort(function(a, b) { return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
     hdRenderOverview();
     hdRenderBookings();
+    hdRenderWallet();
   });
 }
 function hdRenderOverview() {
@@ -7212,15 +7338,60 @@ function hdRenderWallet() {
   var h = _hotelProfile || {};
   var hint = document.getElementById("hdw-hotelname-hint");
   if (hint) hint.textContent = h.name || "your hotel";
-  document.getElementById("hd-wallet-stats").innerHTML =
-    statCardMain("&#128176;", "var(--gold)", "var(--gold-dim)", "Available Balance", "\u20a6" + (h.walletBalance || 0).toLocaleString()) +
-    statCardMain("&#128179;", "var(--blue)", "var(--blue-bg)", "Total Withdrawn", "\u20a6" + (h.totalWithdrawn || 0).toLocaleString()) +
-    statCardMain("&#9203;", "var(--red)", "var(--red-bg)", "Pending Requests", _hdWithdrawals.filter(function(w) { return w.status === "Pending"; }).length);
-  document.getElementById("hd-withdrawals-list").innerHTML = _hdWithdrawals.length ? _hdWithdrawals.map(function(w) {
-    var color = w.status === "Approved" ? "var(--green)" : w.status === "Rejected" ? "var(--red)" : "var(--muted)";
-    var bankLine = w.bankName ? '<div style="font-size:.74rem;color:var(--muted);margin-top:.25rem">' + esc(w.bankName) + ' &middot; ' + esc(w.accountNumber || "-") + ' &middot; ' + esc(w.accountName || "-") + '</div>' : '';
-    return '<div style="padding:.6rem 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem"><span>\u20a6' + w.amount.toLocaleString() + '</span><span style="color:' + color + ';font-weight:700;font-size:.78rem">' + esc(w.status) + '</span></div>' + bankLine + '</div>';
-  }).join("") : '<div class="empty">No withdrawal requests yet.</div>';
+  if (!document.getElementById("hd-wallet-hero")) return;
+
+  var pendingW = _hdWithdrawals.filter(function(w) { return w.status === "Pending"; });
+  var pendingAmt = pendingW.reduce(function(s, w) { return s + (Number(w.amount) || 0); }, 0);
+  var bal = h.walletBalance || 0;
+
+  document.getElementById("hd-wallet-hero").innerHTML = walHeroHTML("hd-wal", { total: bal + pendingAmt, available: bal, pending: pendingAmt, addOnclick: null });
+
+  document.getElementById("hd-wallet-qa").innerHTML = walQaRowHTML([
+    { icon: "&#128176;", color: "var(--gold)", bg: "var(--gold-dim)", label: "Request Withdrawal", onclick: "document.getElementById('hd-withdraw-form').scrollIntoView({behavior:'smooth'});document.getElementById('hdw-amount').focus()" },
+    { icon: "&#127974;", color: "var(--blue)", bg: "var(--blue-bg)", label: "Bank Details", onclick: "document.getElementById('hdw-bank').scrollIntoView({behavior:'smooth'});document.getElementById('hdw-bank').focus()" },
+    { icon: "&#128197;", color: "var(--green)", bg: "var(--green-bg)", label: "View Bookings", onclick: "hdSetTab('bookings')" },
+    { icon: "&#128337;", color: "var(--muted)", bg: "var(--surface2)", label: "Transaction History", onclick: "document.getElementById('hd-wallet-tx-list').scrollIntoView({behavior:'smooth'})" }
+  ]);
+
+  var now = new Date();
+  var paidBookings = _hdBookings.filter(function(b) { return b.paymentStatus === "paid"; });
+  var moneyInMonth = paidBookings.reduce(function(s, b) {
+    if (!b.createdAt) return s;
+    var d = new Date(b.createdAt.toMillis());
+    return (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) ? s + (b.hotelShare || 0) : s;
+  }, 0);
+  var approvedW = _hdWithdrawals.filter(function(w) { return w.status === "Approved"; });
+  var moneyOutMonth = approvedW.reduce(function(s, w) {
+    if (!w.requestedAt) return s;
+    var d = new Date(w.requestedAt.toMillis());
+    return (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) ? s + (w.amount || 0) : s;
+  }, 0);
+  var totalTx = paidBookings.length + _hdWithdrawals.length;
+
+  document.getElementById("hd-wallet-overview").innerHTML = walOverviewHTML([
+    { icon: "&#8595;", color: "var(--green)", bg: "var(--green-bg)", value: "\u20a6" + Math.round(moneyInMonth).toLocaleString(), label: "Money In This Month" },
+    { icon: "&#8593;", color: "var(--red)", bg: "var(--red-bg)", value: "\u20a6" + Math.round(moneyOutMonth).toLocaleString(), label: "Money Out This Month" },
+    { icon: "&#8987;", color: "#b5820a", bg: "rgba(181,130,10,.1)", value: "\u20a6" + Math.round(pendingAmt).toLocaleString(), label: "Pending Transactions" },
+    { icon: "&#128202;", color: "var(--blue)", bg: "var(--blue-bg)", value: totalTx, label: "Total Transactions" }
+  ]);
+
+  // Unified transaction feed: every paid booking is money in (the hotel's
+  // share of that booking), every withdrawal request is money out (or a
+  // refund back in, if the admin rejected it).
+  var tx = [];
+  paidBookings.forEach(function(b) {
+    tx.push({ t: b.createdAt, positive: true, amount: b.hotelShare || 0, icon: "&#8595;", color: "var(--green)", bg: "var(--green-bg)", title: "Booking Payment", sub: esc(b.name || "Guest") + " \u00b7 " + esc(b.roomType || "") });
+  });
+  _hdWithdrawals.forEach(function(w) {
+    if (w.status === "Approved") tx.push({ t: w.requestedAt, positive: false, amount: w.amount || 0, icon: "&#127974;", color: "var(--blue)", bg: "var(--blue-bg)", title: "Bank Transfer", sub: "To " + esc(w.bankName || "-") });
+    else if (w.status === "Rejected") tx.push({ t: w.requestedAt, positive: true, amount: w.amount || 0, icon: "&#8635;", color: "var(--gold)", bg: "var(--gold-dim)", title: "Withdrawal Refunded", sub: "Request was declined \u00b7 refunded to wallet" });
+    else tx.push({ t: w.requestedAt, positive: false, amount: w.amount || 0, icon: "&#8987;", color: "#b5820a", bg: "rgba(181,130,10,.1)", title: "Withdrawal (Pending)", sub: "To " + esc(w.bankName || "-") + " \u00b7 awaiting approval" });
+  });
+  tx.sort(function(a, b) { return (b.t ? b.t.toMillis() : 0) - (a.t ? a.t.toMillis() : 0); });
+
+  document.getElementById("hd-wallet-tx").innerHTML = tx.length
+    ? '<div class="lcard" style="padding:.3rem 1.1rem">' + tx.slice(0, 20).map(walTxRowHTML).join("") + '</div>'
+    : '<div class="emst"><span class="ei">&#128179;</span>No transactions yet.</div>';
 }
 function hdRequestWithdrawal() {
   var amount = parseInt(document.getElementById("hdw-amount").value, 10);
