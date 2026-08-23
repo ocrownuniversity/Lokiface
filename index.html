@@ -798,6 +798,10 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 
 <!-- ACCOUNT -->
 <div class="page" id="page-account">
+  <div class="hxout" id="acc-loading" style="text-align:center;padding:3.5rem 1rem">
+    <div style="width:38px;height:38px;border:3px solid var(--gold-border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem"></div>
+    <div style="font-size:.85rem;color:var(--muted)">Loading your account&hellip;</div>
+  </div>
   <div class="hxout" id="acc-guest" style="display:none">
     <div class="phero">
       <div class="ptag">My Account</div>
@@ -854,6 +858,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         <div class="hd-sb-item" data-k="bookings" onclick="accOpenSub('bookings')"><span class="ic">&#128197;</span>My Bookings</div>
         <div class="hd-sb-item" data-k="wishlist" onclick="accOpenSub('wishlist')"><span class="ic">&#9825;</span>My Wishlist</div>
         <div class="hd-sb-item" data-k="chats" onclick="accOpenSub('chats')"><span class="ic">&#128172;</span>Messages<span id="acc-sb-chat-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
+        <div class="hd-sb-item" data-k="support" onclick="accOpenSub('support')"><span class="ic">&#128276;</span>Contact Admin<span id="acc-sb-support-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
         <div class="hd-sb-item" data-k="profile" onclick="accOpenSub('profile')"><span class="ic">&#128100;</span>My Profile</div>
         <div class="hd-sb-item" data-k="payments" onclick="accOpenSub('payments')"><span class="ic">&#128179;</span>Payments &amp; Wallet</div>
         <div class="hd-sb-item" data-k="inbox" onclick="accOpenSub('inbox')"><span class="ic">&#9993;</span>Inbox<span id="acc-sb-inbox-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
@@ -1609,6 +1614,26 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 .rv-reply-form textarea{width:100%;min-height:56px;font-size:.78rem;padding:.5rem .6rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;resize:vertical;box-sizing:border-box}
 .rv-reply-form button{margin-top:.4rem}
 .rv-meta-actions{margin-top:.5rem}
+/* Support Messages (admin <-> user chat) — scoped classes, additive only */
+.spt-layout{display:flex;gap:1rem;align-items:flex-start}
+.spt-threads{flex:0 0 260px;max-height:560px;overflow-y:auto}
+.spt-thread{display:flex;align-items:center;gap:.6rem;padding:.7rem .6rem;border-bottom:1px solid var(--border);cursor:pointer;border-radius:8px}
+.spt-thread:hover{background:var(--surface2)}
+.spt-thread.on{background:var(--gold-dim)}
+.spt-thread-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0}
+.spt-thread-name{font-size:.85rem;font-weight:600;color:var(--text)}
+.spt-thread-last{font-size:.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.spt-chat-wrap{flex:1;min-width:0}
+.spt-box{display:flex;flex-direction:column;height:520px;border:1.5px solid var(--border);border-radius:12px;overflow:hidden}
+.spt-msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.6rem;background:var(--surface2)}
+.spt-bubble{max-width:75%;padding:.6rem .85rem;border-radius:12px;font-size:.85rem;line-height:1.5;word-wrap:break-word}
+.spt-bubble.mine{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:3px}
+.spt-bubble.theirs{align-self:flex-start;background:#fff;border:1px solid var(--border);border-bottom-left-radius:3px}
+.spt-bubble-time{font-size:.62rem;opacity:.6;margin-top:.25rem}
+.spt-input-row{display:flex;gap:.5rem;padding:.7rem;border-top:1px solid var(--border);background:#fff}
+.spt-input-row input{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:.6rem .8rem;font-size:.85rem;outline:none;font-family:'Inter',sans-serif}
+.spt-send-btn{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:0 1.1rem;cursor:pointer;font-size:1rem}
+@media (max-width:760px){.spt-layout{flex-direction:column}.spt-threads{flex:0 0 auto;width:100%;max-height:220px}.spt-box{height:440px}}
 </style>
 </head>
 <body>
@@ -1658,6 +1683,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;sb-item&quot; data-page=&quot;hotels&quot; onclick=&quot;goPage('hotels')&quot;><span class=&quot;ic&quot;>&amp;#127974;</span>Hotels</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage('hotelbookings')&quot;><span class=&quot;ic&quot;>&amp;#128273;</span>Marketplace Bookings</div>
       <div class=&quot;sb-item&quot; data-page=&quot;users&quot; onclick=&quot;goPage('users')&quot;><span class=&quot;ic&quot;>&amp;#128101;</span>Users</div>
+      <div class=&quot;sb-item&quot; data-page=&quot;support&quot; onclick=&quot;goPage('support')&quot;><span class=&quot;ic&quot;>&amp;#128172;</span>Messages<span class=&quot;abadge&quot; id=&quot;support-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem&quot;>0</span></div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotelverification&quot; onclick=&quot;goPage('hotelverification')&quot;><span class=&quot;ic&quot;>&amp;#9989;</span>Hotel Verification</div>
       <div class=&quot;sb-item&quot; data-page=&quot;hotelregs&quot; onclick=&quot;goPage('hotelregs')&quot;><span class=&quot;ic&quot;>&amp;#128196;</span>Hotel Registrations<span class=&quot;abadge&quot; id=&quot;hr-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;display:none;align-items:center;justify-content:center;padding:0 .3rem&quot;></span></div>
       <div class=&quot;sb-item&quot; data-page=&quot;payments&quot; onclick=&quot;goPage('payments')&quot;><span class=&quot;ic&quot;>&amp;#128179;</span>Payments</div>
@@ -1785,6 +1811,26 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
         <div class=&quot;card&quot;><div class=&quot;card-title&quot;>Users by Status</div><div class=&quot;chart-wrap&quot;><canvas id=&quot;users-chart-status&quot;></canvas></div></div>
       </div>
       <div class=&quot;card&quot;><div class=&quot;card-title&quot;>Recent Signups</div><div id=&quot;users-recent&quot;></div></div>
+    </div>
+
+    <!-- ============ SUPPORT MESSAGES (admin <-> user chat) ============ -->
+    <div class=&quot;apage&quot; id=&quot;page-support&quot;>
+      <div class=&quot;ph&quot;><div class=&quot;ph-row&quot;><div><div class=&quot;ph-title&quot;>Messages</div><div class=&quot;ph-sub&quot;>Chat directly with users. Replies appear instantly in their account under &quot;Contact Admin&quot;.</div></div></div></div>
+      <div class=&quot;card&quot;>
+        <div class=&quot;spt-layout&quot;>
+          <div class=&quot;spt-threads&quot; id=&quot;spt-threads&quot;><div class=&quot;empty&quot;>Loading conversations...</div></div>
+          <div class=&quot;spt-chat-wrap&quot;>
+            <div class=&quot;fst&quot; id=&quot;spt-chat-title&quot; style=&quot;margin-bottom:.6rem&quot;>Select a conversation</div>
+            <div class=&quot;spt-box&quot;>
+              <div class=&quot;spt-msgs&quot; id=&quot;spt-msgs&quot;><div class=&quot;empty&quot;>Pick a user on the left to see the conversation.</div></div>
+              <div class=&quot;spt-input-row&quot;>
+                <input type=&quot;text&quot; id=&quot;spt-input&quot; placeholder=&quot;Type a reply...&quot; onkeypress=&quot;if(event.key==='Enter')sptSendMessage()&quot; disabled/>
+                <button class=&quot;spt-send-btn&quot; onclick=&quot;sptSendMessage()&quot;>&amp;#10148;</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ============ HOTEL VERIFICATION ============ -->
@@ -2984,6 +3030,7 @@ function goPage(page) {
   document.querySelectorAll(&quot;.sb-item&quot;).forEach(function(el){ el.classList.toggle(&quot;on&quot;, el.dataset.page === page); });
   document.querySelectorAll(&quot;.bnav-item&quot;).forEach(function(el){ el.classList.toggle(&quot;on&quot;, el.dataset.page === page); });
   if (page === &quot;rooms&quot;) ensureRoomsHotelSelected();
+  if (page === &quot;support&quot;) sptLoadThreads();
   closeDrawers();
   window.scrollTo(0,0);
 }
@@ -2998,6 +3045,7 @@ function loadAll() {
     ensureHVFields();
     renderAll();
     applyAdminBranding(_settings);
+    sptLoadSidebarBadge();
     document.getElementById(&quot;loader&quot;).style.opacity = &quot;0&quot;;
     setTimeout(function(){ document.getElementById(&quot;loader&quot;).style.display = &quot;none&quot;; }, 400);
   }).catch(function(e){
@@ -3935,6 +3983,7 @@ var ADMIN_PERMISSION_PAGES = [
   { key: &quot;hotels&quot;, label: &quot;Hotels&quot; },
   { key: &quot;hotelbookings&quot;, label: &quot;Marketplace Bookings&quot; },
   { key: &quot;users&quot;, label: &quot;Users&quot; },
+  { key: &quot;support&quot;, label: &quot;Messages&quot; },
   { key: &quot;hotelverification&quot;, label: &quot;Hotel Verification&quot; },
   { key: &quot;hotelregs&quot;, label: &quot;Hotel Registrations&quot; },
   { key: &quot;payments&quot;, label: &quot;Payments&quot; },
@@ -4759,6 +4808,91 @@ function saveSettings(section) {
   db.collection(&quot;config&quot;).doc(&quot;settings&quot;).set(update, {merge:true}).then(function(){
     T(&quot;Settings Saved&quot;, &quot;Your changes have been saved successfully.&quot;);
   }).catch(function(){ T(&quot;Error&quot;, &quot;Could not save settings.&quot;); });
+}
+
+/* ============ SUPPORT MESSAGES (admin <-> user chat) ============ */
+// Mirrors the customer-facing accSendSupportMessage flow. Thread doc id is
+// simply the user's uid (one conversation per user), stored in
+// &quot;supportChats&quot; with a &quot;messages&quot; subcollection ordered by createdAt.
+var _sptUnsub = null;
+var _sptCurrentUid = null;
+
+function sptLoadSidebarBadge() {
+  db.collection(&quot;supportChats&quot;).get().then(function(snap) {
+    var badge = document.getElementById(&quot;support-sidebar-badge&quot;);
+    if (!badge) return;
+    var unread = snap.docs.filter(function(d) { return d.data().unreadAdmin === true; }).length;
+    if (unread) { badge.textContent = unread; badge.style.display = &quot;inline-flex&quot;; } else { badge.style.display = &quot;none&quot;; }
+  }).catch(function() {});
+}
+
+function sptLoadThreads() {
+  var wrap = document.getElementById(&quot;spt-threads&quot;);
+  wrap.innerHTML = '<div class=&quot;empty&quot;>Loading conversations...</div>';
+  db.collection(&quot;supportChats&quot;).get().then(function(snap) {
+    if (snap.empty) { wrap.innerHTML = '<div class=&quot;empty&quot;>No messages yet. Users can reach you from their account under &quot;Contact Admin&quot;.</div>'; return; }
+    var threads = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
+    threads.sort(function(a, b) { return (b.lastAt ? b.lastAt.toMillis() : 0) - (a.lastAt ? a.lastAt.toMillis() : 0); });
+    wrap.innerHTML = threads.map(function(t) {
+      return '<div class=&quot;spt-thread' + (t.id === _sptCurrentUid ? ' on' : '') + '&quot; onclick=&quot;sptOpenThread(\'' + t.id + '\', \'' + esc(t.userName || t.userEmail || &quot;User&quot;).replace(/'/g, &quot;\\'&quot;) + '\')&quot;>' +
+        (t.unreadAdmin ? '<span class=&quot;spt-thread-dot&quot;></span>' : '<span style=&quot;width:8px&quot;></span>') +
+        '<div style=&quot;min-width:0&quot;><div class=&quot;spt-thread-name&quot;>' + esc(t.userName || &quot;User&quot;) + '</div>' +
+        '<div class=&quot;spt-thread-last&quot;>' + esc(t.lastMessage || &quot;No messages yet&quot;) + '</div></div>' +
+      '</div>';
+    }).join(&quot;&quot;);
+  }).catch(function(err) {
+    console.error(&quot;Could not load support threads:&quot;, err);
+    wrap.innerHTML = '<div class=&quot;empty&quot;>Could not load conversations. Check Firestore rules.</div>';
+  });
+  sptLoadSidebarBadge();
+}
+
+function sptOpenThread(uid, userName) {
+  _sptCurrentUid = uid;
+  document.getElementById(&quot;spt-chat-title&quot;).textContent = userName || &quot;User&quot;;
+  document.getElementById(&quot;spt-input&quot;).disabled = false;
+  document.querySelectorAll(&quot;.spt-thread&quot;).forEach(function(el) { el.classList.remove(&quot;on&quot;); });
+  var msgsEl = document.getElementById(&quot;spt-msgs&quot;);
+  msgsEl.innerHTML = '<div class=&quot;empty&quot;>Loading...</div>';
+
+  db.collection(&quot;supportChats&quot;).doc(uid).set({ unreadAdmin: false }, { merge: true }).catch(function() {});
+  sptLoadThreads();
+
+  if (_sptUnsub) { _sptUnsub(); _sptUnsub = null; }
+  _sptUnsub = db.collection(&quot;supportChats&quot;).doc(uid).collection(&quot;messages&quot;).orderBy(&quot;createdAt&quot;, &quot;asc&quot;).onSnapshot(function(snap) {
+    var el = document.getElementById(&quot;spt-msgs&quot;);
+    if (!el) return;
+    if (snap.empty) { el.innerHTML = '<div class=&quot;empty&quot;>No messages yet.</div>'; return; }
+    el.innerHTML = snap.docs.map(function(d) {
+      var m = d.data();
+      var mine = m.sender === &quot;admin&quot;;
+      var time = m.createdAt ? m.createdAt.toDate().toLocaleString([], { month: &quot;short&quot;, day: &quot;numeric&quot;, hour: &quot;2-digit&quot;, minute: &quot;2-digit&quot; }) : &quot;&quot;;
+      return '<div class=&quot;spt-bubble ' + (mine ? &quot;mine&quot; : &quot;theirs&quot;) + '&quot;>' + esc(m.text) + '<div class=&quot;spt-bubble-time&quot;>' + time + '</div></div>';
+    }).join(&quot;&quot;);
+    el.scrollTop = el.scrollHeight;
+  }, function(err) {
+    console.error(&quot;Support chat listener error:&quot;, err);
+    var el = document.getElementById(&quot;spt-msgs&quot;);
+    if (el) el.innerHTML = '<div class=&quot;empty&quot;>Could not load this conversation. Check Firestore rules.</div>';
+  });
+}
+
+function sptSendMessage() {
+  var input = document.getElementById(&quot;spt-input&quot;);
+  var text = input.value.trim();
+  if (!text || !_sptCurrentUid) return;
+  input.value = &quot;&quot;;
+  var uid = _sptCurrentUid;
+  db.collection(&quot;supportChats&quot;).doc(uid).collection(&quot;messages&quot;).add({
+    sender: &quot;admin&quot;, text: text, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    return db.collection(&quot;supportChats&quot;).doc(uid).set({
+      lastMessage: text, lastAt: firebase.firestore.FieldValue.serverTimestamp(), lastSender: &quot;admin&quot;, unreadUser: true
+    }, { merge: true });
+  }).catch(function(err) {
+    console.error(&quot;Could not send support message:&quot;, err);
+    T(&quot;Error&quot;, &quot;Could not send your reply. Please try again.&quot;);
+  });
 }
 
 /* ============ BOOT ============ */
@@ -6060,6 +6194,10 @@ var _accWishlist = [];
 var _hotelSession = null;
 var _hotelProfile = null;
 
+function hideAccLoading() {
+  var el = document.getElementById("acc-loading");
+  if (el) el.style.display = "none";
+}
 auth.onAuthStateChanged(function(user) {
   _accUser = user;
   if (user) {
@@ -6068,6 +6206,7 @@ auth.onAuthStateChanged(function(user) {
         _hotelSession = user.uid;
         _hotelProfile = hdoc.data();
         _hotelProfile.id = user.uid;
+        hideAccLoading();
         document.getElementById("acc-guest").style.display = "none";
         document.getElementById("acc-loggedin").style.display = "none";
         document.getElementById("acc-app").style.display = "none";
@@ -6082,18 +6221,35 @@ auth.onAuthStateChanged(function(user) {
         _accProfile = doc.exists ? doc.data() : { name: user.email, email: user.email, phone: "", photoURL: "" };
         accRenderHeader();
         loadWishlist();
+      }).catch(function() {
+        _accProfile = { name: user.email, email: user.email, phone: "", photoURL: "" };
+        accRenderHeader();
       });
+      hideAccLoading();
       document.getElementById("acc-guest").style.display = "none";
       document.getElementById("acc-loggedin").style.display = "block";
       document.getElementById("acc-app").style.display = "block";
       document.getElementById("acc-sub").style.display = "none";
     }).catch(function() {
+      // A slow/dropped connection can make this lookup fail outright. Rather
+      // than leaving the page permanently blank (the old behaviour), fall
+      // back to showing the signed-in customer view — worst case the user
+      // taps a menu item and that specific request retries.
       _hotelSession = null; _hotelProfile = null;
+      _accProfile = _accProfile || { name: user.email, email: user.email, phone: "", photoURL: "" };
+      accRenderHeader();
+      hideAccLoading();
+      document.getElementById("acc-guest").style.display = "none";
+      document.getElementById("acc-loggedin").style.display = "block";
+      document.getElementById("acc-app").style.display = "block";
+      document.getElementById("acc-sub").style.display = "none";
+      T("Connection Issue", "Your account loaded from a slow connection — some info may be out of date. Pull to refresh if anything looks off.", 6000);
     });
   } else {
     if (_hdNotifUnsub) { _hdNotifUnsub(); _hdNotifUnsub = null; }
     _hotelSession = null; _hotelProfile = null;
     _accProfile = null;
+    hideAccLoading();
     document.getElementById("acc-guest").style.display = "block";
     document.getElementById("acc-loggedin").style.display = "none";
     document.getElementById("acc-app").style.display = "none";
@@ -6397,6 +6553,12 @@ function accLoadMenuBadges() {
     var unread = snap.docs.filter(function(d) { return d.data().unreadUser === true; }).length;
     if (unread) { el.textContent = unread; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
   }).catch(function() {});
+  db.collection("supportChats").doc(uid).get().then(function(doc) {
+    var el = document.getElementById("acc-sb-support-badge");
+    if (!el) return;
+    var unread = doc.exists && doc.data().unreadUser === true;
+    if (unread) { el.textContent = "1"; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
+  }).catch(function() {});
 }
 
 function accOpenSub(key) {
@@ -6407,6 +6569,7 @@ function accOpenSub(key) {
   var titles = {
     bookings: "My Bookings", wishlist: "My Wishlist", profile: "My Profile",
     payments: "Payments & Wallet", inbox: "Inbox", notifications: "Notifications", chats: "Messages",
+    support: "Contact Admin",
     refer: "Refer & Earn", help: "Help & Support", about: "About Hotels Continental",
     terms: "Terms & Conditions", privacy: "Privacy Policy"
   };
@@ -6419,6 +6582,7 @@ function accOpenSub(key) {
   else if (key === "payments") accRenderPayments(body);
   else if (key === "inbox") accRenderInbox(body);
   else if (key === "chats") { if (_accChatUnsub) { _accChatUnsub(); _accChatUnsub = null; } accRenderChats(body); }
+  else if (key === "support") { if (_accSupportUnsub) { _accSupportUnsub(); _accSupportUnsub = null; } accRenderSupportChat(body); }
   else if (key === "notifications") accRenderNotifications(body);
   else if (key === "refer") accRenderRefer(body);
   else if (key === "help") accRenderStatic(body, "Need a hand?", "Call or WhatsApp us on <a href=\"tel:09123213212\" style=\"color:var(--gold)\">09123213212</a>, or email <a href=\"mailto:HotelsContinental@gmail.com\" style=\"color:var(--gold)\">HotelsContinental@gmail.com</a>. Our team is available 24/7.");
@@ -6881,6 +7045,67 @@ function accSendChatMessage() {
     }, { merge: true });
   }).catch(function() { T("Error", "Could not send your message. Please try again."); });
 }
+
+// ═══════════════════════════════════════════
+// SUPPORT CHAT: customer <-> platform admin, separate from the per-hotel
+// chats above. One thread per user, doc id === uid, so there's nothing to
+// pick from — opening "Contact Admin" goes straight to the conversation.
+// ═══════════════════════════════════════════
+var _accSupportUnsub = null;
+function ensureSupportThread() {
+  var uid = _accUser.uid;
+  return db.collection("supportChats").doc(uid).set({
+    uid: uid,
+    userName: (_accProfile && _accProfile.name) || _accUser.displayName || "Guest",
+    userEmail: _accUser.email || ""
+  }, { merge: true }).then(function() { return uid; });
+}
+function accRenderSupportChat(body) {
+  body.innerHTML =
+    '<div class="chat-box"><div class="chat-msgs" id="acc-support-msgs"><div class="emst"><span class="ei">&#8987;</span>Loading...</div></div>' +
+    '<div class="chat-input-row"><input type="text" id="acc-support-input" placeholder="Type a message to the admin..." onkeypress="if(event.key===\'Enter\')accSendSupportMessage()"/>' +
+    '<button class="chat-send-btn" onclick="accSendSupportMessage()">&#10148;</button></div></div>';
+  ensureSupportThread().then(function(uid) {
+    db.collection("supportChats").doc(uid).set({ unreadUser: false }, { merge: true }).catch(function() {});
+    accLoadMenuBadges();
+    if (_accSupportUnsub) { _accSupportUnsub(); _accSupportUnsub = null; }
+    _accSupportUnsub = db.collection("supportChats").doc(uid).collection("messages").orderBy("createdAt", "asc").onSnapshot(function(snap) {
+      var msgsEl = document.getElementById("acc-support-msgs");
+      if (!msgsEl) return;
+      if (snap.empty) { msgsEl.innerHTML = '<div class="emst"><span class="ei">&#128172;</span>Say hello! Questions about your account, a booking, or the platform — the admin team will reply here.</div>'; return; }
+      msgsEl.innerHTML = snap.docs.map(function(d) {
+        var m = d.data();
+        var mine = m.sender === "user";
+        var time = m.createdAt ? m.createdAt.toDate().toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+        return '<div class="chat-bubble ' + (mine ? "mine" : "theirs") + '">' + esc(m.text) + '<div class="chat-bubble-time">' + time + '</div></div>';
+      }).join("");
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+    }, function(err) {
+      console.error("Support chat listener error:", err);
+      var msgsEl = document.getElementById("acc-support-msgs");
+      if (msgsEl) msgsEl.innerHTML = '<div class="emst"><span class="ei">&#128172;</span>Could not load this conversation. Check your connection and try again.</div>';
+    });
+  }).catch(function(err) {
+    console.error("Could not open support chat:", err);
+    var msgsEl = document.getElementById("acc-support-msgs");
+    if (msgsEl) msgsEl.innerHTML = '<div class="emst"><span class="ei">&#128172;</span>Could not open this conversation. Check your connection and try again.</div>';
+  });
+}
+function accSendSupportMessage() {
+  var input = document.getElementById("acc-support-input");
+  var text = input.value.trim();
+  if (!text || !_accUser) return;
+  input.value = "";
+  var uid = _accUser.uid;
+  db.collection("supportChats").doc(uid).collection("messages").add({
+    sender: "user", text: text, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    return db.collection("supportChats").doc(uid).set({
+      lastMessage: text, lastAt: firebase.firestore.FieldValue.serverTimestamp(), lastSender: "user", unreadAdmin: true
+    }, { merge: true });
+  }).catch(function() { T("Error", "Could not send your message. Please try again."); });
+}
+
 // Booking messages (type === "booking") carry structured fields sent
 // automatically whenever a booking is created or updated by the admin;
 // anything else falls back to the plain subject/body layout. Unread
