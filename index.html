@@ -39,9 +39,9 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text);min
 /* ===== HOTELS AFRICA: splash screen ===== */
 :root{--ha-gold:#f0a83c;--ha-gold2:#ffce6e;--ha-navy:#0b2c66}
 #loader{background:radial-gradient(circle at 50% 30%,#123168 0%,var(--ink) 70%)}
-.ldz-badge{width:110px;height:118px;position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:1.3rem;animation:fu .9s ease both}
+.ldz-badge{width:104px;height:120px;position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:1.3rem;animation:fu .9s ease both}
 .ldz-africa{width:100%;height:100%;filter:drop-shadow(0 8px 22px rgba(240,168,60,.35))}
-.ldz-building{position:absolute;width:26px;height:26px;left:50%;top:46%;transform:translate(-50%,-50%)}
+.ldz-building{position:absolute;width:30px;height:34px;left:52%;top:44%;transform:translate(-50%,-50%)}
 .ldz-word{display:flex;flex-direction:column;align-items:center;animation:fu 1s .1s ease both}
 .ldz-hotels{font-family:'Playfair Display',serif;font-weight:700;font-size:2.6rem;letter-spacing:.06em;color:#fff;line-height:1}
 .ldz-africa-txt{display:flex;align-items:center;gap:.6rem;font-family:'Playfair Display',serif;font-weight:700;font-size:1.9rem;letter-spacing:.1em;color:var(--ha-gold);margin-top:.15rem}
@@ -52,7 +52,9 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text);min
 #loader .lc svg{filter:none}
 /* ===== HOTELS AFRICA: nav logo mark ===== */
 .nlm{background:linear-gradient(135deg,var(--ha-gold),var(--ha-gold2))}
-.nlm .hz-navsvg{width:22px;height:24px}
+.nlm{width:36px;height:40px;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nlm .hz-navsvg{width:100%;height:100%}
+.nlm .hz-navbuilding{position:absolute;width:11px;height:12px;left:52%;top:44%;transform:translate(-50%,-50%)}
 /* ===== HOTELS AFRICA: homepage hero / search widget ===== */
 .hz-hero{min-height:auto;padding:0;display:block;background:var(--ink) url('https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;position:relative}
 .hz-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,37,69,.55) 0%,rgba(11,37,69,.75) 55%,rgba(11,37,69,.92) 100%)}
@@ -490,23 +492,27 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 
 <div id="loader">
   <div class="ldz-badge">
-    <svg class="ldz-africa" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
-      <path fill="url(#ldzGrad)" d="M50,4 C60,3 69,9 68,19 C79,21 87,30 81,41 C91,45 94,57 85,66 C91,75 88,88 76,93 C74,102 63,109 53,105 C46,110 35,109 30,101 C19,102 11,94 11,84 C3,80 0,69 6,60 C0,51 4,40 15,36 C13,26 20,17 31,16 C33,7 41,4 50,4 Z"/>
-      <ellipse cx="90" cy="70" rx="4.5" ry="7.5" fill="url(#ldzGrad)"/>
+    <svg class="ldz-africa" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+      <path fill="url(#ldzGrad)" d="M30,4 L58,3 L74,14 L70,26 L92,34 L78,42 L84,58 L74,80 L58,104 L46,116 L34,102 L22,84 L14,66 L26,58 L10,48 L18,32 L14,16 Z"/>
+      <ellipse cx="92" cy="88" rx="4.5" ry="8" fill="url(#ldzGrad)"/>
       <defs>
-        <linearGradient id="ldzGrad" x1="0" y1="0" x2="100" y2="110" gradientUnits="userSpaceOnUse">
+        <linearGradient id="ldzGrad" x1="0" y1="0" x2="100" y2="120" gradientUnits="userSpaceOnUse">
           <stop offset="0" stop-color="#ffce6e"/>
           <stop offset="1" stop-color="#f0a83c"/>
         </linearGradient>
       </defs>
     </svg>
-    <svg class="ldz-building" viewBox="0 0 24 24" fill="#0b2c66" xmlns="http://www.w3.org/2000/svg">
-      <rect x="9" y="2" width="6" height="20" rx="1"/>
-      <rect x="10.3" y="0" width="3.4" height="2.6"/>
-      <rect x="10.4" y="5.5" width="3.2" height="2"/>
-      <rect x="10.4" y="9.5" width="3.2" height="2"/>
-      <rect x="10.4" y="13.5" width="3.2" height="2"/>
-      <rect x="10.4" y="17.5" width="3.2" height="2" fill="#ffce6e"/>
+    <svg class="ldz-building" viewBox="0 0 24 28" fill="#0b2c66" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="4" width="8" height="24" rx="1"/>
+      <rect x="10.3" y="0" width="3.4" height="4.4"/>
+      <rect x="10" y="8" width="3" height="2.4"/>
+      <rect x="15" y="8" width="1.8" height="2.4"/>
+      <rect x="10" y="12.5" width="3" height="2.4"/>
+      <rect x="15" y="12.5" width="1.8" height="2.4"/>
+      <rect x="10" y="17" width="3" height="2.4" fill="#ffce6e"/>
+      <rect x="15" y="17" width="1.8" height="2.4" fill="#ffce6e"/>
+      <rect x="10" y="21.5" width="3" height="2.4"/>
+      <rect x="15" y="21.5" width="1.8" height="2.4"/>
     </svg>
   </div>
   <div class="ldz-word">
@@ -533,9 +539,27 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 <nav>
   <button class="nbrand" onclick="SP('home')">
     <div class="nlm">
-      <svg class="hz-navsvg" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
-        <path fill="#0b2545" d="M50,4 C60,3 69,9 68,19 C79,21 87,30 81,41 C91,45 94,57 85,66 C91,75 88,88 76,93 C74,102 63,109 53,105 C46,110 35,109 30,101 C19,102 11,94 11,84 C3,80 0,69 6,60 C0,51 4,40 15,36 C13,26 20,17 31,16 C33,7 41,4 50,4 Z"/>
-        <ellipse cx="90" cy="70" rx="4.5" ry="7.5" fill="#0b2545"/>
+      <svg class="hz-navsvg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+        <path fill="url(#navGrad)" d="M30,4 L58,3 L74,14 L70,26 L92,34 L78,42 L84,58 L74,80 L58,104 L46,116 L34,102 L22,84 L14,66 L26,58 L10,48 L18,32 L14,16 Z"/>
+        <ellipse cx="92" cy="88" rx="4.5" ry="8" fill="url(#navGrad)"/>
+        <defs>
+          <linearGradient id="navGrad" x1="0" y1="0" x2="100" y2="120" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#ffce6e"/>
+            <stop offset="1" stop-color="#f0a83c"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <svg class="hz-navbuilding" viewBox="0 0 24 28" fill="#0b2545" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8" y="4" width="8" height="24" rx="1"/>
+        <rect x="10.3" y="0" width="3.4" height="4.4"/>
+        <rect x="10" y="8" width="3" height="2.4"/>
+        <rect x="15" y="8" width="1.8" height="2.4"/>
+        <rect x="10" y="12.5" width="3" height="2.4"/>
+        <rect x="15" y="12.5" width="1.8" height="2.4"/>
+        <rect x="10" y="17" width="3" height="2.4"/>
+        <rect x="15" y="17" width="1.8" height="2.4"/>
+        <rect x="10" y="21.5" width="3" height="2.4"/>
+        <rect x="15" y="21.5" width="1.8" height="2.4"/>
       </svg>
     </div>
     <div>
@@ -559,20 +583,11 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   </button>
 </nav>
 <script>
-// Show the company logo instantly on repeat visits using a cached copy from
-// localStorage, instead of waiting for the Firebase SDKs (loaded at the
-// bottom of the page) to download and the Firestore round-trip to finish.
-// The live fetch further down still runs and keeps this cache up to date.
+// NOTE: the Hotels Africa brand mark (Africa icon in the nav + splash) is now
+// fixed brand art and must not be overwritten by a previously-uploaded
+// single-hotel logo, so this cache-based instant-paint is disabled.
 (function() {
-  try {
-    var cached = localStorage.getItem("hc-company-logo");
-    if (!cached) return;
-    document.querySelectorAll(".nlm").forEach(function(el) {
-      el.innerHTML = '<img src="' + cached + '" style="width:100%;height:100%;object-fit:cover;border-radius:9px"/>';
-    });
-    var lc = document.querySelector("#loader .lc");
-    if (lc) lc.innerHTML = '<img src="' + cached + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
-  } catch (e) {}
+  try { localStorage.removeItem("hc-company-logo"); } catch (e) {}
 })();
 </script>
 <div class="mnav" id="mnav">
@@ -618,8 +633,8 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
           <div class="hz-fld"><label>City</label>
             <select id="hz-city" onchange="hzSyncLocation()"><option>Lagos</option><option>Abuja</option><option>Port Harcourt</option></select>
           </div>
-          <div class="hz-fld"><label>Check-in</label><input type="date" id="hz-checkin"/></div>
-          <div class="hz-fld"><label>Check-out</label><input type="date" id="hz-checkout"/></div>
+          <div class="hz-fld"><label>Check-in</label><input type="date" id="hz-checkin" value="2026-07-30"/></div>
+          <div class="hz-fld"><label>Check-out</label><input type="date" id="hz-checkout" value="2026-08-02"/></div>
           <div class="hz-fld"><label>Guests &amp; Rooms</label>
             <select id="hz-guests"><option>2 Adults &#183; 1 Room</option><option>1 Adult &#183; 1 Room</option><option>3 Adults &#183; 1 Room</option><option>4 Adults &#183; 2 Rooms</option></select>
           </div>
@@ -5980,24 +5995,12 @@ function hideLoader() {
 window.onload = function() { setTimeout(hideLoader, 800); loadSavedImages(); };
 setTimeout(hideLoader, 2000);
 
-// Applies the uploaded company logo (Admin > Settings > Company Profile) to
-// the public site's logo slots (nav brand + loader mark). These slots are
-// intentionally left empty in the HTML so no hardcoded/default icon ever
-// shows before the real uploaded logo loads. Also caches the logo in
-// localStorage so the next page load can show it instantly (see the small
-// inline script right after </nav>) instead of waiting on this Firestore
-// round-trip again.
+// Applies the uploaded company logo (Admin > Settings > Company Profile).
+// Hotels Africa now uses a fixed brand mark (Africa icon) in the nav and
+// splash screen, so this no longer overwrites those slots — it's kept as a
+// no-op so the rest of the settings/save code above doesn't need changes.
 function applyPublicBranding(logo) {
-  if (!logo) return;
-  try {
-    if (localStorage.getItem("hc-company-logo") === logo) return; // already showing this version
-    localStorage.setItem("hc-company-logo", logo);
-  } catch (e) {}
-  document.querySelectorAll(".nlm").forEach(function(el) {
-    el.innerHTML = '<img src="' + logo + '" style="width:100%;height:100%;object-fit:cover;border-radius:9px"/>';
-  });
-  var lc = document.querySelector("#loader .lc");
-  if (lc) lc.innerHTML = '<img src="' + logo + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>';
+  return;
 }
 // Company bank account details shown wherever a customer needs to make a
 // manual bank transfer (legacy booking page, marketplace room booking, and
