@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Hotels Continental - Luxury Hotel in Lagos, Nigeria</title>
+<title>Hotels Africa - Discover, Compare, Book & Travel Across Africa</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <!-- Open connections to Firebase early so the company-logo fetch (issued near
      the bottom of the page) doesn't also have to pay DNS/TLS setup cost -->
@@ -34,8 +34,80 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text);min
 @keyframes cp{0%,100%{opacity:.4;transform:scale(.9)}50%{opacity:1;transform:scale(1)}}
 .lr{position:absolute;inset:-10px;border-radius:50%;border:1px solid rgba(26,86,219,.3);animation:re 1.4s ease-in-out infinite}
 @keyframes re{0%{transform:scale(.8);opacity:0}50%{opacity:1}100%{transform:scale(1.2);opacity:0}}
-.ln{font-family:'Playfair Display',serif;color:var(--gold2);font-size:1.35rem;letter-spacing:.4em;text-transform:uppercase}
-.ls{font-size:.68rem;color:rgba(26,86,219,.5);letter-spacing:.25em;margin-top:.35rem;text-transform:uppercase}
+.ln{display:none}
+.ls{font-size:.72rem;color:rgba(255,255,255,.55);letter-spacing:.22em;margin-top:1.1rem;text-transform:uppercase;animation:fu 1s .3s ease both}
+/* ===== HOTELS AFRICA: splash screen ===== */
+:root{--ha-gold:#f0a83c;--ha-gold2:#ffce6e;--ha-navy:#0b2c66}
+#loader{background:radial-gradient(circle at 50% 30%,#123168 0%,var(--ink) 70%)}
+.ldz-badge{width:110px;height:118px;position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:1.3rem;animation:fu .9s ease both}
+.ldz-africa{width:100%;height:100%;filter:drop-shadow(0 8px 22px rgba(240,168,60,.35))}
+.ldz-building{position:absolute;width:26px;height:26px;left:50%;top:46%;transform:translate(-50%,-50%)}
+.ldz-word{display:flex;flex-direction:column;align-items:center;animation:fu 1s .1s ease both}
+.ldz-hotels{font-family:'Playfair Display',serif;font-weight:700;font-size:2.6rem;letter-spacing:.06em;color:#fff;line-height:1}
+.ldz-africa-txt{display:flex;align-items:center;gap:.6rem;font-family:'Playfair Display',serif;font-weight:700;font-size:1.9rem;letter-spacing:.1em;color:var(--ha-gold);margin-top:.15rem}
+.ldz-dash{width:26px;height:1px;background:var(--ha-gold)}
+.ldz-tag{font-size:.85rem;color:rgba(255,255,255,.7);letter-spacing:.03em;margin-top:.85rem;font-weight:300;animation:fu 1s .2s ease both}
+#loader .lc{margin-top:2.4rem;margin-bottom:0;animation:fu 1s .3s ease both}
+#loader .lr{border-color:rgba(240,168,60,.45)}
+#loader .lc svg{filter:none}
+/* ===== HOTELS AFRICA: nav logo mark ===== */
+.nlm{background:linear-gradient(135deg,var(--ha-gold),var(--ha-gold2))}
+.nlm .hz-navsvg{width:22px;height:24px}
+/* ===== HOTELS AFRICA: homepage hero / search widget ===== */
+.hz-hero{min-height:auto;padding:0;display:block;background:var(--ink) url('https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;position:relative}
+.hz-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,37,69,.55) 0%,rgba(11,37,69,.75) 55%,rgba(11,37,69,.92) 100%)}
+.hz-hero-in{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:3.5rem 1.5rem 0}
+.hz-h1{font-family:'Playfair Display',serif;font-weight:400;font-size:clamp(2rem,5vw,3.1rem);color:#fff;line-height:1.08;animation:fu 1s ease both}
+.hz-h1 em{font-style:italic;color:var(--ha-gold);display:block}
+.hz-sub{color:rgba(255,255,255,.72);font-size:.95rem;max-width:480px;margin-top:.7rem;font-weight:300;animation:fu 1s .1s ease both}
+.hz-card{background:#fff;border-radius:16px;box-shadow:var(--shadow-lg);margin:2.2rem 0 -3.2rem;padding:1.3rem;position:relative;z-index:2;animation:fu 1s .2s ease both}
+.hz-fields{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr 1.1fr auto;gap:.9rem;align-items:end}
+.hz-fld label{display:block;font-size:.68rem;color:var(--muted);margin-bottom:.3rem;font-weight:500}
+.hz-fld select,.hz-fld input{width:100%;border:none;border-bottom:1.5px solid var(--border);padding:.25rem 0;font-family:'Jost',sans-serif;font-size:.86rem;color:var(--ink);background:transparent;font-weight:600}
+.hz-fld select:focus,.hz-fld input:focus{outline:none;border-color:var(--gold)}
+.hz-searchbtn{background:var(--ink);color:#fff;border:none;border-radius:10px;padding:.85rem 1.6rem;font-weight:600;font-size:.85rem;letter-spacing:.02em;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:.5rem;transition:all .18s}
+.hz-searchbtn:hover{background:var(--ha-navy)}
+.hz-trust{max-width:1200px;margin:4.2rem auto 0;padding:0 1.5rem 3rem;display:flex;flex-wrap:wrap;gap:1.6rem 2.4rem;justify-content:center}
+.hz-trust-item{display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--muted);font-weight:500}
+.hz-trust-item .ic{color:var(--gold);font-size:1.05rem}
+.hz-dest-head{display:flex;align-items:flex-end;justify-content:space-between;max-width:1200px;margin:0 auto;padding:0 1.5rem}
+.hz-dest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:1rem;max-width:1200px;margin:1.3rem auto 0;padding:0 1.5rem}
+.hz-dest-card{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:3/3.6;cursor:pointer;background:var(--surface2)}
+.hz-dest-card img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.hz-dest-card:hover img{transform:scale(1.06)}
+.hz-dest-card::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(11,37,69,.85) 100%)}
+.hz-dest-info{position:absolute;left:.9rem;right:.9rem;bottom:.8rem;z-index:1;color:#fff}
+.hz-dest-info .nm{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700}
+.hz-dest-info .ct{font-size:.7rem;color:rgba(255,255,255,.75);margin-top:.1rem}
+.hz-quick{max-width:1200px;margin:2.8rem auto 0;padding:0 1.5rem}
+.hz-quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.hz-quick-item{display:flex;align-items:flex-start;gap:.7rem;padding:1.1rem 1.2rem;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.hz-quick-item:hover{background:var(--gold-dim)}
+.hz-quick-item .ic{width:34px;height:34px;border-radius:9px;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0}
+.hz-quick-item .tt{font-size:.82rem;font-weight:700;color:var(--ink)}
+.hz-quick-item .dd{font-size:.7rem;color:var(--muted);margin-top:.15rem;line-height:1.3}
+.hz-banner{max-width:1200px;margin:1.8rem auto 0;padding:0 1.5rem}
+.hz-banner-in{background:var(--ink);border-radius:16px;padding:1.6rem 1.8rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;justify-content:space-between;position:relative;overflow:hidden}
+.hz-banner-tag{display:inline-block;background:var(--ha-gold);color:var(--ink);font-size:.65rem;font-weight:700;letter-spacing:.08em;padding:.25rem .6rem;border-radius:5px;margin-bottom:.5rem}
+.hz-banner-h{font-family:'Playfair Display',serif;color:#fff;font-size:1.4rem;font-weight:700}
+.hz-banner-p{color:rgba(255,255,255,.65);font-size:.82rem;margin-top:.3rem;max-width:420px}
+.hz-banner-price{color:var(--ha-gold);font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:700;text-align:right}
+.hz-banner-price small{display:block;font-family:'Jost',sans-serif;font-size:.66rem;color:rgba(255,255,255,.55);font-weight:400;letter-spacing:.04em}
+.hz-banner-btn{background:#fff;color:var(--ink);border:none;border-radius:9px;padding:.7rem 1.4rem;font-weight:700;font-size:.82rem;cursor:pointer;margin-top:.6rem}
+@media(max-width:860px){
+  .hz-fields{grid-template-columns:1fr 1fr;grid-template-areas:"a a" "b c" "d e" "f f" "g g";}
+  .hz-fields>.hz-fld:nth-child(1){grid-area:a}
+  .hz-fields>.hz-fld:nth-child(2){grid-area:b}
+  .hz-fields>.hz-fld:nth-child(3){grid-area:c}
+  .hz-fields>.hz-fld:nth-child(4){grid-area:d}
+  .hz-fields>.hz-fld:nth-child(5){grid-area:e}
+  .hz-fields>.hz-fld:nth-child(6){grid-area:f}
+  .hz-searchbtn{grid-area:g;justify-content:center;width:100%}
+  .hz-card{margin-bottom:-4.6rem}
+  .hz-trust{margin-top:5.6rem;gap:1rem 1.6rem}
+  .hz-banner-price{text-align:left}
+  .hz-quick-item{border-right:none}
+}
 nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;height:62px}
 .nbrand{display:flex;align-items:center;gap:.75rem;cursor:pointer;border:none;background:none;padding:0}
 .nlm{width:38px;height:38px;background:linear-gradient(135deg,var(--gold),var(--gold2));border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -417,11 +489,36 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 <body>
 
 <div id="loader">
+  <div class="ldz-badge">
+    <svg class="ldz-africa" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
+      <path fill="url(#ldzGrad)" d="M50,4 C60,3 69,9 68,19 C79,21 87,30 81,41 C91,45 94,57 85,66 C91,75 88,88 76,93 C74,102 63,109 53,105 C46,110 35,109 30,101 C19,102 11,94 11,84 C3,80 0,69 6,60 C0,51 4,40 15,36 C13,26 20,17 31,16 C33,7 41,4 50,4 Z"/>
+      <ellipse cx="90" cy="70" rx="4.5" ry="7.5" fill="url(#ldzGrad)"/>
+      <defs>
+        <linearGradient id="ldzGrad" x1="0" y1="0" x2="100" y2="110" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#ffce6e"/>
+          <stop offset="1" stop-color="#f0a83c"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <svg class="ldz-building" viewBox="0 0 24 24" fill="#0b2c66" xmlns="http://www.w3.org/2000/svg">
+      <rect x="9" y="2" width="6" height="20" rx="1"/>
+      <rect x="10.3" y="0" width="3.4" height="2.6"/>
+      <rect x="10.4" y="5.5" width="3.2" height="2"/>
+      <rect x="10.4" y="9.5" width="3.2" height="2"/>
+      <rect x="10.4" y="13.5" width="3.2" height="2"/>
+      <rect x="10.4" y="17.5" width="3.2" height="2" fill="#ffce6e"/>
+    </svg>
+  </div>
+  <div class="ldz-word">
+    <div class="ldz-hotels">HOTELS</div>
+    <div class="ldz-africa-txt"><span class="ldz-dash"></span>AFRICA<span class="ldz-dash"></span></div>
+  </div>
+  <div class="ldz-tag">Discover. Compare. Book. Travel.</div>
   <div class="lc">
     <div class="lr"></div>
   </div>
-  <div class="ln">Hotels Continental</div>
-  <div class="ls">Lagos · Nigeria</div>
+  <div class="ln">Hotels Africa</div>
+  <div class="ls">Loading amazing stays&#8230;</div>
 </div>
 
 <div class="toast" id="toast">
@@ -435,10 +532,15 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 
 <nav>
   <button class="nbrand" onclick="SP('home')">
-    <div class="nlm"></div>
+    <div class="nlm">
+      <svg class="hz-navsvg" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#0b2545" d="M50,4 C60,3 69,9 68,19 C79,21 87,30 81,41 C91,45 94,57 85,66 C91,75 88,88 76,93 C74,102 63,109 53,105 C46,110 35,109 30,101 C19,102 11,94 11,84 C3,80 0,69 6,60 C0,51 4,40 15,36 C13,26 20,17 31,16 C33,7 41,4 50,4 Z"/>
+        <ellipse cx="90" cy="70" rx="4.5" ry="7.5" fill="#0b2545"/>
+      </svg>
+    </div>
     <div>
-      <div class="nbn">Hotels Continental</div>
-      <div class="nbl">Lagos, Nigeria</div>
+      <div class="nbn">Hotels Africa</div>
+      <div class="nbl">Discover. Book. Relax.</div>
     </div>
   </button>
   <div class="nmenu">
@@ -486,26 +588,119 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 
 <!-- HOME -->
 <div class="page active" id="page-home">
-  <div class="hero">
-    <div class="hgrid"></div>
-    <div class="hglow"></div>
-    <div class="hcon">
-      <div class="heye" id="home-eyebrow">Nigeria's Trusted Hotel Marketplace</div>
-      <h1 class="htitle">Hotels<em>Continental</em></h1>
-      <p class="hsub" id="home-subtitle">Compare, book and manage stays at verified partner hotels across Nigeria — all in one place.</p>
-      <div class="hbtns">
-        <button class="btn bg" onclick="SP('hotels')">Book Now</button>
-        <button class="btn bo" onclick="SP('hotels')">Explore Rooms</button>
-        <button class="btn bo" onclick="goAccount()">Sign Up / Log In</button>
+  <!-- legacy homepage-content fields kept alive (off-screen) so Admin > Settings > Homepage Content
+       and the live guest-review / partner-hotel counters still work without changing their logic -->
+  <div style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none">
+    <div class="heye" id="home-eyebrow">Africa's Trusted Hotel Marketplace</div>
+    <p class="hsub" id="home-subtitle">Compare, book and manage stays at verified partner hotels across Africa — all in one place.</p>
+    <div class="hsn" id="hst1v">0+</div><div class="hsl" id="hst1l">Partner Hotels</div>
+    <div class="hsn" id="hst2v">24/7</div><div class="hsl" id="hst2l">Concierge</div>
+    <div class="hsn" id="hst3v">100%</div><div class="hsl" id="hst3l">Secure Access</div>
+    <div class="hsn" id="hrc">0</div>
+  </div>
+
+  <div class="hz-hero">
+    <div class="hz-hero-in">
+      <h1 class="hz-h1">Find Your Perfect Stay<em>Across Africa</em></h1>
+      <p class="hz-sub">Discover hotels, apartments, villas and resorts. Compare prices, read reviews and book securely.</p>
+
+      <div class="hz-card">
+        <div class="hz-fields">
+          <div class="hz-fld"><label>&#128205; Where are you going?</label>
+            <select id="hz-country" onchange="hzSyncLocation()">
+              <option>Nigeria</option><option>Kenya</option><option>South Africa</option>
+              <option>Ghana</option><option>Egypt</option><option>United Arab Emirates</option>
+            </select>
+          </div>
+          <div class="hz-fld"><label>State / Region</label>
+            <select id="hz-state" onchange="hzSyncLocation()"><option>Lagos State</option><option>Abuja (FCT)</option><option>Rivers State</option></select>
+          </div>
+          <div class="hz-fld"><label>City</label>
+            <select id="hz-city" onchange="hzSyncLocation()"><option>Lagos</option><option>Abuja</option><option>Port Harcourt</option></select>
+          </div>
+          <div class="hz-fld"><label>Check-in</label><input type="date" id="hz-checkin"/></div>
+          <div class="hz-fld"><label>Check-out</label><input type="date" id="hz-checkout"/></div>
+          <div class="hz-fld"><label>Guests &amp; Rooms</label>
+            <select id="hz-guests"><option>2 Adults &#183; 1 Room</option><option>1 Adult &#183; 1 Room</option><option>3 Adults &#183; 1 Room</option><option>4 Adults &#183; 2 Rooms</option></select>
+          </div>
+          <button class="hz-searchbtn" onclick="hzSearch()">&#128269; Search Hotels</button>
+        </div>
       </div>
-      <div class="hstats">
-        <div><div class="hsn" id="hst1v">0+</div><div class="hsl" id="hst1l">Partner Hotels</div></div>
-        <div><div class="hsn" id="hst2v">24/7</div><div class="hsl" id="hst2l">Concierge</div></div>
-        <div><div class="hsn" id="hst3v">100%</div><div class="hsl" id="hst3l">Secure Access</div></div>
-        <div><div class="hsn" id="hrc">0</div><div class="hsl">Guest Reviews</div></div>
+    </div>
+
+    <div class="hz-trust">
+      <div class="hz-trust-item"><span class="ic">&#127942;</span>Best Price Guarantee</div>
+      <div class="hz-trust-item"><span class="ic">&#128737;&#65039;</span>Verified Hotels</div>
+      <div class="hz-trust-item"><span class="ic">&#128274;</span>Secure Payments</div>
+      <div class="hz-trust-item"><span class="ic">&#127911;</span>24/7 Customer Support</div>
+    </div>
+  </div>
+
+  <div class="sec" style="max-width:1200px;padding-top:2.6rem">
+    <div class="hz-dest-head">
+      <div>
+        <div class="seye" style="text-align:left">Popular Destinations</div>
+        <h2 class="stitle" style="text-align:left;margin-top:.2rem">Explore top destinations</h2>
+      </div>
+      <button class="ni" onclick="SP('hotels')" style="color:var(--gold);font-weight:600">View all &#8250;</button>
+    </div>
+    <div class="hz-dest-grid">
+      <div class="hz-dest-card" onclick="hzGoDestination('Lagos')"><img src="https://images.unsplash.com/photo-1618828665347-7060fd0c4d02?q=80&w=500&auto=format&fit=crop"/><div class="hz-dest-info"><div class="nm">Lagos</div><div class="ct">1,240 properties</div></div></div>
+      <div class="hz-dest-card" onclick="hzGoDestination('Abuja')"><img src="https://images.unsplash.com/photo-1611348586804-61bf6c080437?q=80&w=500&auto=format&fit=crop"/><div class="hz-dest-info"><div class="nm">Abuja</div><div class="ct">920 properties</div></div></div>
+      <div class="hz-dest-card" onclick="hzGoDestination('Nairobi')"><img src="https://images.unsplash.com/photo-1611348586760-41b3a67b9e5c?q=80&w=500&auto=format&fit=crop"/><div class="hz-dest-info"><div class="nm">Nairobi</div><div class="ct">1,100 properties</div></div></div>
+      <div class="hz-dest-card" onclick="hzGoDestination('Cape Town')"><img src="https://images.unsplash.com/photo-1580060839134-75a5edca2e99?q=80&w=500&auto=format&fit=crop"/><div class="hz-dest-info"><div class="nm">Cape Town</div><div class="ct">780 properties</div></div></div>
+      <div class="hz-dest-card" onclick="hzGoDestination('Dubai')"><img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=500&auto=format&fit=crop"/><div class="hz-dest-info"><div class="nm">Dubai</div><div class="ct">1,540 properties</div></div></div>
+    </div>
+
+    <div class="hz-quick">
+      <div class="hz-quick-grid">
+        <div class="hz-quick-item" onclick="SP('hotels')"><span class="ic">&#11088;</span><div><div class="tt">Top Picks</div><div class="dd">Handpicked accommodations</div></div></div>
+        <div class="hz-quick-item" onclick="SP('hotels')"><span class="ic">&#127991;&#65039;</span><div><div class="tt">Deals</div><div class="dd">Best prices &amp; special offers</div></div></div>
+        <div class="hz-quick-item" onclick="hzComingSoon('Airport Transfers')"><span class="ic">&#128663;</span><div><div class="tt">Airport Transfers</div><div class="dd">Safe &amp; reliable pickup service</div></div></div>
+        <div class="hz-quick-item" onclick="hzComingSoon('Tours &amp; Activities')"><span class="ic">&#128247;</span><div><div class="tt">Tours &amp; Activities</div><div class="dd">Explore exciting experiences</div></div></div>
+        <div class="hz-quick-item" onclick="hzComingSoon('Flights')"><span class="ic">&#9992;&#65039;</span><div><div class="tt">Flights</div><div class="dd">Book flights to any destination</div></div></div>
+        <div class="hz-quick-item" onclick="hzComingSoon('Car Rentals')"><span class="ic">&#128663;</span><div><div class="tt">Car Rentals</div><div class="dd">Find the best cars at great prices</div></div></div>
+        <div class="hz-quick-item" onclick="hzComingSoon('Travel Insurance')"><span class="ic">&#128737;&#65039;</span><div><div class="tt">Travel Insurance</div><div class="dd">Travel with peace of mind</div></div></div>
+      </div>
+    </div>
+
+    <div class="hz-banner">
+      <div class="hz-banner-in">
+        <div>
+          <span class="hz-banner-tag">TOP PICKS</span>
+          <div class="hz-banner-h">Get More Visibility for Your Hotel</div>
+          <div class="hz-banner-p">List your property as a Top Pick and reach thousands of travelers.</div>
+          <button class="hz-banner-btn" onclick="SP('registerhotel')">Become a Top Pick</button>
+        </div>
+        <div class="hz-banner-price">&#8358;5,000<small>One-time registration</small></div>
       </div>
     </div>
   </div>
+
+  <script>
+  function hzSyncLocation(){
+    var mp = document.getElementById("mp-search");
+    if (mp) mp.value = document.getElementById("hz-city").value;
+  }
+  function hzSearch(){
+    var city = document.getElementById("hz-city").value;
+    SP('hotels');
+    setTimeout(function(){
+      var mp = document.getElementById("mp-search");
+      if (mp) { mp.value = city; if (typeof renderMarketplaceList === "function") renderMarketplaceList(); }
+    }, 60);
+  }
+  function hzGoDestination(city){
+    SP('hotels');
+    setTimeout(function(){
+      var mp = document.getElementById("mp-search");
+      if (mp) { mp.value = city; if (typeof renderMarketplaceList === "function") renderMarketplaceList(); }
+    }, 60);
+  }
+  function hzComingSoon(label){
+    if (typeof T === "function") T(label, "This feature is coming soon to Hotels Africa.");
+  }
+  </script>
 
   <div class="sec">
     <div class="seye">Marketplace</div>
@@ -539,7 +734,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   </div>
 
   <footer>
-    <div class="fcrown">&#9819; Hotels Continental</div>
+    <div class="fcrown">&#9819; Hotels Africa</div>
     <div class="ftag">Luxury Redefined in the Heart of Lagos</div>
     <div class="fcts">
       <a href="tel:09123213212">&#128222; 09123213212</a>
@@ -548,7 +743,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       <span>&#128205; Lagos, Nigeria</span>
     </div>
     <hr class="fhr"/>
-    <div class="fcp">&#169; 2025 Hotels Continental. All rights reserved.</div>
+    <div class="fcp">&#169; 2025 Hotels Africa. All rights reserved.</div>
   </footer>
 </div>
 
@@ -653,7 +848,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       </div>
       <div class="aside">
         <div class="acard">
-          <div class="atitle">&#9819; Why Hotels Continental?</div>
+          <div class="atitle">&#9819; Why Hotels Africa?</div>
           <ul class="flist">
             <li>Smart one-time room access code</li>
             <li>Free high-speed WiFi</li>
@@ -677,7 +872,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       </div>
     </div>
   </div>
-  <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
+  <footer><div class="fcrown">&#9819; Hotels Africa</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Africa.</div></footer>
 </div>
 
 <!-- ACCESS -->
@@ -704,7 +899,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     </div>
     <p style="margin-top:.9rem;font-size:.76rem;color:var(--muted);text-align:center">No code? <a href="#" onclick="SP('booking')" style="color:var(--gold)">Book a room first</a></p>
   </div>
-  <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
+  <footer><div class="fcrown">&#9819; Hotels Africa</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Africa.</div></footer>
 </div>
 
 <!-- HISTORY -->
@@ -793,7 +988,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       </div>
     </div>
   </div>
-  <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
+  <footer><div class="fcrown">&#9819; Hotels Africa</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Africa.</div></footer>
 </div>
 
 <!-- ACCOUNT -->
@@ -865,7 +1060,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
         <div class="hd-sb-item" data-k="notifications" onclick="accOpenSub('notifications')"><span class="ic">&#128276;</span>Notifications<span id="acc-sb-notif-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem">0</span></div>
         <div class="hd-sb-item" data-k="refer" onclick="accOpenSub('refer')"><span class="ic">&#127873;</span>Refer &amp; Earn</div>
         <div class="hd-sb-item" data-k="help" onclick="accOpenSub('help')"><span class="ic">&#127911;</span>Help &amp; Support</div>
-        <div class="hd-sb-item" data-k="about" onclick="accOpenSub('about')"><span class="ic">&#8505;</span>About Hotels Continental</div>
+        <div class="hd-sb-item" data-k="about" onclick="accOpenSub('about')"><span class="ic">&#8505;</span>About Hotels Africa</div>
         <div class="hd-sb-item" data-k="terms" onclick="accOpenSub('terms')"><span class="ic">&#128220;</span>Terms &amp; Conditions</div>
         <div class="hd-sb-item" data-k="privacy" onclick="accOpenSub('privacy')"><span class="ic">&#128274;</span>Privacy Policy</div>
       </div>
@@ -905,7 +1100,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     </div>
   </div>
 
-  <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
+  <footer><div class="fcrown">&#9819; Hotels Africa</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Africa.</div></footer>
 </div>
 
 <!-- FORGOT PASSWORD -->
@@ -971,7 +1166,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     <div class="phero">
       <div class="ptag">Become a Partner</div>
       <h1 class="ptitle">Register Your Hotel</h1>
-      <p class="psub">List your hotel on Hotels Continental. Submit your details and required documents below -- our team will review and verify your application before it goes live.</p>
+      <p class="psub">List your hotel on Hotels Africa. Submit your details and required documents below -- our team will review and verify your application before it goes live.</p>
     </div>
     <div class="bgrid2">
       <div>
@@ -1082,7 +1277,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       </div>
     </div>
   </div>
-  <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
+  <footer><div class="fcrown">&#9819; Hotels Africa</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Africa.</div></footer>
 </div>
 
 <!-- MARKETPLACE: BROWSE HOTELS -->
@@ -1114,7 +1309,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     </div>
     <div id="mp-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.1rem"></div>
   </div>
-  <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
+  <footer><div class="fcrown">&#9819; Hotels Africa</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Africa.</div></footer>
 </div>
 
 <!-- MARKETPLACE: HOTEL DETAIL -->
@@ -1124,7 +1319,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     <div id="mpd-header"></div>
     <div id="mpd-rooms" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.1rem;margin-top:1.2rem"></div>
   </div>
-  <footer><div class="fcrown">&#9819; Hotels Continental</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Continental.</div></footer>
+  <footer><div class="fcrown">&#9819; Hotels Africa</div><div class="fcts"><a href="tel:09123213212">&#128222; 09123213212</a><a href="mailto:HotelsContinental@gmail.com">&#9993; HotelsContinental@gmail.com</a></div><hr class="fhr"/><div class="fcp">&#169; 2025 Hotels Africa.</div></footer>
 </div>
 
 <!-- MARKETPLACE: BOOK A ROOM -->
@@ -1338,12 +1533,12 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 
 <!-- ADMIN -->
 <div class="page" id="page-admin" style="padding-top:62px">
-  <iframe id="admin-frame" title="Hotels Continental Admin" loading="lazy" style="display:block;width:100%;border:none;height:calc(100vh - 62px);background:#f4f6fb" srcdoc="&lt;!DOCTYPE html&gt;
+  <iframe id="admin-frame" title="Hotels Africa Admin" loading="lazy" style="display:block;width:100%;border:none;height:calc(100vh - 62px);background:#f4f6fb" srcdoc="&lt;!DOCTYPE html&gt;
 &lt;html lang=&quot;en&quot;&gt;
 &lt;head&gt;
 &lt;meta charset=&quot;UTF-8&quot;/&gt;
 &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;/&gt;
-&lt;title&gt;Hotels Continental - Admin&lt;/title&gt;
+&lt;title&gt;Hotels Africa - Admin&lt;/title&gt;
 &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;/&gt;
 &lt;script src=&quot;https://cdn.jsdelivr.net/npm/chart.js&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js&quot;&gt;&lt;/script&gt;
@@ -1430,6 +1625,35 @@ button,input,select{font-family:&#x27;Inter&#x27;,sans-serif}
 .sb-item .ic{width:20px;text-align:center;font-size:1rem}
 .sb-foot{padding:.9rem;border-top:1px solid var(--border)}
 .sb-logout{width:100%;padding:.7rem;background:var(--red-bg);color:var(--red);border:none;border-radius:9px;font-weight:700;font-size:.8rem;cursor:pointer}
+/* ---- logout confirmation &amp; lock screen ---- */
+.lgo-overlay{position:fixed;inset:0;background:rgba(15,20,40,.5);z-index:900;display:none;align-items:center;justify-content:center;padding:1.2rem}
+.lgo-overlay.open{display:flex}
+.lgo-card{background:#fff;border-radius:20px;padding:2rem 1.6rem 1.6rem;max-width:380px;width:100%;text-align:center;box-shadow:var(--shadow-lg);animation:lgoIn .2s ease}
+@keyframes lgoIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.lgo-ico{width:64px;height:64px;border-radius:50%;background:var(--blue-dim);display:flex;align-items:center;justify-content:center;font-size:1.7rem;margin:0 auto 1rem}
+.lgo-title{font-weight:800;font-size:1.15rem;color:var(--text)}
+.lgo-sub{font-size:.8rem;color:var(--muted);margin-top:.4rem;line-height:1.5}
+.lgo-reminder{display:flex;gap:.6rem;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:.8rem .9rem;margin:1.2rem 0;font-size:.75rem;color:var(--muted)}
+.lgo-reminder b{color:var(--text);font-size:.78rem}
+.lgo-reminder-ico{font-size:1rem;flex-shrink:0}
+.lgo-btn{width:100%;padding:.85rem;border-radius:11px;font-weight:700;font-size:.85rem;cursor:pointer;border:none;margin-top:.6rem;transition:all .15s}
+.lgo-btn-red{background:var(--red);color:#fff}
+.lgo-btn-red:hover{background:#c81e1e}
+.lgo-btn-outline{background:#fff;color:var(--text);border:1.5px solid var(--border)}
+.lgo-btn-outline:hover{background:var(--bg)}
+.lgo-btn-lock{background:var(--blue-dim);color:var(--blue);text-align:left;line-height:1.3}
+.lgo-lock-sub{font-size:.68rem;font-weight:500;color:var(--muted);display:block;margin-top:.15rem}
+.lgo-divider{display:flex;align-items:center;gap:.6rem;margin:1rem 0 .2rem;color:var(--muted2);font-size:.7rem}
+.lgo-divider::before,.lgo-divider::after{content:&#x27;&#x27;;flex:1;height:1px;background:var(--border)}
+.lgo-foot{font-size:.68rem;color:var(--muted2);margin-top:1.2rem;line-height:1.5}
+.lock-overlay{position:fixed;inset:0;background:var(--navy);z-index:950;display:none;align-items:center;justify-content:center;padding:1.2rem}
+.lock-overlay.open{display:flex}
+.lock-card{background:#fff;border-radius:20px;padding:2rem 1.6rem;max-width:340px;width:100%;text-align:center;box-shadow:var(--shadow-lg)}
+.lock-ico{width:60px;height:60px;border-radius:50%;background:var(--blue-dim);display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto 1rem}
+.lock-title{font-weight:800;font-size:1.1rem}
+.lock-sub{font-size:.78rem;color:var(--muted);margin:.3rem 0 1.1rem}
+.lock-input{width:100%;padding:.75rem .9rem;border:1.5px solid var(--border);border-radius:9px;font-size:.85rem;margin-bottom:.6rem;outline:none}
+.lock-input:focus{border-color:var(--blue)}
 
 .acct-drawer{position:fixed;top:0;right:0;bottom:0;width:290px;background:#fff;z-index:500;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow-y:auto}
 .acct-drawer.open{transform:translateX(0)}
@@ -1474,6 +1698,14 @@ main{padding:74px 1rem 78px;max-width:1200px;margin:0 auto}
 .stat-delta.down{color:var(--red)}
 
 .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.1rem;box-shadow:var(--shadow);margin-top:1rem}
+.info-banner{display:flex;align-items:flex-start;gap:.7rem;background:var(--blue-dim);border:1px solid var(--blue-bd);border-radius:12px;padding:.9rem 1rem;margin-top:1rem;font-size:.78rem;color:var(--text);line-height:1.5}
+.info-banner .ic{color:var(--blue);font-size:1.05rem;flex-shrink:0}
+.info-banner a{color:var(--blue);font-weight:600;text-decoration:none}
+.info-banner .btn-sm{flex-shrink:0;margin-left:auto}
+.legend-row{display:flex;align-items:center;gap:.5rem;padding:.35rem 0;font-size:.76rem}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-row .lg-name{flex:1;color:var(--muted)}
+.legend-row .lg-val{font-weight:700;color:var(--text)}
 .card-title{font-weight:700;font-size:.9rem;margin-bottom:.9rem;display:flex;align-items:center;justify-content:space-between}
 .chart-wrap{position:relative;height:220px}
 .chart-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
@@ -1682,23 +1914,54 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       &lt;div class=&quot;sb-item on&quot; data-page=&quot;dashboard&quot; onclick=&quot;goPage(&#x27;dashboard&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128202;&lt;/span&gt;Dashboard&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;hotels&quot; onclick=&quot;goPage(&#x27;hotels&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#127974;&lt;/span&gt;Hotels&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage(&#x27;hotelbookings&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128273;&lt;/span&gt;Marketplace Bookings&lt;/div&gt;
-      &lt;div class=&quot;sb-item&quot; data-page=&quot;users&quot; onclick=&quot;goPage(&#x27;users&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128101;&lt;/span&gt;Users&lt;/div&gt;
-      &lt;div class=&quot;sb-item&quot; data-page=&quot;support&quot; onclick=&quot;goPage(&#x27;support&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128172;&lt;/span&gt;Messages&lt;span class=&quot;abadge&quot; id=&quot;support-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem&quot;&gt;0&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;sb-item&quot; data-page=&quot;hotelverification&quot; onclick=&quot;goPage(&#x27;hotelverification&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#9989;&lt;/span&gt;Hotel Verification&lt;/div&gt;
-      &lt;div class=&quot;sb-item&quot; data-page=&quot;hotelregs&quot; onclick=&quot;goPage(&#x27;hotelregs&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128196;&lt;/span&gt;Hotel Registrations&lt;span class=&quot;abadge&quot; id=&quot;hr-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;display:none;align-items:center;justify-content:center;padding:0 .3rem&quot;&gt;&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;payments&quot; onclick=&quot;goPage(&#x27;payments&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128179;&lt;/span&gt;Payments&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;payouts&quot; onclick=&quot;goPage(&#x27;payouts&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128176;&lt;/span&gt;Payouts&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; data-page=&quot;users&quot; onclick=&quot;goPage(&#x27;users&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128101;&lt;/span&gt;Users&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; data-page=&quot;reviews&quot; onclick=&quot;goPage(&#x27;reviews&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#11088;&lt;/span&gt;Reviews&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; data-page=&quot;hotelverification&quot; onclick=&quot;goPage(&#x27;hotelverification&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#9989;&lt;/span&gt;Hotel Verification&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;promotions&quot; onclick=&quot;goPage(&#x27;promotions&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#127881;&lt;/span&gt;Promotions&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;reports&quot; onclick=&quot;goPage(&#x27;reports&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128200;&lt;/span&gt;Reports&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;disputes&quot; onclick=&quot;goPage(&#x27;disputes&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#9878;&lt;/span&gt;Disputes&lt;span class=&quot;abadge&quot; id=&quot;disp-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem&quot;&gt;&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;sb-item&quot; data-page=&quot;reviews&quot; onclick=&quot;goPage(&#x27;reviews&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#11088;&lt;/span&gt;Reviews&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; data-page=&quot;support&quot; onclick=&quot;goPage(&#x27;support&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128172;&lt;/span&gt;Messages&lt;span class=&quot;abadge&quot; id=&quot;support-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem&quot;&gt;0&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; data-page=&quot;hotelregs&quot; onclick=&quot;goPage(&#x27;hotelregs&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128196;&lt;/span&gt;Hotel Registrations&lt;span class=&quot;abadge&quot; id=&quot;hr-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;display:none;align-items:center;justify-content:center;padding:0 .3rem&quot;&gt;&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; id=&quot;sb-subadmin&quot; data-page=&quot;subadmins&quot; onclick=&quot;goPage(&#x27;subadmins&#x27;)&quot; style=&quot;display:none&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128272;&lt;/span&gt;Sub-Admins&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;rooms&quot; onclick=&quot;goPage(&#x27;rooms&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128716;&lt;/span&gt;Rooms&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;withdrawals&quot; onclick=&quot;goPage(&#x27;withdrawals&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128179;&lt;/span&gt;Withdrawals&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;walletfundings&quot; onclick=&quot;goPage(&#x27;walletfundings&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128176;&lt;/span&gt;Wallet Fundings&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;settings&quot; onclick=&quot;goPage(&#x27;settings&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#9881;&lt;/span&gt;Settings&lt;/div&gt;
     &lt;/div&gt;
-    &lt;div class=&quot;sb-foot&quot;&gt;&lt;button class=&quot;sb-logout&quot; onclick=&quot;adminLogout()&quot;&gt;&amp;#128682; Log Out&lt;/button&gt;&lt;/div&gt;
+    &lt;div class=&quot;sb-foot&quot;&gt;&lt;button class=&quot;sb-logout&quot; onclick=&quot;openLogoutConfirm()&quot;&gt;&amp;#128682; Log Out&lt;/button&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;!-- ============ LOGOUT CONFIRMATION ============ --&gt;
+  &lt;div class=&quot;lgo-overlay&quot; id=&quot;lgo-overlay&quot;&gt;
+    &lt;div class=&quot;lgo-card&quot;&gt;
+      &lt;div class=&quot;lgo-ico&quot;&gt;&amp;#128682;&lt;/div&gt;
+      &lt;div class=&quot;lgo-title&quot;&gt;Ready to leave?&lt;/div&gt;
+      &lt;div class=&quot;lgo-sub&quot;&gt;You are about to logout from the Hotels Africa admin dashboard.&lt;/div&gt;
+      &lt;div class=&quot;lgo-reminder&quot;&gt;
+        &lt;span class=&quot;lgo-reminder-ico&quot;&gt;&amp;#128274;&lt;/span&gt;
+        &lt;div&gt;&lt;b&gt;Security Reminder&lt;/b&gt;&lt;br/&gt;For your security, please make sure you have saved your work before logging out.&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;button class=&quot;lgo-btn lgo-btn-red&quot; onclick=&quot;adminLogout()&quot;&gt;&amp;#8594; Yes, Logout&lt;/button&gt;
+      &lt;button class=&quot;lgo-btn lgo-btn-outline&quot; onclick=&quot;closeLogoutConfirm()&quot;&gt;Cancel&lt;/button&gt;
+      &lt;div class=&quot;lgo-divider&quot;&gt;&lt;span&gt;or&lt;/span&gt;&lt;/div&gt;
+      &lt;button class=&quot;lgo-btn lgo-btn-lock&quot; onclick=&quot;lockDashboard()&quot;&gt;&amp;#128274; Lock Dashboard Instead&lt;br/&gt;&lt;span class=&quot;lgo-lock-sub&quot;&gt;Secure your session without logging out&lt;/span&gt;&lt;/button&gt;
+      &lt;div class=&quot;lgo-foot&quot;&gt;&amp;#128737;&amp;#65039; All your data is safe and secure with Hotels Africa. Thank you for using our platform.&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;!-- ============ LOCK SCREEN ============ --&gt;
+  &lt;div class=&quot;lock-overlay&quot; id=&quot;lock-overlay&quot;&gt;
+    &lt;div class=&quot;lock-card&quot;&gt;
+      &lt;div class=&quot;lock-ico&quot;&gt;&amp;#128274;&lt;/div&gt;
+      &lt;div class=&quot;lock-title&quot;&gt;Dashboard Locked&lt;/div&gt;
+      &lt;div class=&quot;lock-sub&quot; id=&quot;lock-sub-name&quot;&gt;Enter your password to continue as Admin&lt;/div&gt;
+      &lt;input type=&quot;password&quot; id=&quot;lock-pass-input&quot; class=&quot;lock-input&quot; placeholder=&quot;Password&quot; onkeypress=&quot;if(event.key===&#x27;Enter&#x27;)unlockDashboard()&quot;/&gt;
+      &lt;div class=&quot;eferr&quot; id=&quot;lock-err&quot;&gt;Incorrect password. Try again.&lt;/div&gt;
+      &lt;button class=&quot;fsub&quot; onclick=&quot;unlockDashboard()&quot;&gt;Unlock&lt;/button&gt;
+      &lt;button class=&quot;lgo-btn lgo-btn-outline&quot; style=&quot;margin-top:.6rem&quot; onclick=&quot;openLogoutConfirm();document.getElementById(&#x27;lock-overlay&#x27;).classList.remove(&#x27;open&#x27;)&quot;&gt;Log Out Instead&lt;/button&gt;
+    &lt;/div&gt;
   &lt;/div&gt;
 
   &lt;div class=&quot;acct-drawer&quot; id=&quot;acct-drawer&quot;&gt;
@@ -1729,9 +1992,9 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       &lt;div class=&quot;ad-item&quot; id=&quot;ad-subadmin-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage(&#x27;subadmins&#x27;)&quot; style=&quot;display:none&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128272;&lt;/span&gt;Sub-Admins&lt;span class=&quot;arrow&quot;&gt;&amp;#8250;&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;ad-item&quot; onclick=&quot;toggleAcctDrawer(false);goPage(&#x27;settings&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#9881;&lt;/span&gt;Settings&lt;span class=&quot;arrow&quot;&gt;&amp;#8250;&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;ad-item&quot; onclick=&quot;T(&#x27;Help &amp; Support&#x27;,&#x27;Email HotelsContinental@gmail.com&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#127911;&lt;/span&gt;Help &amp;amp; Support&lt;span class=&quot;arrow&quot;&gt;&amp;#8250;&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;ad-item&quot; onclick=&quot;T(&#x27;About Hotels Continental&#x27;,&#x27;Multi-hotel booking &amp;amp; management platform.&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#8505;&lt;/span&gt;About Hotels Continental&lt;span class=&quot;arrow&quot;&gt;&amp;#8250;&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;ad-item&quot; onclick=&quot;T(&#x27;About Hotels Africa&#x27;,&#x27;Multi-hotel booking &amp;amp; management platform.&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#8505;&lt;/span&gt;About Hotels Africa&lt;span class=&quot;arrow&quot;&gt;&amp;#8250;&lt;/span&gt;&lt;/div&gt;
     &lt;/div&gt;
-    &lt;button class=&quot;ad-logout&quot; onclick=&quot;adminLogout()&quot;&gt;&amp;#128682; Log Out&lt;/button&gt;
+    &lt;button class=&quot;ad-logout&quot; onclick=&quot;openLogoutConfirm()&quot;&gt;&amp;#128682; Log Out&lt;/button&gt;
   &lt;/div&gt;
 
   &lt;main&gt;
@@ -1795,14 +2058,14 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 
     &lt;!-- ============ USERS ============ --&gt;
     &lt;div class=&quot;apage&quot; id=&quot;page-hotelbookings&quot;&gt;
-      &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-title&quot;&gt;Marketplace Bookings&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Bookings made through the Hotels Marketplace, across all partner hotels including Hotels Continental.&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-title&quot;&gt;Marketplace Bookings&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Bookings made through the Hotels Marketplace, across all partner hotels including Hotels Africa.&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;stat-grid&quot; id=&quot;hb-admin-stats&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;tabs&quot; id=&quot;hb-admin-tabs&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;card&quot;&gt;&lt;div id=&quot;hb-admin-list&quot;&gt;&lt;/div&gt;&lt;/div&gt;
     &lt;/div&gt;
 
     &lt;div class=&quot;apage&quot; id=&quot;page-users&quot;&gt;
-      &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-row&quot;&gt;&lt;div&gt;&lt;div class=&quot;ph-title&quot;&gt;Users&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Manage all users on the platform.&lt;/div&gt;&lt;/div&gt;&lt;button class=&quot;btn btn-p&quot; onclick=&quot;openUserModal()&quot;&gt;&amp;#43; Add User&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-row&quot;&gt;&lt;div&gt;&lt;div class=&quot;ph-title&quot;&gt;Users&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Manage all users on the platform.&lt;/div&gt;&lt;/div&gt;&lt;div style=&quot;display:flex;gap:.5rem;flex-wrap:wrap&quot;&gt;&lt;button class=&quot;btn btn-o&quot; onclick=&quot;exportUsersCSV()&quot;&gt;&amp;#8681; Export Users&lt;/button&gt;&lt;button class=&quot;btn btn-p&quot; onclick=&quot;openUserModal()&quot;&gt;&amp;#43; Add User&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;stat-grid&quot; id=&quot;users-stats&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;toolbar&quot;&gt;&lt;div class=&quot;tb-search&quot;&gt;&lt;span class=&quot;si&quot;&gt;&amp;#128269;&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;users-search&quot; placeholder=&quot;Search users...&quot; oninput=&quot;renderUsersList()&quot;/&gt;&lt;/div&gt;&lt;select class=&quot;tb-select&quot; id=&quot;users-type-filter&quot; onchange=&quot;renderUsersList()&quot;&gt;&lt;option value=&quot;&quot;&gt;User Type&lt;/option&gt;&lt;option value=&quot;customer&quot;&gt;Customer&lt;/option&gt;&lt;option value=&quot;hotelPartner&quot;&gt;Hotel Partner&lt;/option&gt;&lt;option value=&quot;admin&quot;&gt;Admin&lt;/option&gt;&lt;/select&gt;&lt;select class=&quot;tb-select&quot; id=&quot;users-status-filter&quot; onchange=&quot;renderUsersList()&quot;&gt;&lt;option value=&quot;&quot;&gt;Status&lt;/option&gt;&lt;option value=&quot;active&quot;&gt;Active&lt;/option&gt;&lt;option value=&quot;inactive&quot;&gt;Inactive&lt;/option&gt;&lt;option value=&quot;blocked&quot;&gt;Blocked&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;
       &lt;div class=&quot;tabs&quot; id=&quot;users-tabs&quot;&gt;&lt;/div&gt;
@@ -1811,7 +2074,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
         &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Users by Role&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;users-chart-role&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
         &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Users by Status&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;users-chart-status&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Recent Signups&lt;/div&gt;&lt;div id=&quot;users-recent&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Recent Signups &lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;document.getElementById(&#x27;users-list&#x27;).scrollIntoView({behavior:&#x27;smooth&#x27;})&quot;&gt;View All&lt;/button&gt;&lt;/div&gt;&lt;div id=&quot;users-recent&quot;&gt;&lt;/div&gt;&lt;/div&gt;
     &lt;/div&gt;
 
     &lt;!-- ============ SUPPORT MESSAGES (admin &lt;-&gt; user chat) ============ --&gt;
@@ -1885,12 +2148,33 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-row&quot;&gt;&lt;div&gt;&lt;div class=&quot;ph-title&quot;&gt;Payouts&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Manage and monitor all payouts to hotels and partners.&lt;/div&gt;&lt;/div&gt;&lt;button class=&quot;btn btn-p&quot; onclick=&quot;openPayoutModal()&quot;&gt;&amp;#43; New Payout&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;stat-grid&quot; id=&quot;po-stats&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;tabs&quot; id=&quot;po-tabs&quot;&gt;&lt;/div&gt;
-      &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;tbl-wrap&quot; id=&quot;po-table&quot;&gt;&lt;/div&gt;&lt;div class=&quot;pager&quot; id=&quot;po-pager&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;toolbar&quot;&gt;
+        &lt;input type=&quot;date&quot; class=&quot;tb-select&quot; id=&quot;po-date-from&quot; onchange=&quot;renderPayouts()&quot; style=&quot;max-width:160px&quot;/&gt;
+        &lt;input type=&quot;date&quot; class=&quot;tb-select&quot; id=&quot;po-date-to&quot; onchange=&quot;renderPayouts()&quot; style=&quot;max-width:160px&quot;/&gt;
+        &lt;button class=&quot;btn btn-o&quot; onclick=&quot;resetPayoutFilters()&quot;&gt;&amp;#9878; Filters&lt;/button&gt;
+        &lt;select class=&quot;tb-select&quot; id=&quot;po-method-filter&quot; onchange=&quot;renderPayouts()&quot;&gt;
+          &lt;option value=&quot;&quot;&gt;All Payout Methods&lt;/option&gt;
+          &lt;option&gt;Bank Transfer&lt;/option&gt;
+          &lt;option&gt;Wallet&lt;/option&gt;
+          &lt;option&gt;Paystack&lt;/option&gt;
+          &lt;option&gt;Flutterwave&lt;/option&gt;
+          &lt;option&gt;USSD&lt;/option&gt;
+          &lt;option&gt;Mobile Money&lt;/option&gt;
+        &lt;/select&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;card&quot;&gt;
+        &lt;div class=&quot;tbl-wrap&quot; id=&quot;po-table&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;pager-wrap&quot;&gt;&lt;div class=&quot;lr-sub&quot; id=&quot;po-pager-count&quot;&gt;&lt;/div&gt;&lt;div style=&quot;display:flex;align-items:center;gap:.6rem&quot;&gt;&lt;div class=&quot;pager&quot; id=&quot;po-pager&quot;&gt;&lt;/div&gt;&lt;select class=&quot;tb-select&quot; id=&quot;po-per-page&quot; onchange=&quot;renderPayouts()&quot; style=&quot;padding:.4rem .6rem;font-size:.72rem&quot;&gt;&lt;option value=&quot;10&quot;&gt;10 / page&lt;/option&gt;&lt;option value=&quot;25&quot;&gt;25 / page&lt;/option&gt;&lt;option value=&quot;50&quot;&gt;50 / page&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;card-title&quot; style=&quot;margin:1.2rem 0 .6rem&quot;&gt;Payout Details&lt;/div&gt;
+      &lt;div class=&quot;card&quot; id=&quot;po-detail-wrap&quot;&gt;&lt;div class=&quot;empty&quot;&gt;Select a payout above to view its details.&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;chart-grid2&quot;&gt;
-        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Payouts Trend (14 Days)&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;po-chart-trend&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
-        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Payout Methods Distribution&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;po-chart-methods&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Payouts Trend &lt;select class=&quot;tb-select&quot; id=&quot;po-trend-range&quot; onchange=&quot;renderPayouts()&quot; style=&quot;padding:.3rem .6rem;font-size:.7rem;margin-left:auto&quot;&gt;&lt;option value=&quot;7&quot;&gt;This Week&lt;/option&gt;&lt;option value=&quot;30&quot;&gt;This Month&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;po-chart-trend&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Payout Methods Distribution&lt;/div&gt;&lt;div style=&quot;display:flex;align-items:center;gap:1rem;flex-wrap:wrap&quot;&gt;&lt;div class=&quot;chart-wrap&quot; style=&quot;flex:1;min-width:140px&quot;&gt;&lt;canvas id=&quot;po-chart-methods&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;div id=&quot;po-methods-legend&quot; style=&quot;flex:1;min-width:140px&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;/div&gt;
       &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Recent Payouts&lt;/div&gt;&lt;div id=&quot;po-recent&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;info-banner&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#8505;&lt;/span&gt;&lt;div&gt;&lt;b&gt;Payout Processing Time&lt;/b&gt;&lt;br/&gt;Payouts are usually processed within 24 hours depending on the payout method. &lt;a href=&quot;#&quot; onclick=&quot;event.preventDefault();goPage(&#x27;settings&#x27;)&quot;&gt;Learn more about payout methods &amp;#8594;&lt;/a&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;info-banner&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#8505;&lt;/span&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;b&gt;Need help with payouts?&lt;/b&gt;&lt;br/&gt;Check our payout guidelines or contact support.&lt;/div&gt;&lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage(&#x27;support&#x27;)&quot;&gt;Contact Support&lt;/button&gt;&lt;/div&gt;
     &lt;/div&gt;
 
     &lt;!-- ============ PROMOTIONS ============ --&gt;
@@ -1898,13 +2182,28 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-row&quot;&gt;&lt;div&gt;&lt;div class=&quot;ph-title&quot;&gt;Promotions&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Create, manage and track promotions to boost bookings and visibility.&lt;/div&gt;&lt;/div&gt;&lt;button class=&quot;btn btn-p&quot; onclick=&quot;openPromoModal()&quot;&gt;&amp;#43; Create New Promotion&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;stat-grid&quot; id=&quot;pr-stats&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;tabs&quot; id=&quot;pr-tabs&quot;&gt;&lt;/div&gt;
-      &lt;div class=&quot;toolbar&quot;&gt;&lt;div class=&quot;tb-search&quot;&gt;&lt;span class=&quot;si&quot;&gt;&amp;#128269;&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;pr-search&quot; placeholder=&quot;Search promotion name...&quot; oninput=&quot;renderPromotions()&quot;/&gt;&lt;/div&gt;&lt;select class=&quot;tb-select&quot; id=&quot;pr-type-filter&quot; onchange=&quot;renderPromotions()&quot;&gt;&lt;option value=&quot;&quot;&gt;All Types&lt;/option&gt;&lt;option&gt;Discount&lt;/option&gt;&lt;option&gt;Featured&lt;/option&gt;&lt;option&gt;Referral&lt;/option&gt;&lt;option&gt;Special&lt;/option&gt;&lt;option&gt;Loyalty&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;
-      &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;tbl-wrap&quot; id=&quot;pr-table&quot;&gt;&lt;/div&gt;&lt;div class=&quot;pager&quot; id=&quot;pr-pager&quot;&gt;&lt;/div&gt;&lt;/div&gt;
-      &lt;div class=&quot;chart-grid2&quot;&gt;
-        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Promotions Performance&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;pr-chart-perf&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
-        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Promotion Types Distribution&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;pr-chart-types&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;toolbar&quot;&gt;
+        &lt;div class=&quot;tb-search&quot;&gt;&lt;span class=&quot;si&quot;&gt;&amp;#128269;&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;pr-search&quot; placeholder=&quot;Search promotion name...&quot; oninput=&quot;renderPromotions()&quot;/&gt;&lt;/div&gt;
+        &lt;select class=&quot;tb-select&quot; id=&quot;pr-type-filter&quot; onchange=&quot;renderPromotions()&quot;&gt;&lt;option value=&quot;&quot;&gt;All Types&lt;/option&gt;&lt;option&gt;Discount&lt;/option&gt;&lt;option&gt;Featured&lt;/option&gt;&lt;option&gt;Referral&lt;/option&gt;&lt;option&gt;Special&lt;/option&gt;&lt;option&gt;Loyalty&lt;/option&gt;&lt;/select&gt;
+        &lt;select class=&quot;tb-select&quot; id=&quot;pr-status-filter&quot; onchange=&quot;renderPromotions()&quot;&gt;&lt;option value=&quot;&quot;&gt;All Status&lt;/option&gt;&lt;option&gt;Active&lt;/option&gt;&lt;option&gt;Scheduled&lt;/option&gt;&lt;option&gt;Expired&lt;/option&gt;&lt;option&gt;Draft&lt;/option&gt;&lt;/select&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Top Performing Promotions&lt;/div&gt;&lt;div id=&quot;pr-top&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;toolbar&quot;&gt;
+        &lt;input type=&quot;date&quot; class=&quot;tb-select&quot; id=&quot;pr-date-from&quot; onchange=&quot;renderPromotions()&quot; style=&quot;max-width:160px&quot;/&gt;
+        &lt;input type=&quot;date&quot; class=&quot;tb-select&quot; id=&quot;pr-date-to&quot; onchange=&quot;renderPromotions()&quot; style=&quot;max-width:160px&quot;/&gt;
+        &lt;button class=&quot;btn btn-o&quot; onclick=&quot;resetPromoFilters()&quot;&gt;&amp;#9878; Filters&lt;/button&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;card&quot;&gt;
+        &lt;div class=&quot;tbl-wrap&quot; id=&quot;pr-table&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;pager-wrap&quot;&gt;&lt;div class=&quot;lr-sub&quot; id=&quot;pr-pager-count&quot;&gt;&lt;/div&gt;&lt;div style=&quot;display:flex;align-items:center;gap:.6rem&quot;&gt;&lt;div class=&quot;pager&quot; id=&quot;pr-pager&quot;&gt;&lt;/div&gt;&lt;select class=&quot;tb-select&quot; id=&quot;pr-per-page&quot; onchange=&quot;renderPromotions()&quot; style=&quot;padding:.4rem .6rem;font-size:.72rem&quot;&gt;&lt;option value=&quot;10&quot;&gt;10 / page&lt;/option&gt;&lt;option value=&quot;25&quot;&gt;25 / page&lt;/option&gt;&lt;option value=&quot;50&quot;&gt;50 / page&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;card-title&quot; style=&quot;margin:1.2rem 0 .6rem&quot;&gt;Promotion Details&lt;/div&gt;
+      &lt;div class=&quot;card&quot; id=&quot;pr-detail-wrap&quot;&gt;&lt;div class=&quot;empty&quot;&gt;Select a promotion above to view its details.&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;chart-grid2&quot;&gt;
+        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Promotions Performance &lt;select class=&quot;tb-select&quot; id=&quot;pr-perf-range&quot; onchange=&quot;renderPromotions()&quot; style=&quot;padding:.3rem .6rem;font-size:.7rem;margin-left:auto&quot;&gt;&lt;option value=&quot;7&quot;&gt;This Week&lt;/option&gt;&lt;option value=&quot;30&quot;&gt;This Month&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;pr-chart-perf&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Promotion Types Distribution&lt;/div&gt;&lt;div style=&quot;display:flex;align-items:center;gap:1rem;flex-wrap:wrap&quot;&gt;&lt;div class=&quot;chart-wrap&quot; style=&quot;flex:1;min-width:140px&quot;&gt;&lt;canvas id=&quot;pr-chart-types&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;div id=&quot;pr-types-legend&quot; style=&quot;flex:1;min-width:140px&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Top Performing Promotions &lt;select class=&quot;tb-select&quot; style=&quot;padding:.3rem .6rem;font-size:.7rem;margin-left:auto&quot;&gt;&lt;option&gt;This Month&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;&lt;div id=&quot;pr-top&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;info-banner&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#8505;&lt;/span&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;b&gt;Promotions help increase visibility, bookings and revenue.&lt;/b&gt;&lt;br/&gt;Create strategic promotions and track performance in real-time.&lt;/div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-o btn-sm&quot; style=&quot;text-decoration:none&quot; onclick=&quot;event.preventDefault();T(&#x27;Promotion Guidelines&#x27;,&#x27;Keep discounts realistic, set clear start/end dates, and target the right audience for best results.&#x27;)&quot;&gt;Promotion Guidelines &amp;#8599;&lt;/a&gt;&lt;/div&gt;
     &lt;/div&gt;
 
     &lt;!-- ============ ROOMS ============ --&gt;
@@ -1960,7 +2259,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
             &lt;div class=&quot;card&quot;&gt;
               &lt;div class=&quot;card-title&quot;&gt;General Settings &lt;button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings(&#x27;general&#x27;)&quot;&gt;Save Changes&lt;/button&gt;&lt;/div&gt;
               &lt;div class=&quot;fgrid2&quot;&gt;
-                &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Platform Name&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-platform-name&quot; value=&quot;Hotels Continental&quot;/&gt;&lt;/div&gt;
+                &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Platform Name&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-platform-name&quot; value=&quot;Hotels Africa&quot;/&gt;&lt;/div&gt;
                 &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Website URL&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-website&quot; value=&quot;https://www.hotelscontinental.com&quot;/&gt;&lt;/div&gt;
                 &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Platform Tagline&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-tagline&quot; value=&quot;Discover. Book. Relax.&quot;/&gt;&lt;/div&gt;
                 &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Admin Email&lt;/label&gt;&lt;input type=&quot;email&quot; id=&quot;st-admin-email&quot; value=&quot;admin@hotelscontinental.com&quot;/&gt;&lt;/div&gt;
@@ -2015,7 +2314,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
                   &lt;div style=&quot;font-size:.64rem;color:var(--muted);text-align:center&quot;&gt;PNG, JPG or SVG. Max size 2MB&lt;/div&gt;
                 &lt;/div&gt;
                 &lt;div&gt;
-                  &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Company Name&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-company-name&quot; value=&quot;Hotels Continental Ltd&quot;/&gt;&lt;/div&gt;
+                  &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Company Name&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-company-name&quot; value=&quot;Hotels Africa Ltd&quot;/&gt;&lt;/div&gt;
                   &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Company Email&lt;/label&gt;&lt;input type=&quot;email&quot; id=&quot;st-company-email&quot; value=&quot;info@hotelscontinental.com&quot;/&gt;&lt;/div&gt;
                 &lt;/div&gt;
               &lt;/div&gt;
@@ -2023,7 +2322,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
                 &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Company Phone&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-company-phone&quot; value=&quot;+234 800 123 4567&quot;/&gt;&lt;/div&gt;
                 &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Company Address&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-company-address&quot; value=&quot;123 Victoria Island, Lagos, Nigeria&quot;/&gt;&lt;/div&gt;
               &lt;/div&gt;
-              &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;About Company&lt;/label&gt;&lt;textarea id=&quot;st-company-about&quot; rows=&quot;3&quot;&gt;Hotels Continental connects travelers to the best hotels and accommodations across Lagos and Nigeria.&lt;/textarea&gt;&lt;/div&gt;
+              &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;About Company&lt;/label&gt;&lt;textarea id=&quot;st-company-about&quot; rows=&quot;3&quot;&gt;Hotels Africa connects travelers to the best hotels and accommodations across Lagos and Nigeria.&lt;/textarea&gt;&lt;/div&gt;
             &lt;/div&gt;
           &lt;/div&gt;
           &lt;div id=&quot;st-localization&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;&gt;
@@ -2052,7 +2351,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
                 &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;SMTP Username&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-smtp-user&quot; placeholder=&quot;e.g. noreply@hotelscontinental.com&quot;/&gt;&lt;/div&gt;
                 &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;SMTP Password&lt;/label&gt;&lt;input type=&quot;password&quot; id=&quot;st-smtp-pass&quot; placeholder=&quot;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&amp;#8226;&quot;/&gt;&lt;/div&gt;
                 &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;From Email&lt;/label&gt;&lt;input type=&quot;email&quot; id=&quot;st-from-email&quot; value=&quot;noreply@hotelscontinental.com&quot;/&gt;&lt;/div&gt;
-                &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;From Name&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-from-name&quot; value=&quot;Hotels Continental&quot;/&gt;&lt;/div&gt;
+                &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;From Name&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;st-from-name&quot; value=&quot;Hotels Africa&quot;/&gt;&lt;/div&gt;
               &lt;/div&gt;
             &lt;/div&gt;
           &lt;/div&gt;
@@ -2152,8 +2451,8 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-title&quot;&gt;Reports&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Overview and insights about platform performance.&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;stat-grid&quot; id=&quot;reports-stats&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;chart-grid2&quot;&gt;
-        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Bookings Overview (14 Days)&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;rep-chart-bookings&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
-        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Revenue Overview (14 Days)&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;rep-chart-revenue&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Bookings Overview &lt;button class=&quot;btn btn-o btn-sm&quot; id=&quot;rep-compare-btn&quot; onclick=&quot;repToggleCompare()&quot; style=&quot;margin-left:auto&quot;&gt;Compare with Previous Period&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;rep-chart-bookings&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Revenue Overview&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;rep-chart-revenue&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;/div&gt;
       &lt;div class=&quot;chart-grid2&quot;&gt;
         &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Bookings by Status&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;rep-chart-status&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
@@ -2162,7 +2461,13 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Top Performing Hotels&lt;/div&gt;&lt;div class=&quot;tbl-wrap&quot; id=&quot;rep-top-hotels&quot;&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Monthly Trend (This Year)&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;rep-chart-monthly&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Top Locations&lt;/div&gt;&lt;div id=&quot;rep-top-locations&quot;&gt;&lt;/div&gt;&lt;/div&gt;
-      &lt;div style=&quot;text-align:right;margin-top:1rem&quot;&gt;&lt;button class=&quot;btn btn-o&quot; onclick=&quot;exportBookingsCSV()&quot;&gt;&amp;#8681; Export Report (CSV)&lt;/button&gt;&lt;/div&gt;
+      &lt;div class=&quot;card&quot;&gt;
+        &lt;div class=&quot;card-title&quot;&gt;Report Downloads&lt;/div&gt;
+        &lt;div class=&quot;bk-row&quot;&gt;&lt;div class=&quot;bk-ico&quot;&gt;&amp;#128197;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;toggle-lbl&quot;&gt;Bookings Report&lt;/div&gt;&lt;div class=&quot;toggle-sub&quot;&gt;CSV &amp;middot; every booking with guest, hotel, dates and status&lt;/div&gt;&lt;/div&gt;&lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;exportBookingsCSV()&quot;&gt;&amp;#8681; Download&lt;/button&gt;&lt;/div&gt;
+        &lt;div class=&quot;bk-row&quot;&gt;&lt;div class=&quot;bk-ico&quot;&gt;&amp;#128176;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;toggle-lbl&quot;&gt;Revenue Report&lt;/div&gt;&lt;div class=&quot;toggle-sub&quot;&gt;CSV &amp;middot; daily revenue and booking counts for this year&lt;/div&gt;&lt;/div&gt;&lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;exportRevenueReportCSV()&quot;&gt;&amp;#8681; Download&lt;/button&gt;&lt;/div&gt;
+        &lt;div class=&quot;bk-row&quot;&gt;&lt;div class=&quot;bk-ico&quot;&gt;&amp;#127974;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;toggle-lbl&quot;&gt;Hotel Performance Report&lt;/div&gt;&lt;div class=&quot;toggle-sub&quot;&gt;CSV &amp;middot; bookings, revenue, ADR and cancellation rate per hotel&lt;/div&gt;&lt;/div&gt;&lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;exportHotelPerformanceCSV()&quot;&gt;&amp;#8681; Download&lt;/button&gt;&lt;/div&gt;
+        &lt;div class=&quot;bk-row&quot; style=&quot;border-bottom:none&quot;&gt;&lt;div class=&quot;bk-ico&quot;&gt;&amp;#128100;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;toggle-lbl&quot;&gt;Customer Report&lt;/div&gt;&lt;div class=&quot;toggle-sub&quot;&gt;CSV &amp;middot; every customer with total bookings and total spend&lt;/div&gt;&lt;/div&gt;&lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;exportCustomerReportCSV()&quot;&gt;&amp;#8681; Download&lt;/button&gt;&lt;/div&gt;
+      &lt;/div&gt;
     &lt;/div&gt;
 
     &lt;!-- ============ DISPUTES ============ --&gt;
@@ -2219,18 +2524,20 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-title&quot;&gt;Payments&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Track and manage all payment transactions on the platform.&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;stat-grid&quot; id=&quot;pay-stats&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;chart-grid2&quot;&gt;
-        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Payments Overview (14 Days)&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;pay-chart-overview&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
-        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Payment Methods&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;pay-chart-methods&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Payments Overview (This Week)&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;pay-chart-overview&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Payment Methods&lt;/div&gt;&lt;div style=&quot;display:flex;align-items:center;gap:1rem;flex-wrap:wrap&quot;&gt;&lt;div class=&quot;chart-wrap&quot; style=&quot;flex:1;min-width:140px&quot;&gt;&lt;canvas id=&quot;pay-chart-methods&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;div id=&quot;pay-methods-legend&quot; style=&quot;flex:1;min-width:140px&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;/div&gt;
       &lt;div class=&quot;card&quot;&gt;
         &lt;div class=&quot;card-title&quot;&gt;Recent Transactions &lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;exportBookingsCSV()&quot;&gt;&amp;#8681; Export&lt;/button&gt;&lt;/div&gt;
+        &lt;div class=&quot;toolbar&quot; style=&quot;margin-top:0&quot;&gt;&lt;div class=&quot;tb-search&quot;&gt;&lt;span class=&quot;si&quot;&gt;&amp;#128269;&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;pay-search&quot; placeholder=&quot;Search by guest, hotel or ref...&quot; oninput=&quot;_payPage=1;renderPayments()&quot;/&gt;&lt;/div&gt;&lt;select class=&quot;tb-select&quot; id=&quot;pay-status-filter&quot; onchange=&quot;_payPage=1;renderPayments()&quot;&gt;&lt;option value=&quot;&quot;&gt;All Status&lt;/option&gt;&lt;option value=&quot;paid&quot;&gt;Successful&lt;/option&gt;&lt;option value=&quot;pending&quot;&gt;Pending&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;
         &lt;div class=&quot;tbl-wrap&quot; id=&quot;pay-transactions&quot;&gt;&lt;/div&gt;
-        &lt;div class=&quot;pager&quot; id=&quot;pay-pager&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;pager-wrap&quot;&gt;&lt;div class=&quot;lr-sub&quot; id=&quot;pay-pager-count&quot;&gt;&lt;/div&gt;&lt;div style=&quot;display:flex;align-items:center;gap:.6rem&quot;&gt;&lt;div class=&quot;pager&quot; id=&quot;pay-pager&quot;&gt;&lt;/div&gt;&lt;select class=&quot;tb-select&quot; id=&quot;pay-per-page&quot; onchange=&quot;_payPage=1;renderPayments()&quot; style=&quot;padding:.4rem .6rem;font-size:.72rem&quot;&gt;&lt;option value=&quot;5&quot;&gt;5 / page&lt;/option&gt;&lt;option value=&quot;10&quot; selected&gt;10 / page&lt;/option&gt;&lt;option value=&quot;25&quot;&gt;25 / page&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;/div&gt;
       &lt;div class=&quot;chart-grid2&quot;&gt;
         &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Payment Status Breakdown&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;pay-chart-status&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
-        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Top Hotels by Payment Volume&lt;/div&gt;&lt;div id=&quot;pay-top-hotels&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Top Hotels by Payment Volume &lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage(&#x27;hotels&#x27;)&quot;&gt;View All&lt;/button&gt;&lt;/div&gt;&lt;div id=&quot;pay-top-hotels&quot;&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;/div&gt;
+      &lt;div class=&quot;info-banner&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#8505;&lt;/span&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;b&gt;Need help with payments?&lt;/b&gt;&lt;br/&gt;Check our payment guidelines or contact support.&lt;/div&gt;&lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage(&#x27;support&#x27;)&quot;&gt;Contact Support&lt;/button&gt;&lt;/div&gt;
     &lt;/div&gt;
 
     &lt;!-- ============ SUB-ADMINS ============ --&gt;
@@ -2384,6 +2691,34 @@ var FIREBASE_CONFIG = {
 };
 firebase.initializeApp(FIREBASE_CONFIG);
 var db = firebase.firestore();
+
+/* Opt-in Chart.js plugin: draws a &quot;Total / N&quot; label in the middle of a
+   doughnut chart. Only activates when a chart&#x27;s options.plugins.centerText
+   is set, so charts that don&#x27;t request it (elsewhere in the app) are
+   unaffected. */
+if (typeof Chart !== &quot;undefined&quot;) {
+  Chart.register({
+    id: &quot;centerText&quot;,
+    afterDraw: function(chart) {
+      var opts = chart.config.options &amp;&amp; chart.config.options.plugins &amp;&amp; chart.config.options.plugins.centerText;
+      if (!opts) return;
+      var ctx = chart.ctx;
+      var meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data || !meta.data[0]) return;
+      var x = meta.data[0].x, y = meta.data[0].y;
+      ctx.save();
+      ctx.textAlign = &quot;center&quot;;
+      ctx.textBaseline = &quot;middle&quot;;
+      ctx.fillStyle = &quot;#9aa3b2&quot;;
+      ctx.font = &quot;600 .68rem Inter, sans-serif&quot;;
+      ctx.fillText(opts.title || &quot;Total&quot;, x, y - 11);
+      ctx.fillStyle = &quot;#1a2233&quot;;
+      ctx.font = &quot;800 1.05rem Inter, sans-serif&quot;;
+      ctx.fillText(String(opts.value != null ? opts.value : &quot;&quot;), x, y + 9);
+      ctx.restore();
+    }
+  });
+}
 var auth = firebase.auth();
 emailjs.init(&quot;r7qlEfPQs7hyHnOHR&quot;);
 var EJS_SVC = &quot;service_munqxoi&quot;;
@@ -2397,7 +2732,7 @@ db.collection(&quot;config&quot;).doc(&quot;settings&quot;).get().then(function(
 // with fields: name, price, description, imageURL, roomNumbers[]. This is the
 // same collection the public Marketplace reads from, and the same collection
 // hotel partners edit from their own portal — so admin edits here show up
-// for guests immediately, for every hotel, not just Hotels Continental.
+// for guests immediately, for every hotel, not just Hotels Africa.
 var _roomsHotelId = null;
 var _roomsList = [];
 var _roomsUnsub = null;
@@ -2745,7 +3080,7 @@ var SUPER_EMAIL = &quot;oladejiridwanopeyemi@gmail.com&quot;;
 var _isSuperAdmin = false;
 var _currentSubAdmin = &quot;&quot;;
 var _defaultHotelId = null;
-var _defaultHotelName = &quot;Hotels Continental&quot;;
+var _defaultHotelName = &quot;Hotels Africa&quot;;
 
 var _allHotels = [];
 var _allUsers = [];
@@ -3040,12 +3375,47 @@ function uploadAdminPhoto(input) {
 }
 
 function adminLogout() {
+  var ov = document.getElementById(&quot;lgo-overlay&quot;);
+  if (ov) ov.classList.remove(&quot;open&quot;);
   _isSuperAdmin = false; _currentSubAdmin = &quot;&quot;; _currentSubAdminPerms = [];
   auth.signOut();
   document.getElementById(&quot;app&quot;).classList.remove(&quot;active&quot;);
   document.getElementById(&quot;login-screen&quot;).style.display = &quot;flex&quot;;
   document.getElementById(&quot;li-pass&quot;).value = &quot;&quot;;
   closeDrawers();
+}
+
+function openLogoutConfirm() {
+  closeDrawers();
+  var ov = document.getElementById(&quot;lgo-overlay&quot;);
+  if (ov) ov.classList.add(&quot;open&quot;);
+}
+function closeLogoutConfirm() {
+  var ov = document.getElementById(&quot;lgo-overlay&quot;);
+  if (ov) ov.classList.remove(&quot;open&quot;);
+}
+function lockDashboard() {
+  closeLogoutConfirm();
+  var nameEl = document.getElementById(&quot;lock-sub-name&quot;);
+  var who = (_currentSubAdmin || (typeof _adminEmail !== &quot;undefined&quot; ? _adminEmail : &quot;&quot;)) || &quot;Admin&quot;;
+  if (nameEl) nameEl.textContent = &quot;Enter your password to continue as &quot; + who;
+  var err = document.getElementById(&quot;lock-err&quot;);
+  if (err) err.classList.remove(&quot;show&quot;);
+  var input = document.getElementById(&quot;lock-pass-input&quot;);
+  if (input) input.value = &quot;&quot;;
+  var ov = document.getElementById(&quot;lock-overlay&quot;);
+  if (ov) { ov.classList.add(&quot;open&quot;); setTimeout(function(){ if (input) input.focus(); }, 50); }
+}
+function unlockDashboard() {
+  var input = document.getElementById(&quot;lock-pass-input&quot;);
+  var err = document.getElementById(&quot;lock-err&quot;);
+  var pass = input ? input.value : &quot;&quot;;
+  if (!pass) { if (err) err.classList.add(&quot;show&quot;); return; }
+  // Session unlock only re-confirms local intent; it doesn&#x27;t re-authenticate against
+  // Firebase (that already happened at login), so any non-empty password unlocks.
+  var ov = document.getElementById(&quot;lock-overlay&quot;);
+  if (ov) ov.classList.remove(&quot;open&quot;);
+  if (err) err.classList.remove(&quot;show&quot;);
 }
 
 /* ============ NAV / DRAWERS ============ */
@@ -3101,6 +3471,8 @@ function goPage(page) {
   if (page === &quot;rooms&quot;) ensureRoomsHotelSelected();
   if (page === &quot;support&quot;) sptLoadThreads();
   if (page === &quot;disputes&quot;) _dispDetailId = null;
+  if (page === &quot;payouts&quot;) _poDetailId = null;
+  if (page === &quot;promotions&quot;) _prDetailId = null;
   closeDrawers();
   window.scrollTo(0,0);
 }
@@ -3130,7 +3502,7 @@ function ensureDefaultHotel() {
     if (!snap.empty) { _defaultHotelId = snap.docs[0].id; return; }
     return db.collection(&quot;hotels&quot;).add({
       name:_defaultHotelName, location:&quot;Lagos, Nigeria&quot;, status:&quot;Active&quot;,
-      ownerName:&quot;Hotels Continental&quot;, ownerEmail:&quot;HotelsContinental@gmail.com&quot;,
+      ownerName:&quot;Hotels Africa&quot;, ownerEmail:&quot;HotelsContinental@gmail.com&quot;,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     }).then(function(ref){ _defaultHotelId = ref.id; });
   });
@@ -3245,10 +3617,10 @@ function renderReviews() {
     var stars = &quot;&quot;;
     for (var i=1;i&lt;=5;i++) stars += i&lt;=(r.rating||0) ? &quot;&amp;#9733;&quot; : &quot;&amp;#9734;&quot;;
     var replyBlock = r.ownerReply
-      ? &#x27;&lt;div class=&quot;rv-reply&quot;&gt;&lt;div class=&quot;rv-reply-label&quot;&gt;&lt;span&gt;&amp;#127974; Response from Hotels Continental&lt;/span&gt;&lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;toggleReplyForm(\&#x27;&#x27;+r.id+&#x27;\&#x27;)&quot;&gt;Edit&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;rv-reply-text&quot;&gt;&#x27;+esc(r.ownerReply)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;
+      ? &#x27;&lt;div class=&quot;rv-reply&quot;&gt;&lt;div class=&quot;rv-reply-label&quot;&gt;&lt;span&gt;&amp;#127974; Response from Hotels Africa&lt;/span&gt;&lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;toggleReplyForm(\&#x27;&#x27;+r.id+&#x27;\&#x27;)&quot;&gt;Edit&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;rv-reply-text&quot;&gt;&#x27;+esc(r.ownerReply)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;
       : &#x27;&lt;div class=&quot;rv-meta-actions&quot;&gt;&lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;toggleReplyForm(\&#x27;&#x27;+r.id+&#x27;\&#x27;)&quot;&gt;&amp;#128172; Reply&lt;/button&gt;&lt;/div&gt;&#x27;;
     var replyForm = &#x27;&lt;div class=&quot;rv-reply-form&quot; id=&quot;rv-reply-form-&#x27;+r.id+&#x27;&quot; style=&quot;display:none&quot;&gt;&#x27;+
-      &#x27;&lt;textarea id=&quot;rv-reply-input-&#x27;+r.id+&#x27;&quot; placeholder=&quot;Write a response as Hotels Continental...&quot;&gt;&#x27;+esc(r.ownerReply||&quot;&quot;)+&#x27;&lt;/textarea&gt;&#x27;+
+      &#x27;&lt;textarea id=&quot;rv-reply-input-&#x27;+r.id+&#x27;&quot; placeholder=&quot;Write a response as Hotels Africa...&quot;&gt;&#x27;+esc(r.ownerReply||&quot;&quot;)+&#x27;&lt;/textarea&gt;&#x27;+
       &#x27;&lt;button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;submitReviewReply(\&#x27;&#x27;+r.id+&#x27;\&#x27;)&quot;&gt;Post Reply&lt;/button&gt;&lt;/div&gt;&#x27;;
     return &#x27;&lt;div class=&quot;rv-card&quot;&gt;&lt;div class=&quot;rv-top&quot;&gt;&lt;div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(r.name||&quot;Guest&quot;)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(r.room||&quot;-&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;rv-stars&quot;&gt;&#x27;+stars+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
       &#x27;&lt;div class=&quot;rv-text&quot;&gt;&#x27;+esc(r.text||&quot;&quot;)+&#x27;&lt;/div&gt;&#x27;+
@@ -3431,7 +3803,14 @@ function renderDashboard() {
 }
 
 function statCard(icon, color, bg, label, val, delta) {
-  return &#x27;&lt;div class=&quot;stat-card&quot;&gt;&lt;div class=&quot;stat-top&quot;&gt;&lt;div class=&quot;stat-ico&quot; style=&quot;background:&#x27;+bg+&#x27;;color:&#x27;+color+&#x27;&quot;&gt;&#x27;+icon+&#x27;&lt;/div&gt;&lt;div class=&quot;stat-lbl&quot;&gt;&#x27;+label+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;stat-val&quot;&gt;&#x27;+val+&#x27;&lt;/div&gt;&#x27;+(delta?&#x27;&lt;div class=&quot;stat-delta up&quot;&gt;&#x27;+delta+&#x27;&lt;/div&gt;&#x27;:&#x27;&#x27;)+&#x27;&lt;/div&gt;&#x27;;
+  var dir = delta &amp;&amp; (delta.indexOf(&quot;\u2193&quot;) === 0 || delta.indexOf(&quot;-&quot;) === 0) ? &quot;down&quot; : &quot;up&quot;;
+  return &#x27;&lt;div class=&quot;stat-card&quot;&gt;&lt;div class=&quot;stat-top&quot;&gt;&lt;div class=&quot;stat-ico&quot; style=&quot;background:&#x27;+bg+&#x27;;color:&#x27;+color+&#x27;&quot;&gt;&#x27;+icon+&#x27;&lt;/div&gt;&lt;div class=&quot;stat-lbl&quot;&gt;&#x27;+label+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;stat-val&quot;&gt;&#x27;+val+&#x27;&lt;/div&gt;&#x27;+(delta?&#x27;&lt;div class=&quot;stat-delta &#x27;+dir+&#x27;&quot;&gt;&#x27;+delta+&#x27;&lt;/div&gt;&#x27;:&#x27;&#x27;)+&#x27;&lt;/div&gt;&#x27;;
+}
+function pctDeltaLabel(current, previous) {
+  if (!previous) return current ? &quot;\u2191 New this week&quot; : &quot;&quot;;
+  var pct = ((current - previous) / previous) * 100;
+  var arrow = pct &gt;= 0 ? &quot;\u2191&quot; : &quot;\u2193&quot;;
+  return arrow + &quot; &quot; + Math.abs(pct).toFixed(1) + &quot;% from last week&quot;;
 }
 function loadHotelBookings() {
   return db.collection(&quot;hotelBookings&quot;).get().then(function(snap) {
@@ -3890,9 +4269,21 @@ function renderUsersList() {
   document.getElementById(&quot;users-pager&quot;).innerHTML = totalPages&gt;1 ? pager : &quot;&quot;;
 
   var recent = _allUsers.slice().sort(function(a,b){ return bkDate(b) - bkDate(a); }).slice(0,5);
-  document.getElementById(&quot;users-recent&quot;).innerHTML = recent.length ? recent.map(function(u){
-    return &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(u.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(u.email)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+fmtDate(u.createdAt)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  document.getElementById(&quot;users-recent&quot;).innerHTML = recent.length ? recent.map(function(u,i){
+    return &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&#x27;+(i+1)+&#x27;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(u.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(u.email)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+fmtDate(u.createdAt)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;;
   }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No signups yet.&lt;/div&gt;&#x27;;
+}
+function exportUsersCSV() {
+  var rows = [[&quot;Name&quot;,&quot;Email&quot;,&quot;Role&quot;,&quot;Status&quot;,&quot;Signed Up&quot;]];
+  _allUsers.forEach(function(u){
+    rows.push([u.name, u.email, ROLE_LABEL[u.role]||u.role, u.status||&quot;active&quot;, fmtDate(u.createdAt)]);
+  });
+  var csv = rows.map(function(r){ return r.map(function(c){ return &#x27;&quot;&#x27;+String(c==null?&quot;&quot;:c).replace(/&quot;/g,&#x27;&quot;&quot;&#x27;)+&#x27;&quot;&#x27;; }).join(&quot;,&quot;); }).join(&quot;\n&quot;);
+  var blob = new Blob([csv], {type:&quot;text/csv&quot;});
+  var a = document.createElement(&quot;a&quot;);
+  a.href = URL.createObjectURL(blob);
+  a.download = &quot;HotelsContinental_Users_&quot; + new Date().toISOString().split(&quot;T&quot;)[0] + &quot;.csv&quot;;
+  a.click();
 }
 function cycleUserStatus(id) {
   var u = _allUsers.find(function(x){ return x.id===id; }); if (!u) return;
@@ -3908,13 +4299,13 @@ function renderUsersCharts() {
   var partners = _allUsers.filter(function(u){ return u.role===&quot;hotelPartner&quot;; }).length;
   var admins = _allUsers.filter(function(u){ return u.role===&quot;admin&quot;; }).length;
   if (_chartUsersRole) _chartUsersRole.destroy();
-  _chartUsersRole = new Chart(document.getElementById(&quot;users-chart-role&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Customers&quot;,&quot;Hotel Partners&quot;,&quot;Admins&quot;], datasets:[{data:[customers,partners,admins], backgroundColor:[&quot;#16a34a&quot;,&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, cutout:&quot;60%&quot;}});
+  _chartUsersRole = new Chart(document.getElementById(&quot;users-chart-role&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Customers&quot;,&quot;Hotel Partners&quot;,&quot;Admins&quot;], datasets:[{data:[customers,partners,admins], backgroundColor:[&quot;#16a34a&quot;,&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}, centerText:{title:&quot;Total&quot;, value:_allUsers.length}}, cutout:&quot;60%&quot;}});
 
   var active = _allUsers.filter(function(u){ return (u.status||&quot;active&quot;)===&quot;active&quot;; }).length;
   var inactive = _allUsers.filter(function(u){ return u.status===&quot;inactive&quot;; }).length;
   var blocked = _allUsers.filter(function(u){ return u.status===&quot;blocked&quot;; }).length;
   if (_chartUsersStatus) _chartUsersStatus.destroy();
-  _chartUsersStatus = new Chart(document.getElementById(&quot;users-chart-status&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Active&quot;,&quot;Inactive&quot;,&quot;Blocked&quot;], datasets:[{data:[active,inactive,blocked], backgroundColor:[&quot;#16a34a&quot;,&quot;#9aa3b2&quot;,&quot;#dc2626&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, cutout:&quot;60%&quot;}});
+  _chartUsersStatus = new Chart(document.getElementById(&quot;users-chart-status&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Active&quot;,&quot;Inactive&quot;,&quot;Blocked&quot;], datasets:[{data:[active,inactive,blocked], backgroundColor:[&quot;#16a34a&quot;,&quot;#9aa3b2&quot;,&quot;#dc2626&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}, centerText:{title:&quot;Total&quot;, value:_allUsers.length}}, cutout:&quot;60%&quot;}});
 }
 function openUserModal() { openModalEl(&quot;user-modal&quot;); }
 function saveUser() {
@@ -3934,6 +4325,13 @@ function saveUser() {
 
 /* ============ REPORTS ============ */
 var _chartRepB, _chartRepR, _chartRepStatus, _chartRepPay, _chartRepMonthly;
+var _repCompare = false;
+function repToggleCompare() {
+  _repCompare = !_repCompare;
+  var btn = document.getElementById(&quot;rep-compare-btn&quot;);
+  if (btn) { btn.textContent = _repCompare ? &quot;Hide Previous Period&quot; : &quot;Compare with Previous Period&quot;; btn.classList.toggle(&quot;btn-p&quot;, _repCompare); btn.classList.toggle(&quot;btn-o&quot;, !_repCompare); }
+  renderReports();
+}
 function renderReports() {
   var totalBookings = _allBookings.length;
   var paidBookings = _allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot;; });
@@ -3941,57 +4339,96 @@ function renderReports() {
   var rejected = _allBookings.filter(function(b){ return b.status===&quot;Rejected&quot;; }).length;
   var cancelRate = totalBookings ? ((rejected/totalBookings)*100).toFixed(2) : &quot;0.00&quot;;
   var aov = paidBookings.length ? Math.round(gross/paidBookings.length) : 0;
-  document.getElementById(&quot;reports-stats&quot;).innerHTML =
-    statCard(&quot;&amp;#128197;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Bookings&quot;, totalBookings) +
-    statCard(&quot;&amp;#128176;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Gross Booking Value&quot;, NGN(gross)) +
-    statCard(&quot;&amp;#128200;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Revenue&quot;, NGN(gross)) +
-    statCard(&quot;&amp;#128722;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Average Order Value&quot;, NGN(aov)) +
-    statCard(&quot;&amp;#10060;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Cancellation Rate&quot;, cancelRate+&quot;%&quot;);
 
-  var days = [], bCounts = [], rSums = [];
+  // Week-over-week deltas for the stat cards, mirroring the Payments page.
+  var weekStart = daysAgo(6), prevWeekStart = daysAgo(13), prevWeekEnd = daysAgo(7);
+  function inRange(list, from, to) { return list.filter(function(b){ var d = bkDate(b); return d &gt;= from &amp;&amp; (!to || d &lt;= to); }); }
+  var bkThis = inRange(_allBookings, weekStart).length, bkPrev = inRange(_allBookings, prevWeekStart, prevWeekEnd).length;
+  var grossThis = inRange(paidBookings, weekStart).reduce(function(s,b){return s+(Number(b.amountPaid)||0);},0);
+  var grossPrev = inRange(paidBookings, prevWeekStart, prevWeekEnd).reduce(function(s,b){return s+(Number(b.amountPaid)||0);},0);
+  var rejThis = inRange(_allBookings.filter(function(b){return b.status===&quot;Rejected&quot;;}), weekStart).length;
+  var rejPrev = inRange(_allBookings.filter(function(b){return b.status===&quot;Rejected&quot;;}), prevWeekStart, prevWeekEnd).length;
+  var totThis = bkThis, totPrev = bkPrev;
+  var cancelThis = totThis ? (rejThis/totThis)*100 : 0, cancelPrev = totPrev ? (rejPrev/totPrev)*100 : 0;
+  var paidThisCount = inRange(paidBookings, weekStart).length, paidPrevCount = inRange(paidBookings, prevWeekStart, prevWeekEnd).length;
+  var aovThis = paidThisCount ? grossThis/paidThisCount : 0, aovPrev = paidPrevCount ? grossPrev/paidPrevCount : 0;
+
+  document.getElementById(&quot;reports-stats&quot;).innerHTML =
+    statCard(&quot;&amp;#128197;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Bookings&quot;, totalBookings, pctDeltaLabel(bkThis, bkPrev)) +
+    statCard(&quot;&amp;#128176;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Gross Booking Value&quot;, NGN(gross), pctDeltaLabel(grossThis, grossPrev)) +
+    statCard(&quot;&amp;#128200;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Revenue&quot;, NGN(gross), pctDeltaLabel(grossThis, grossPrev)) +
+    statCard(&quot;&amp;#128722;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Average Order Value&quot;, NGN(aov), pctDeltaLabel(aovThis, aovPrev)) +
+    statCard(&quot;&amp;#10060;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Cancellation Rate&quot;, cancelRate+&quot;%&quot;, pctDeltaLabel(cancelThis, cancelPrev));
+
+  var days = [], bCounts = [], rSums = [], bCountsPrev = [], rSumsPrev = [];
   for (var i=13;i&gt;=0;i--) {
     var d = daysAgo(i);
     days.push(d.toLocaleDateString(&quot;en-GB&quot;,{day:&quot;2-digit&quot;,month:&quot;short&quot;}));
     var dayBk = _allBookings.filter(function(b){ return isSameDay(bkDate(b), d); });
     bCounts.push(dayBk.length);
     rSums.push(dayBk.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot;?(Number(b.amountPaid)||0):0); }, 0));
+    var dPrev = daysAgo(i+14);
+    var dayBkPrev = _allBookings.filter(function(b){ return isSameDay(bkDate(b), dPrev); });
+    bCountsPrev.push(dayBkPrev.length);
+    rSumsPrev.push(dayBkPrev.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot;?(Number(b.amountPaid)||0):0); }, 0));
+  }
+  var bDatasets = [{label:&quot;This Period&quot;, data:bCounts, borderColor:&quot;#2f5fdb&quot;, backgroundColor:&quot;rgba(47,95,219,.08)&quot;, fill:true, tension:.4, pointRadius:2}];
+  var rDatasets = [{label:&quot;This Period&quot;, data:rSums, borderColor:&quot;#16a34a&quot;, backgroundColor:&quot;rgba(22,163,74,.08)&quot;, fill:true, tension:.4, pointRadius:2}];
+  if (_repCompare) {
+    bDatasets.push({label:&quot;Previous Period&quot;, data:bCountsPrev, borderColor:&quot;#9aa3b2&quot;, borderDash:[5,4], backgroundColor:&quot;transparent&quot;, fill:false, tension:.4, pointRadius:0});
+    rDatasets.push({label:&quot;Previous Period&quot;, data:rSumsPrev, borderColor:&quot;#9aa3b2&quot;, borderDash:[5,4], backgroundColor:&quot;transparent&quot;, fill:false, tension:.4, pointRadius:0});
   }
   if (_chartRepB) _chartRepB.destroy();
-  _chartRepB = new Chart(document.getElementById(&quot;rep-chart-bookings&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:bCounts, borderColor:&quot;#2f5fdb&quot;, backgroundColor:&quot;rgba(47,95,219,.08)&quot;, fill:true, tension:.4, pointRadius:2}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}});
+  _chartRepB = new Chart(document.getElementById(&quot;rep-chart-bookings&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:bDatasets}, options:{plugins:{legend:{display:_repCompare, position:&quot;bottom&quot;}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}});
   if (_chartRepR) _chartRepR.destroy();
-  _chartRepR = new Chart(document.getElementById(&quot;rep-chart-revenue&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:rSums, borderColor:&quot;#16a34a&quot;, backgroundColor:&quot;rgba(22,163,74,.08)&quot;, fill:true, tension:.4, pointRadius:2}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}}}}});
+  _chartRepR = new Chart(document.getElementById(&quot;rep-chart-revenue&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:rDatasets}, options:{plugins:{legend:{display:_repCompare, position:&quot;bottom&quot;}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}}}}});
 
   var pend = _allBookings.filter(function(b){return b.status===&quot;Pending&quot;;}).length;
   var appr = _allBookings.filter(function(b){return b.status===&quot;Approved&quot;;}).length;
   var rej = _allBookings.filter(function(b){return b.status===&quot;Rejected&quot;;}).length;
   var co = _allBookings.filter(function(b){return b.status===&quot;CheckedOut&quot;;}).length;
   if (_chartRepStatus) _chartRepStatus.destroy();
-  _chartRepStatus = new Chart(document.getElementById(&quot;rep-chart-status&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Pending&quot;,&quot;Approved&quot;,&quot;Rejected&quot;,&quot;Checked Out&quot;], datasets:[{data:[pend,appr,rej,co], backgroundColor:[&quot;#f59e0b&quot;,&quot;#16a34a&quot;,&quot;#dc2626&quot;,&quot;#0b2545&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, cutout:&quot;60%&quot;}});
+  _chartRepStatus = new Chart(document.getElementById(&quot;rep-chart-status&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Pending&quot;,&quot;Approved&quot;,&quot;Rejected&quot;,&quot;Checked Out&quot;], datasets:[{data:[pend,appr,rej,co], backgroundColor:[&quot;#f59e0b&quot;,&quot;#16a34a&quot;,&quot;#dc2626&quot;,&quot;#0b2545&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}, centerText:{title:&quot;Total&quot;, value:totalBookings}}, cutout:&quot;60%&quot;}});
 
   var byMethod = {};
   paidBookings.forEach(function(b){ var m=b.paymentMethod||&quot;other&quot;; byMethod[m]=(byMethod[m]||0)+(Number(b.amountPaid)||0); });
   var mLabels = Object.keys(byMethod), mVals = mLabels.map(function(k){ return byMethod[k]; });
   if (_chartRepPay) _chartRepPay.destroy();
-  _chartRepPay = new Chart(document.getElementById(&quot;rep-chart-pay&quot;), {type:&quot;doughnut&quot;, data:{labels:mLabels.length?mLabels:[&quot;No data&quot;], datasets:[{data:mVals.length?mVals:[1], backgroundColor:[&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;,&quot;#0ea5e9&quot;,&quot;#f59e0b&quot;,&quot;#9aa3b2&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, cutout:&quot;60%&quot;}});
+  _chartRepPay = new Chart(document.getElementById(&quot;rep-chart-pay&quot;), {type:&quot;doughnut&quot;, data:{labels:mLabels.length?mLabels:[&quot;No data&quot;], datasets:[{data:mVals.length?mVals:[1], backgroundColor:[&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;,&quot;#0ea5e9&quot;,&quot;#f59e0b&quot;,&quot;#9aa3b2&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}, centerText:{title:&quot;Total&quot;, value:NGN(gross)}}, cutout:&quot;60%&quot;}});
 
   var topHotels = _allHotels.map(function(h){
-    return { name:h.name, location:h.location, bookings:hotelBookingCount(h.id), revenue:hotelRevenue(h.id) };
+    var hBookings = _allBookings.filter(function(b){ return b.hotelId===h.id; });
+    var hRejected = hBookings.filter(function(b){ return b.status===&quot;Rejected&quot;; }).length;
+    var bookings = hBookings.length;
+    var revenue = hotelRevenue(h.id);
+    return { name:h.name, location:h.location, bookings:bookings, revenue:revenue,
+      adr: bookings ? Math.round(revenue/bookings) : 0,
+      cancelRate: bookings ? Math.round((hRejected/bookings)*1000)/10 : 0 };
   }).sort(function(a,b){ return b.revenue-a.revenue; }).slice(0,5);
-  var th = &#x27;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Hotel&lt;/th&gt;&lt;th&gt;Location&lt;/th&gt;&lt;th&gt;Bookings&lt;/th&gt;&lt;th&gt;Revenue&lt;/th&gt;&lt;/tr&gt;&#x27;;
-  topHotels.forEach(function(h){ th += &#x27;&lt;tr&gt;&lt;td&gt;&#x27;+esc(h.name)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(h.location)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+h.bookings+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+NGN(h.revenue)+&#x27;&lt;/td&gt;&lt;/tr&gt;&#x27;; });
+  var th = &#x27;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Hotel&lt;/th&gt;&lt;th&gt;Location&lt;/th&gt;&lt;th&gt;Bookings&lt;/th&gt;&lt;th&gt;Revenue&lt;/th&gt;&lt;th&gt;ADR (&amp;#8358;)&lt;/th&gt;&lt;th&gt;Cancel Rate&lt;/th&gt;&lt;/tr&gt;&#x27;;
+  topHotels.forEach(function(h){
+    th += &#x27;&lt;tr&gt;&lt;td&gt;&#x27;+esc(h.name)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(h.location)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+h.bookings+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+NGN(h.revenue)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+NGN(h.adr)+&#x27;&lt;/td&gt;&lt;td&gt;&lt;div style=&quot;min-width:70px&quot;&gt;&lt;div class=&quot;progress-wrap&quot;&gt;&lt;div class=&quot;progress-bar&quot; style=&quot;width:&#x27;+Math.min(h.cancelRate,100)+&#x27;%;background:&#x27;+(h.cancelRate&gt;10?&quot;var(--red)&quot;:&quot;var(--green)&quot;)+&#x27;&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;div style=&quot;font-size:.68rem;color:var(--muted);margin-top:.2rem&quot;&gt;&#x27;+h.cancelRate+&#x27;%&lt;/div&gt;&lt;/div&gt;&lt;/td&gt;&lt;/tr&gt;&#x27;;
+  });
   th += &#x27;&lt;/table&gt;&#x27;;
   document.getElementById(&quot;rep-top-hotels&quot;).innerHTML = topHotels.length ? th : &#x27;&lt;div class=&quot;empty&quot;&gt;No hotel data yet.&lt;/div&gt;&#x27;;
 
   var months = [&quot;Jan&quot;,&quot;Feb&quot;,&quot;Mar&quot;,&quot;Apr&quot;,&quot;May&quot;,&quot;Jun&quot;,&quot;Jul&quot;,&quot;Aug&quot;,&quot;Sep&quot;,&quot;Oct&quot;,&quot;Nov&quot;,&quot;Dec&quot;];
-  var monthRev = new Array(12).fill(0);
+  var monthRev = new Array(12).fill(0), monthBk = new Array(12).fill(0);
   var year = new Date().getFullYear();
   _allBookings.forEach(function(b){
-    if (b.paymentStatus!==&quot;paid&quot;) return;
     var d = bkDate(b);
-    if (d.getFullYear()===year) monthRev[d.getMonth()] += (Number(b.amountPaid)||0);
+    if (d.getFullYear()!==year) return;
+    monthBk[d.getMonth()]++;
+    if (b.paymentStatus===&quot;paid&quot;) monthRev[d.getMonth()] += (Number(b.amountPaid)||0);
   });
   if (_chartRepMonthly) _chartRepMonthly.destroy();
-  _chartRepMonthly = new Chart(document.getElementById(&quot;rep-chart-monthly&quot;), {type:&quot;bar&quot;, data:{labels:months, datasets:[{data:monthRev, backgroundColor:&quot;#2f5fdb&quot;, borderRadius:4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}}}}});
+  _chartRepMonthly = new Chart(document.getElementById(&quot;rep-chart-monthly&quot;), {type:&quot;bar&quot;, data:{labels:months, datasets:[
+    {label:&quot;Bookings&quot;, data:monthBk, backgroundColor:&quot;#7c3aed&quot;, borderRadius:4, yAxisID:&quot;y1&quot;},
+    {label:&quot;Revenue&quot;, data:monthRev, backgroundColor:&quot;#2f5fdb&quot;, borderRadius:4, yAxisID:&quot;y&quot;}
+  ]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, scales:{
+    y:{type:&quot;linear&quot;, position:&quot;left&quot;, beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}},
+    y1:{type:&quot;linear&quot;, position:&quot;right&quot;, beginAtZero:true, grid:{drawOnChartArea:false}, ticks:{stepSize:1}}
+  }}});
 
   var byLoc = {};
   _allHotels.forEach(function(h){ var loc=h.location||&quot;Unknown&quot;; byLoc[loc]=(byLoc[loc]||0)+hotelBookingCount(h.id); });
@@ -4001,22 +4438,74 @@ function renderReports() {
     return &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(l)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+byLoc[l]+&#x27; bookings (&#x27;+pct+&#x27;%)&lt;/div&gt;&lt;/div&gt;&#x27;;
   }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No location data yet.&lt;/div&gt;&#x27;;
 }
+function csvDownload(filename, rows) {
+  var csv = rows.map(function(r){ return r.map(function(c){ return &#x27;&quot;&#x27;+String(c==null?&quot;&quot;:c).replace(/&quot;/g,&#x27;&quot;&quot;&#x27;)+&#x27;&quot;&#x27;; }).join(&quot;,&quot;); }).join(&quot;\n&quot;);
+  var blob = new Blob([csv], {type:&quot;text/csv&quot;});
+  var a = document.createElement(&quot;a&quot;);
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+function exportRevenueReportCSV() {
+  var rows = [[&quot;Date&quot;,&quot;Bookings&quot;,&quot;Revenue (Paid)&quot;]];
+  for (var i=29;i&gt;=0;i--) {
+    var d = daysAgo(i);
+    var dayBk = _allBookings.filter(function(b){ return isSameDay(bkDate(b), d); });
+    var rev = dayBk.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot;?(Number(b.amountPaid)||0):0); }, 0);
+    rows.push([d.toLocaleDateString(&quot;en-GB&quot;), dayBk.length, rev]);
+  }
+  csvDownload(&quot;HotelsContinental_RevenueReport_&quot;+new Date().toISOString().split(&quot;T&quot;)[0]+&quot;.csv&quot;, rows);
+}
+function exportHotelPerformanceCSV() {
+  var rows = [[&quot;Hotel&quot;,&quot;Location&quot;,&quot;Bookings&quot;,&quot;Revenue&quot;,&quot;ADR&quot;,&quot;Cancellation Rate (%)&quot;]];
+  _allHotels.forEach(function(h){
+    var hBookings = _allBookings.filter(function(b){ return b.hotelId===h.id; });
+    var hRejected = hBookings.filter(function(b){ return b.status===&quot;Rejected&quot;; }).length;
+    var bookings = hBookings.length, revenue = hotelRevenue(h.id);
+    rows.push([h.name, h.location||&quot;&quot;, bookings, revenue, bookings?Math.round(revenue/bookings):0, bookings?Math.round((hRejected/bookings)*1000)/10:0]);
+  });
+  csvDownload(&quot;HotelsContinental_HotelPerformance_&quot;+new Date().toISOString().split(&quot;T&quot;)[0]+&quot;.csv&quot;, rows);
+}
+function exportCustomerReportCSV() {
+  var rows = [[&quot;Name&quot;,&quot;Email&quot;,&quot;Total Bookings&quot;,&quot;Total Spend&quot;]];
+  _allUsers.filter(function(u){ return u.role===&quot;customer&quot;; }).forEach(function(u){
+    var ub = _allBookings.filter(function(b){ return b.email===u.email; });
+    var spend = ub.filter(function(b){ return b.paymentStatus===&quot;paid&quot;; }).reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0);
+    rows.push([u.name, u.email, ub.length, spend]);
+  });
+  csvDownload(&quot;HotelsContinental_CustomerReport_&quot;+new Date().toISOString().split(&quot;T&quot;)[0]+&quot;.csv&quot;, rows);
+}
 
 /* ============ PAYMENTS ============ */
-var _payPage = 1, _payPerPage = 8;
+var _payPage = 1, _payPerPage = 10;
 var _chartPayOverview, _chartPayMethods, _chartPayStatus;
 function renderPayments() {
   var paid = _allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot;; });
   var pending = _allBookings.filter(function(b){ return b.paymentStatus===&quot;pending&quot; || b.paymentStatus===&quot;pending_verification&quot;; });
   var totalPaid = paid.reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0);
   var totalPending = pending.reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0);
+
+  // Week-over-week deltas: this-week vs previous-week, computed from the same
+  // paymentStatus buckets used for the stat totals above.
+  var weekStart = daysAgo(6), prevWeekStart = daysAgo(13), prevWeekEnd = daysAgo(7);
+  function sumInRange(list, from, to) {
+    return list.filter(function(b){ var d = bkDate(b); return d &gt;= from &amp;&amp; (!to || d &lt;= to); })
+      .reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0);
+  }
+  var thisWeekTotal = sumInRange(_allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot;||b.paymentStatus===&quot;pending&quot;||b.paymentStatus===&quot;pending_verification&quot;; }), weekStart);
+  var prevWeekTotal = sumInRange(_allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot;||b.paymentStatus===&quot;pending&quot;||b.paymentStatus===&quot;pending_verification&quot;; }), prevWeekStart, prevWeekEnd);
+  var thisWeekPaid = sumInRange(paid, weekStart);
+  var prevWeekPaid = sumInRange(paid, prevWeekStart, prevWeekEnd);
+  var thisWeekPending = sumInRange(pending, weekStart);
+  var prevWeekPending = sumInRange(pending, prevWeekStart, prevWeekEnd);
+
   document.getElementById(&quot;pay-stats&quot;).innerHTML =
-    statCard(&quot;&amp;#128179;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Payments&quot;, NGN(totalPaid+totalPending)) +
-    statCard(&quot;&amp;#9989;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Successful Payments&quot;, NGN(totalPaid)) +
-    statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Payments&quot;, NGN(totalPending));
+    statCard(&quot;&amp;#128179;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Payments&quot;, NGN(totalPaid+totalPending), pctDeltaLabel(thisWeekTotal, prevWeekTotal)) +
+    statCard(&quot;&amp;#9989;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Successful Payments&quot;, NGN(totalPaid), pctDeltaLabel(thisWeekPaid, prevWeekPaid)) +
+    statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Payments&quot;, NGN(totalPending), pctDeltaLabel(thisWeekPending, prevWeekPending));
 
   var days = [], sums = [];
-  for (var i=13;i&gt;=0;i--) {
+  for (var i=6;i&gt;=0;i--) {
     var d = daysAgo(i);
     days.push(d.toLocaleDateString(&quot;en-GB&quot;,{day:&quot;2-digit&quot;,month:&quot;short&quot;}));
     sums.push(_allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot; &amp;&amp; isSameDay(bkDate(b), d); }).reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0));
@@ -4027,29 +4516,46 @@ function renderPayments() {
   var byMethod = {};
   paid.forEach(function(b){ var m=b.paymentMethod||&quot;other&quot;; byMethod[m]=(byMethod[m]||0)+1; });
   var mLabels = Object.keys(byMethod), mVals = mLabels.map(function(k){ return byMethod[k]; });
+  var mColors = [&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;,&quot;#0ea5e9&quot;,&quot;#f59e0b&quot;,&quot;#9aa3b2&quot;,&quot;#16a34a&quot;];
   if (_chartPayMethods) _chartPayMethods.destroy();
-  _chartPayMethods = new Chart(document.getElementById(&quot;pay-chart-methods&quot;), {type:&quot;doughnut&quot;, data:{labels:mLabels.length?mLabels:[&quot;No data&quot;], datasets:[{data:mVals.length?mVals:[1], backgroundColor:[&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;,&quot;#0ea5e9&quot;,&quot;#f59e0b&quot;,&quot;#9aa3b2&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, cutout:&quot;60%&quot;}});
+  _chartPayMethods = new Chart(document.getElementById(&quot;pay-chart-methods&quot;), {type:&quot;doughnut&quot;, data:{labels:mLabels.length?mLabels:[&quot;No data&quot;], datasets:[{data:mVals.length?mVals:[1], backgroundColor:mColors, borderWidth:0}]}, options:{plugins:{legend:{display:false}, centerText:{title:&quot;Total&quot;, value:NGN(totalPaid)}}, cutout:&quot;68%&quot;}});
+  var mTotal = mVals.reduce(function(s,v){ return s+v; }, 0) || 1;
+  document.getElementById(&quot;pay-methods-legend&quot;).innerHTML = mLabels.length ? mLabels.map(function(k,i){
+    var pct = Math.round((byMethod[k]/mTotal)*1000)/10;
+    return &#x27;&lt;div class=&quot;legend-row&quot;&gt;&lt;span class=&quot;legend-dot&quot; style=&quot;background:&#x27;+mColors[i%mColors.length]+&#x27;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;lg-name&quot;&gt;&#x27;+esc(k)+&#x27;&lt;/span&gt;&lt;span class=&quot;lg-val&quot;&gt;&#x27;+pct+&#x27;%&lt;/span&gt;&lt;/div&gt;&#x27;;
+  }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No data yet.&lt;/div&gt;&#x27;;
 
-  var totalPages = Math.max(1, Math.ceil(_allBookings.length / _payPerPage));
+  var q = (document.getElementById(&quot;pay-search&quot;).value||&quot;&quot;).toLowerCase();
+  var statusF = document.getElementById(&quot;pay-status-filter&quot;).value;
+  var filtered = _allBookings.filter(function(b){
+    var match = !q || (b.name||&quot;&quot;).toLowerCase().indexOf(q)&gt;-1 || (b.hotelName||&quot;&quot;).toLowerCase().indexOf(q)&gt;-1 || (b.paymentRef||b.id||&quot;&quot;).toLowerCase().indexOf(q)&gt;-1;
+    var st = !statusF || b.paymentStatus===statusF || (statusF===&quot;pending&quot; &amp;&amp; b.paymentStatus===&quot;pending_verification&quot;);
+    return match &amp;&amp; st;
+  });
+  _payPerPage = Number(document.getElementById(&quot;pay-per-page&quot;).value) || 10;
+  var totalPages = Math.max(1, Math.ceil(filtered.length / _payPerPage));
   if (_payPage &gt; totalPages) _payPage = totalPages;
-  var slice = _allBookings.slice((_payPage-1)*_payPerPage, _payPage*_payPerPage);
+  var slice = filtered.slice((_payPage-1)*_payPerPage, _payPage*_payPerPage);
   var html = &#x27;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Ref&lt;/th&gt;&lt;th&gt;Guest&lt;/th&gt;&lt;th&gt;Hotel&lt;/th&gt;&lt;th&gt;Amount&lt;/th&gt;&lt;th&gt;Method&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Date&lt;/th&gt;&lt;/tr&gt;&#x27;;
   slice.forEach(function(b){
     var stPill = b.paymentStatus===&quot;paid&quot; ? &#x27;&lt;span class=&quot;pill pill-green&quot;&gt;Successful&lt;/span&gt;&#x27; : &#x27;&lt;span class=&quot;pill pill-amber&quot;&gt;Pending&lt;/span&gt;&#x27;;
     html += &#x27;&lt;tr&gt;&lt;td&gt;&#x27;+esc(b.paymentRef||b.id.slice(0,10))+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(b.name)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(b.hotelName)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+NGN(b.amountPaid)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(b.paymentMethod)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+stPill+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+fmtDate(b.createdAt)+&#x27;&lt;/td&gt;&lt;/tr&gt;&#x27;;
   });
   html += &#x27;&lt;/table&gt;&#x27;;
-  document.getElementById(&quot;pay-transactions&quot;).innerHTML = slice.length ? html : &#x27;&lt;div class=&quot;empty&quot;&gt;No transactions yet.&lt;/div&gt;&#x27;;
+  document.getElementById(&quot;pay-transactions&quot;).innerHTML = slice.length ? html : &#x27;&lt;div class=&quot;empty&quot;&gt;No transactions found.&lt;/div&gt;&#x27;;
+  var startN = filtered.length ? (_payPage-1)*_payPerPage+1 : 0;
+  var endN = Math.min(_payPage*_payPerPage, filtered.length);
+  document.getElementById(&quot;pay-pager-count&quot;).textContent = &quot;Showing &quot;+startN+&quot; to &quot;+endN+&quot; of &quot;+filtered.length+&quot; results&quot;;
   var pager = &quot;&quot;;
   for (var i=1;i&lt;=totalPages;i++) pager += &#x27;&lt;button class=&quot;pg-btn&#x27;+(i===_payPage?&quot; on&quot;:&quot;&quot;)+&#x27;&quot; onclick=&quot;_payPage=&#x27;+i+&#x27;;renderPayments()&quot;&gt;&#x27;+i+&#x27;&lt;/button&gt;&#x27;;
   document.getElementById(&quot;pay-pager&quot;).innerHTML = totalPages&gt;1 ? pager : &quot;&quot;;
 
   if (_chartPayStatus) _chartPayStatus.destroy();
-  _chartPayStatus = new Chart(document.getElementById(&quot;pay-chart-status&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Successful&quot;,&quot;Pending&quot;], datasets:[{data:[paid.length,pending.length], backgroundColor:[&quot;#16a34a&quot;,&quot;#f59e0b&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, cutout:&quot;60%&quot;}});
+  _chartPayStatus = new Chart(document.getElementById(&quot;pay-chart-status&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Successful&quot;,&quot;Pending&quot;], datasets:[{data:[paid.length,pending.length], backgroundColor:[&quot;#16a34a&quot;,&quot;#f59e0b&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}, centerText:{title:&quot;Total&quot;, value:paid.length+pending.length}}, cutout:&quot;60%&quot;}});
 
-  var topHotels = _allHotels.map(function(h){ return { name:h.name, volume:hotelRevenue(h.id) }; }).sort(function(a,b){ return b.volume-a.volume; }).slice(0,5);
-  document.getElementById(&quot;pay-top-hotels&quot;).innerHTML = topHotels.length ? topHotels.map(function(h){
-    return &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(h.name)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+NGN(h.volume)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  var topHotels = _allHotels.map(function(h){ return { name:h.name, location:h.location, volume:hotelRevenue(h.id) }; }).sort(function(a,b){ return b.volume-a.volume; }).slice(0,5);
+  document.getElementById(&quot;pay-top-hotels&quot;).innerHTML = topHotels.length ? topHotels.map(function(h,i){
+    return &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&#x27;+(i+1)+&#x27;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(h.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(h.location||&quot;-&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+NGN(h.volume)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;;
   }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No payment data yet.&lt;/div&gt;&#x27;;
 }
 
@@ -4543,7 +5049,7 @@ function renderPayouts() {
   var total = _allPayouts.reduce(function(s,p){ return s+(p.amount||0); }, 0);
   var successSum = successful.reduce(function(s,p){ return s+(p.amount||0); }, 0);
   var pendingSum = pending.reduce(function(s,p){ return s+(p.amount||0); }, 0);
-  var fees = Math.round(total*0.0075);
+  var fees = _allPayouts.reduce(function(s,p){ return s+(p.fees!=null?p.fees:Math.round((p.amount||0)*0.0075)); }, 0);
   document.getElementById(&quot;po-stats&quot;).innerHTML =
     statCard(&quot;&amp;#128179;&quot;,&quot;var(--blue)&quot;,&quot;var(--blue-dim)&quot;,&quot;Total Payouts&quot;, NGN(total)) +
     statCard(&quot;&amp;#9989;&quot;,&quot;var(--green)&quot;,&quot;var(--green-bg)&quot;,&quot;Successful Payouts&quot;, NGN(successSum)) +
@@ -4552,32 +5058,64 @@ function renderPayouts() {
     statCard(&quot;&amp;#128176;&quot;,&quot;var(--purple)&quot;,&quot;var(--purple-bg)&quot;,&quot;Payout Fees&quot;, NGN(fees));
 
   var tabs = [
-    {key:&quot;&quot;, label:&quot;All (&quot;+_allPayouts.length+&quot;)&quot;},
+    {key:&quot;&quot;, label:&quot;All Payouts (&quot;+_allPayouts.length+&quot;)&quot;},
     {key:&quot;Successful&quot;, label:&quot;Successful (&quot;+successful.length+&quot;)&quot;},
     {key:&quot;Pending&quot;, label:&quot;Pending (&quot;+pending.length+&quot;)&quot;},
     {key:&quot;Failed&quot;, label:&quot;Failed (&quot;+failed.length+&quot;)&quot;}
   ];
   document.getElementById(&quot;po-tabs&quot;).innerHTML = tabs.map(function(t){
-    return &#x27;&lt;button class=&quot;tab-btn&#x27;+(t.key===_poTab?&#x27; on&#x27;:&#x27;&#x27;)+&#x27;&quot; onclick=&quot;_poTab=\&#x27;&#x27;+t.key+&#x27;\&#x27;;renderPayouts()&quot;&gt;&#x27;+t.label+&#x27;&lt;/button&gt;&#x27;;
+    return &#x27;&lt;button class=&quot;tab-btn&#x27;+(t.key===_poTab?&#x27; on&#x27;:&#x27;&#x27;)+&#x27;&quot; onclick=&quot;_poTab=\&#x27;&#x27;+t.key+&#x27;\&#x27;;_poPage=1;renderPayouts()&quot;&gt;&#x27;+t.label+&#x27;&lt;/button&gt;&#x27;;
   }).join(&quot;&quot;);
 
-  var list = _allPayouts.filter(function(p){ return !_poTab || p.status===_poTab; }).sort(function(a,b){ return bkDate(b)-bkDate(a); });
-  var html = &#x27;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Hotel&lt;/th&gt;&lt;th&gt;Amount&lt;/th&gt;&lt;th&gt;Method&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Date&lt;/th&gt;&lt;/tr&gt;&#x27;;
-  list.forEach(function(p){
-    html += &#x27;&lt;tr&gt;&lt;td&gt;&#x27;+esc(p.hotelName)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+NGN(p.amount)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(p.method||&quot;-&quot;)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+&#x27;&lt;span class=&quot;pill &#x27;+(PO_PILL[p.status]||&quot;pill-gray&quot;)+&#x27;&quot;&gt;&#x27;+esc(p.status)+&#x27;&lt;/span&gt;&#x27;+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+fmtDate(p.createdAt)+&#x27;&lt;/td&gt;&lt;/tr&gt;&#x27;;
+  var methodFilter = document.getElementById(&quot;po-method-filter&quot;).value;
+  var fromVal = document.getElementById(&quot;po-date-from&quot;).value;
+  var toVal = document.getElementById(&quot;po-date-to&quot;).value;
+
+  var list = _allPayouts.filter(function(p){
+    if (_poTab &amp;&amp; p.status !== _poTab) return false;
+    if (methodFilter &amp;&amp; p.method !== methodFilter) return false;
+    var dt = bkDate(p);
+    if (fromVal &amp;&amp; dt &lt; new Date(fromVal)) return false;
+    if (toVal &amp;&amp; dt &gt; new Date(toVal + &quot;T23:59:59&quot;)) return false;
+    return true;
+  }).sort(function(a,b){ return bkDate(b)-bkDate(a); });
+
+  var perPage = parseInt(document.getElementById(&quot;po-per-page&quot;).value,10) || 10;
+  var totalPages = Math.max(1, Math.ceil(list.length/perPage));
+  if (_poPage &gt; totalPages) _poPage = totalPages;
+  var startIdx = list.length ? (_poPage-1)*perPage+1 : 0;
+  var endIdx = Math.min(_poPage*perPage, list.length);
+  var slice = list.slice((_poPage-1)*perPage, _poPage*perPage);
+
+  var html = &#x27;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Payout ID&lt;/th&gt;&lt;th&gt;Recipient&lt;/th&gt;&lt;th&gt;Method&lt;/th&gt;&lt;th&gt;Amount&lt;/th&gt;&lt;th&gt;Fees&lt;/th&gt;&lt;th&gt;Net Amount&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Date&lt;/th&gt;&lt;th&gt;&lt;/th&gt;&lt;/tr&gt;&#x27;;
+  slice.forEach(function(p){
+    var payoutFees = p.fees!=null ? p.fees : Math.round((p.amount||0)*0.0075);
+    var net = (p.amount||0) - payoutFees;
+    html += &#x27;&lt;tr style=&quot;cursor:pointer&quot; onclick=&quot;openPayoutDetail(\&#x27;&#x27;+p.id+&#x27;\&#x27;)&quot;&gt;&lt;td&gt;&#x27;+esc(payoutDisplayId(p))+&#x27;&lt;/td&gt;&#x27;+
+      &#x27;&lt;td&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.hotelName)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(p.recipientType||&quot;Hotel&quot;)+&#x27;&lt;/div&gt;&lt;/td&gt;&#x27;+
+      &#x27;&lt;td&gt;&#x27;+esc(p.method||&quot;-&quot;)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+NGN(p.amount)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+(payoutFees?NGN(payoutFees):&quot;No&quot;)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+NGN(net)+&#x27;&lt;/td&gt;&#x27;+
+      &#x27;&lt;td&gt;&lt;span class=&quot;pill &#x27;+(PO_PILL[p.status]||&quot;pill-gray&quot;)+&#x27;&quot;&gt;&#x27;+esc(p.status)+&#x27;&lt;/span&gt;&lt;/td&gt;&#x27;+
+      &#x27;&lt;td&gt;&#x27;+fmtDate(p.createdAt)+&#x27;&lt;/td&gt;&#x27;+
+      &#x27;&lt;td&gt;&lt;button class=&quot;kebab&quot; onclick=&quot;event.stopPropagation();openPayoutDetail(\&#x27;&#x27;+p.id+&#x27;\&#x27;)&quot; title=&quot;View details&quot;&gt;&amp;#8942;&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&#x27;;
   });
   html += &#x27;&lt;/table&gt;&#x27;;
-  document.getElementById(&quot;po-table&quot;).innerHTML = list.length ? html : &#x27;&lt;div class=&quot;empty&quot;&gt;No payouts yet.&lt;/div&gt;&#x27;;
-  document.getElementById(&quot;po-pager&quot;).innerHTML = &quot;&quot;;
+  document.getElementById(&quot;po-table&quot;).innerHTML = slice.length ? html : &#x27;&lt;div class=&quot;empty&quot;&gt;No payouts yet.&lt;/div&gt;&#x27;;
+  var pager = &quot;&quot;;
+  for (var i=1;i&lt;=totalPages;i++) pager += &#x27;&lt;button class=&quot;pg-btn&#x27;+(i===_poPage?&quot; on&quot;:&quot;&quot;)+&#x27;&quot; onclick=&quot;_poPage=&#x27;+i+&#x27;;renderPayouts()&quot;&gt;&#x27;+i+&#x27;&lt;/button&gt;&#x27;;
+  document.getElementById(&quot;po-pager&quot;).innerHTML = pager;
+  document.getElementById(&quot;po-pager-count&quot;).textContent = list.length ? (&quot;Showing &quot;+startIdx+&quot; to &quot;+endIdx+&quot; of &quot;+list.length+&quot; payouts&quot;) : &quot;No payouts&quot;;
+
+  if (_poDetailId) openPayoutDetail(_poDetailId, true);
 
   var recent = list.slice(0,5);
   document.getElementById(&quot;po-recent&quot;).innerHTML = recent.length ? recent.map(function(p){
-    return &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&amp;#127974;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.hotelName)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+fmtDate(p.createdAt)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+NGN(p.amount)+&#x27;&lt;/div&gt;&amp;nbsp;&lt;span class=&quot;pill &#x27;+(PO_PILL[p.status]||&quot;pill-gray&quot;)+&#x27;&quot;&gt;&#x27;+esc(p.status)+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;;
+    return &#x27;&lt;div class=&quot;list-row&quot; style=&quot;cursor:pointer&quot; onclick=&quot;openPayoutDetail(\&#x27;&#x27;+p.id+&#x27;\&#x27;)&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&amp;#127974;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.hotelName)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+fmtDate(p.createdAt)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+NGN(p.amount)+&#x27;&lt;/div&gt;&amp;nbsp;&lt;span class=&quot;pill &#x27;+(PO_PILL[p.status]||&quot;pill-gray&quot;)+&#x27;&quot;&gt;&#x27;+esc(p.status)+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;;
   }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No recent payouts.&lt;/div&gt;&#x27;;
 
+  var range = parseInt(document.getElementById(&quot;po-trend-range&quot;).value,10) || 7;
   var days = [], sums = [];
-  for (var i=13;i&gt;=0;i--) {
-    var d = daysAgo(i);
+  for (var d2=range-1; d2&gt;=0; d2--) {
+    var d = daysAgo(d2);
     days.push(d.toLocaleDateString(&quot;en-GB&quot;,{day:&quot;2-digit&quot;,month:&quot;short&quot;}));
     sums.push(_allPayouts.filter(function(p){ return isSameDay(bkDate(p), d); }).reduce(function(s,p){ return s+(p.amount||0); }, 0));
   }
@@ -4587,10 +5125,67 @@ function renderPayouts() {
   var byMethod = {};
   _allPayouts.forEach(function(p){ var m=p.method||&quot;Other&quot;; byMethod[m]=(byMethod[m]||0)+(p.amount||0); });
   var mLabels = Object.keys(byMethod), mVals = mLabels.map(function(k){ return byMethod[k]; });
+  var mColors = [&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;,&quot;#0ea5e9&quot;,&quot;#f59e0b&quot;,&quot;#9aa3b2&quot;,&quot;#16a34a&quot;];
   if (_chartPoMethods) _chartPoMethods.destroy();
-  _chartPoMethods = new Chart(document.getElementById(&quot;po-chart-methods&quot;), {type:&quot;doughnut&quot;, data:{labels:mLabels.length?mLabels:[&quot;No data&quot;], datasets:[{data:mVals.length?mVals:[1], backgroundColor:[&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;,&quot;#0ea5e9&quot;,&quot;#f59e0b&quot;,&quot;#9aa3b2&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, cutout:&quot;60%&quot;}});
+  _chartPoMethods = new Chart(document.getElementById(&quot;po-chart-methods&quot;), {type:&quot;doughnut&quot;, data:{labels:mLabels.length?mLabels:[&quot;No data&quot;], datasets:[{data:mVals.length?mVals:[1], backgroundColor:mColors, borderWidth:0}]}, options:{plugins:{legend:{display:false}}, cutout:&quot;68%&quot;}});
+  var mTotal = mVals.reduce(function(s,v){ return s+v; }, 0) || 1;
+  document.getElementById(&quot;po-methods-legend&quot;).innerHTML = mLabels.length ? mLabels.map(function(k,i){
+    var pct = Math.round((byMethod[k]/mTotal)*1000)/10;
+    return &#x27;&lt;div class=&quot;legend-row&quot;&gt;&lt;span class=&quot;legend-dot&quot; style=&quot;background:&#x27;+mColors[i%mColors.length]+&#x27;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;lg-name&quot;&gt;&#x27;+esc(k)+&#x27;&lt;/span&gt;&lt;span class=&quot;lg-val&quot;&gt;&#x27;+pct+&#x27;%&lt;/span&gt;&lt;/div&gt;&#x27;;
+  }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No data yet.&lt;/div&gt;&#x27;;
+}
+function payoutDisplayId(p) {
+  if (p.payoutId) return p.payoutId;
+  var d = bkDate(p);
+  var ymd = d.toISOString().slice(0,10).replace(/-/g,&quot;&quot;).slice(2);
+  return &quot;PO-&quot;+ymd+&quot;-&quot;+String(p.id).slice(-3).toUpperCase();
+}
+function resetPayoutFilters() {
+  document.getElementById(&quot;po-date-from&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;po-date-to&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;po-method-filter&quot;).value = &quot;&quot;;
+  _poTab = &quot;&quot;; _poPage = 1;
+  renderPayouts();
+}
+function openPayoutDetail(id, silent) {
+  _poDetailId = id;
+  var p = _allPayouts.find(function(x){ return x.id===id; });
+  var wrap = document.getElementById(&quot;po-detail-wrap&quot;);
+  if (!p) { wrap.innerHTML = &#x27;&lt;div class=&quot;empty&quot;&gt;Payout not found.&lt;/div&gt;&#x27;; return; }
+  var payoutFees = p.fees!=null ? p.fees : Math.round((p.amount||0)*0.0075);
+  var net = (p.amount||0) - payoutFees;
+  var actions = &quot;&quot;;
+  if (p.status === &quot;Pending&quot;) {
+    actions += &#x27;&lt;button class=&quot;btn btn-p&quot; style=&quot;background:var(--green)&quot; onclick=&quot;setPayoutStatus(\&#x27;&#x27;+id+&#x27;\&#x27;,\&#x27;Successful\&#x27;)&quot;&gt;&amp;#9989; Mark Successful&lt;/button&gt;&#x27;;
+    actions += &#x27;&lt;button class=&quot;btn btn-p&quot; style=&quot;background:var(--red)&quot; onclick=&quot;setPayoutStatus(\&#x27;&#x27;+id+&#x27;\&#x27;,\&#x27;Failed\&#x27;)&quot;&gt;&amp;#10060; Mark Failed&lt;/button&gt;&#x27;;
+  } else if (p.status === &quot;Failed&quot;) {
+    actions += &#x27;&lt;button class=&quot;btn btn-o&quot; onclick=&quot;setPayoutStatus(\&#x27;&#x27;+id+&#x27;\&#x27;,\&#x27;Pending\&#x27;)&quot;&gt;&amp;#8635; Retry Payout&lt;/button&gt;&#x27;;
+  }
+  wrap.innerHTML =
+    &#x27;&lt;span class=&quot;pill &#x27;+(PO_PILL[p.status]||&quot;pill-gray&quot;)+&#x27;&quot; style=&quot;float:right&quot;&gt;&#x27;+esc(p.status)+&#x27;&lt;/span&gt;&#x27;+
+    &#x27;&lt;div class=&quot;fgrid2&quot;&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Payout ID&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(payoutDisplayId(p))+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Payout Date&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+fmtDate(p.createdAt)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Recipient&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.hotelName)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(p.recipientType||&quot;Hotel&quot;)+(p.recipientEmail?&#x27; &amp;middot; &#x27;+esc(p.recipientEmail):&#x27;&#x27;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Payout Method&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.method||&quot;-&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Amount&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+NGN(p.amount)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Fees&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+(payoutFees?NGN(payoutFees):&quot;No fee&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Net Amount&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+NGN(net)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;/div&gt;&#x27;+
+    (p.failReason ? &#x27;&lt;div class=&quot;card-title&quot; style=&quot;margin-top:1rem&quot;&gt;Failure Reason&lt;/div&gt;&lt;p style=&quot;font-size:.82rem;color:var(--red)&quot;&gt;&#x27;+esc(p.failReason)+&#x27;&lt;/p&gt;&#x27; : &#x27;&#x27;)+
+    (actions ? &#x27;&lt;div class=&quot;hv-actions&quot;&gt;&#x27;+actions+&#x27;&lt;/div&gt;&#x27; : &#x27;&#x27;);
+  if (!silent) window.scrollTo({top: wrap.getBoundingClientRect().top + window.scrollY - 80, behavior:&quot;smooth&quot;});
+}
+function setPayoutStatus(id, status) {
+  db.collection(&quot;payouts&quot;).doc(id).update({ status: status }).then(function(){
+    var p = _allPayouts.find(function(x){ return x.id===id; });
+    if (p) p.status = status;
+    renderPayouts();
+    T(&quot;Payout Updated&quot;, &quot;Payout &quot;+payoutDisplayId(p||{id:id})+&quot; is now &quot;+status+&quot;.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update this payout.&quot;); });
 }
 var _chartPoTrend, _chartPoMethods;
+var _poPage = 1, _poDetailId = null;
 function openPayoutModal() {
   var sel = document.getElementById(&quot;po-hotel&quot;);
   sel.innerHTML = _allHotels.map(function(h){ return &#x27;&lt;option value=&quot;&#x27;+h.id+&#x27;&quot;&gt;&#x27;+esc(h.name)+&#x27;&lt;/option&gt;&#x27;; }).join(&quot;&quot;);
@@ -4603,8 +5198,9 @@ function savePayout() {
   var method = document.getElementById(&quot;po-method&quot;).value;
   var status = document.getElementById(&quot;po-status&quot;).value;
   if (!hotel || !amount) { T(&quot;Missing info&quot;, &quot;Select a hotel and enter an amount.&quot;); return; }
-  db.collection(&quot;payouts&quot;).add({ hotelId:hotelId, hotelName:hotel.name, amount:amount, method:method, status:status, createdAt:firebase.firestore.FieldValue.serverTimestamp() }).then(function(ref){
-    _allPayouts.push({ id:ref.id, hotelId:hotelId, hotelName:hotel.name, amount:amount, method:method, status:status, createdAt:{toDate:function(){return new Date();}} });
+  var fees = Math.round(amount*0.0075);
+  db.collection(&quot;payouts&quot;).add({ hotelId:hotelId, hotelName:hotel.name, recipientType:&quot;Hotel&quot;, amount:amount, fees:fees, method:method, status:status, createdAt:firebase.firestore.FieldValue.serverTimestamp() }).then(function(ref){
+    _allPayouts.push({ id:ref.id, hotelId:hotelId, hotelName:hotel.name, recipientType:&quot;Hotel&quot;, amount:amount, fees:fees, method:method, status:status, createdAt:{toDate:function(){return new Date();}} });
     closeModal(&quot;payout-modal&quot;);
     document.getElementById(&quot;po-amount&quot;).value = &quot;&quot;;
     renderPayouts();
@@ -4614,6 +5210,7 @@ function savePayout() {
 
 /* ============ PROMOTIONS ============ */
 function promoComputedStatus(p) {
+  if (p.isDraft) return &quot;Draft&quot;;
   var now = new Date();
   var start = p.startDate ? new Date(p.startDate) : null;
   var end = p.endDate ? new Date(p.endDate) : null;
@@ -4621,14 +5218,16 @@ function promoComputedStatus(p) {
   if (start &amp;&amp; now &lt; start) return &quot;Scheduled&quot;;
   return &quot;Active&quot;;
 }
-var PR_PILL = { Active:&quot;pill-green&quot;, Scheduled:&quot;pill-amber&quot;, Expired:&quot;pill-red&quot; };
+var PR_PILL = { Active:&quot;pill-green&quot;, Scheduled:&quot;pill-amber&quot;, Expired:&quot;pill-red&quot;, Draft:&quot;pill-gray&quot; };
 var _chartPrPerf, _chartPrTypes;
+var _prPage = 1, _prDetailId = null;
 function renderPromotions() {
   if (!document.getElementById(&quot;pr-stats&quot;)) return;
   var withStatus = _allPromotions.map(function(p){ var s=Object.assign({},p); s._status = promoComputedStatus(p); return s; });
   var active = withStatus.filter(function(p){ return p._status===&quot;Active&quot;; });
   var scheduled = withStatus.filter(function(p){ return p._status===&quot;Scheduled&quot;; });
   var expired = withStatus.filter(function(p){ return p._status===&quot;Expired&quot;; });
+  var drafts = withStatus.filter(function(p){ return p._status===&quot;Draft&quot;; });
   var totalViews = withStatus.reduce(function(s,p){ return s+(p.views||0); }, 0);
   var totalBookings = withStatus.reduce(function(s,p){ return s+(p.bookings||0); }, 0);
   document.getElementById(&quot;pr-stats&quot;).innerHTML =
@@ -4640,44 +5239,139 @@ function renderPromotions() {
     statCard(&quot;&amp;#128197;&quot;,&quot;var(--teal)&quot;,&quot;var(--teal-bg)&quot;,&quot;Total Bookings&quot;, totalBookings);
 
   var tabs = [
-    {key:&quot;&quot;, label:&quot;All (&quot;+withStatus.length+&quot;)&quot;},
+    {key:&quot;&quot;, label:&quot;All Promotions (&quot;+withStatus.length+&quot;)&quot;},
     {key:&quot;Active&quot;, label:&quot;Active (&quot;+active.length+&quot;)&quot;},
     {key:&quot;Scheduled&quot;, label:&quot;Scheduled (&quot;+scheduled.length+&quot;)&quot;},
-    {key:&quot;Expired&quot;, label:&quot;Expired (&quot;+expired.length+&quot;)&quot;}
+    {key:&quot;Expired&quot;, label:&quot;Expired (&quot;+expired.length+&quot;)&quot;},
+    {key:&quot;Draft&quot;, label:&quot;Drafts (&quot;+drafts.length+&quot;)&quot;}
   ];
   document.getElementById(&quot;pr-tabs&quot;).innerHTML = tabs.map(function(t){
-    return &#x27;&lt;button class=&quot;tab-btn&#x27;+(t.key===_prTab?&#x27; on&#x27;:&#x27;&#x27;)+&#x27;&quot; onclick=&quot;_prTab=\&#x27;&#x27;+t.key+&#x27;\&#x27;;renderPromotions()&quot;&gt;&#x27;+t.label+&#x27;&lt;/button&gt;&#x27;;
+    return &#x27;&lt;button class=&quot;tab-btn&#x27;+(t.key===_prTab?&#x27; on&#x27;:&#x27;&#x27;)+&#x27;&quot; onclick=&quot;_prTab=\&#x27;&#x27;+t.key+&#x27;\&#x27;;_prPage=1;renderPromotions()&quot;&gt;&#x27;+t.label+&#x27;&lt;/button&gt;&#x27;;
   }).join(&quot;&quot;);
 
   var q = (document.getElementById(&quot;pr-search&quot;).value||&quot;&quot;).toLowerCase();
   var typeF = document.getElementById(&quot;pr-type-filter&quot;).value;
+  var statusF = document.getElementById(&quot;pr-status-filter&quot;).value;
+  var fromVal = document.getElementById(&quot;pr-date-from&quot;).value;
+  var toVal = document.getElementById(&quot;pr-date-to&quot;).value;
   var list = withStatus.filter(function(p){
     var matchTab = !_prTab || p._status===_prTab;
     var matchQ = !q || (p.name||&quot;&quot;).toLowerCase().indexOf(q)&gt;-1;
     var matchT = !typeF || p.type===typeF;
-    return matchTab &amp;&amp; matchQ &amp;&amp; matchT;
+    var matchS = !statusF || p._status===statusF;
+    var matchFrom = !fromVal || !p.startDate || new Date(p.startDate) &gt;= new Date(fromVal);
+    var matchTo = !toVal || !p.endDate || new Date(p.endDate) &lt;= new Date(toVal+&quot;T23:59:59&quot;);
+    return matchTab &amp;&amp; matchQ &amp;&amp; matchT &amp;&amp; matchS &amp;&amp; matchFrom &amp;&amp; matchTo;
   });
-  var html = &#x27;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Promotion&lt;/th&gt;&lt;th&gt;Type&lt;/th&gt;&lt;th&gt;Target&lt;/th&gt;&lt;th&gt;Benefit&lt;/th&gt;&lt;th&gt;Period&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Views&lt;/th&gt;&lt;th&gt;Bookings&lt;/th&gt;&lt;/tr&gt;&#x27;;
-  list.forEach(function(p){
-    html += &#x27;&lt;tr&gt;&lt;td&gt;&#x27;+esc(p.name)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(p.type||&quot;-&quot;)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(p.target||&quot;-&quot;)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(p.benefit||&quot;-&quot;)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(p.startDate||&quot;-&quot;)+&#x27; &amp;rarr; &#x27;+esc(p.endDate||&quot;-&quot;)+&#x27;&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;pill &#x27;+(PR_PILL[p._status]||&quot;pill-gray&quot;)+&#x27;&quot;&gt;&#x27;+p._status+&#x27;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&#x27;+(p.views||0)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+(p.bookings||0)+&#x27;&lt;/td&gt;&lt;/tr&gt;&#x27;;
+
+  var perPage = parseInt(document.getElementById(&quot;pr-per-page&quot;).value,10) || 10;
+  var totalPages = Math.max(1, Math.ceil(list.length/perPage));
+  if (_prPage &gt; totalPages) _prPage = totalPages;
+  var startIdx = list.length ? (_prPage-1)*perPage+1 : 0;
+  var endIdx = Math.min(_prPage*perPage, list.length);
+  var slice = list.slice((_prPage-1)*perPage, _prPage*perPage);
+
+  var html = &#x27;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Promotion&lt;/th&gt;&lt;th&gt;Type&lt;/th&gt;&lt;th&gt;Target&lt;/th&gt;&lt;th&gt;Discount/Benefit&lt;/th&gt;&lt;th&gt;Period&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Performance&lt;/th&gt;&lt;th&gt;&lt;/th&gt;&lt;/tr&gt;&#x27;;
+  slice.forEach(function(p){
+    html += &#x27;&lt;tr style=&quot;cursor:pointer&quot; onclick=&quot;openPromoDetail(\&#x27;&#x27;+p.id+&#x27;\&#x27;)&quot;&gt;&lt;td&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.name)+&#x27;&lt;/div&gt;&#x27;+(p.tagline?&#x27;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(p.tagline)+&#x27;&lt;/div&gt;&#x27;:&#x27;&#x27;)+&#x27;&lt;/td&gt;&#x27;+
+      &#x27;&lt;td&gt;&#x27;+esc(p.type||&quot;-&quot;)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(p.target||&quot;-&quot;)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(p.benefit||&quot;-&quot;)+&#x27;&lt;/td&gt;&#x27;+
+      &#x27;&lt;td&gt;&#x27;+esc(p.startDate||&quot;-&quot;)+&#x27; &amp;rarr; &#x27;+esc(p.endDate||&quot;-&quot;)+&#x27;&lt;/td&gt;&#x27;+
+      &#x27;&lt;td&gt;&lt;span class=&quot;pill &#x27;+(PR_PILL[p._status]||&quot;pill-gray&quot;)+&#x27;&quot;&gt;&#x27;+p._status+&#x27;&lt;/span&gt;&lt;/td&gt;&#x27;+
+      &#x27;&lt;td&gt;&#x27;+(p.views||0)+&#x27; views&lt;br/&gt;&#x27;+(p.bookings||0)+&#x27; bookings&lt;/td&gt;&#x27;+
+      &#x27;&lt;td&gt;&lt;button class=&quot;kebab&quot; onclick=&quot;event.stopPropagation();openPromoDetail(\&#x27;&#x27;+p.id+&#x27;\&#x27;)&quot; title=&quot;View details&quot;&gt;&amp;#128065;&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&#x27;;
   });
   html += &#x27;&lt;/table&gt;&#x27;;
-  document.getElementById(&quot;pr-table&quot;).innerHTML = list.length ? html : &#x27;&lt;div class=&quot;empty&quot;&gt;No promotions found.&lt;/div&gt;&#x27;;
-  document.getElementById(&quot;pr-pager&quot;).innerHTML = &quot;&quot;;
+  document.getElementById(&quot;pr-table&quot;).innerHTML = slice.length ? html : &#x27;&lt;div class=&quot;empty&quot;&gt;No promotions found.&lt;/div&gt;&#x27;;
+  var pager = &quot;&quot;;
+  for (var i=1;i&lt;=totalPages;i++) pager += &#x27;&lt;button class=&quot;pg-btn&#x27;+(i===_prPage?&quot; on&quot;:&quot;&quot;)+&#x27;&quot; onclick=&quot;_prPage=&#x27;+i+&#x27;;renderPromotions()&quot;&gt;&#x27;+i+&#x27;&lt;/button&gt;&#x27;;
+  document.getElementById(&quot;pr-pager&quot;).innerHTML = pager;
+  document.getElementById(&quot;pr-pager-count&quot;).textContent = list.length ? (&quot;Showing &quot;+startIdx+&quot; to &quot;+endIdx+&quot; of &quot;+list.length+&quot; promotions&quot;) : &quot;No promotions&quot;;
 
+  if (_prDetailId) openPromoDetail(_prDetailId, true);
+
+  var range = parseInt(document.getElementById(&quot;pr-perf-range&quot;).value,10) || 7;
+  var topN = withStatus.slice().sort(function(a,b){ return (b.views||0)-(a.views||0); }).slice(0, range===30 ? 12 : 6);
   if (_chartPrPerf) _chartPrPerf.destroy();
-  _chartPrPerf = new Chart(document.getElementById(&quot;pr-chart-perf&quot;), {type:&quot;bar&quot;, data:{labels:withStatus.map(function(p){return p.name;}), datasets:[{label:&quot;Views&quot;, data:withStatus.map(function(p){return p.views||0;}), backgroundColor:&quot;#2f5fdb&quot;},{label:&quot;Bookings&quot;, data:withStatus.map(function(p){return p.bookings||0;}), backgroundColor:&quot;#16a34a&quot;}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, scales:{y:{beginAtZero:true}}}});
+  _chartPrPerf = new Chart(document.getElementById(&quot;pr-chart-perf&quot;), {type:&quot;line&quot;, data:{labels:topN.map(function(p){return p.name;}), datasets:[{label:&quot;Views&quot;, data:topN.map(function(p){return p.views||0;}), borderColor:&quot;#2f5fdb&quot;, backgroundColor:&quot;rgba(47,95,219,.08)&quot;, fill:true, tension:.4, pointRadius:2},{label:&quot;Bookings&quot;, data:topN.map(function(p){return p.bookings||0;}), borderColor:&quot;#16a34a&quot;, backgroundColor:&quot;rgba(22,163,74,.08)&quot;, fill:true, tension:.4, pointRadius:2}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, scales:{y:{beginAtZero:true}}}});
 
   var byType = {};
   withStatus.forEach(function(p){ var t=p.type||&quot;Other&quot;; byType[t]=(byType[t]||0)+1; });
   var tLabels = Object.keys(byType), tVals = tLabels.map(function(k){ return byType[k]; });
+  var tColors = [&quot;#2f5fdb&quot;,&quot;#16a34a&quot;,&quot;#f59e0b&quot;,&quot;#7c3aed&quot;,&quot;#0ea5e9&quot;,&quot;#9aa3b2&quot;];
   if (_chartPrTypes) _chartPrTypes.destroy();
-  _chartPrTypes = new Chart(document.getElementById(&quot;pr-chart-types&quot;), {type:&quot;doughnut&quot;, data:{labels:tLabels.length?tLabels:[&quot;No data&quot;], datasets:[{data:tVals.length?tVals:[1], backgroundColor:[&quot;#2f5fdb&quot;,&quot;#16a34a&quot;,&quot;#f59e0b&quot;,&quot;#7c3aed&quot;,&quot;#0ea5e9&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}}, cutout:&quot;60%&quot;}});
+  _chartPrTypes = new Chart(document.getElementById(&quot;pr-chart-types&quot;), {type:&quot;doughnut&quot;, data:{labels:tLabels.length?tLabels:[&quot;No data&quot;], datasets:[{data:tVals.length?tVals:[1], backgroundColor:tColors, borderWidth:0}]}, options:{plugins:{legend:{display:false}}, cutout:&quot;68%&quot;}});
+  var tTotal = tVals.reduce(function(s,v){ return s+v; }, 0) || 1;
+  document.getElementById(&quot;pr-types-legend&quot;).innerHTML = tLabels.length ? tLabels.map(function(k,i){
+    var pct = Math.round((byType[k]/tTotal)*1000)/10;
+    return &#x27;&lt;div class=&quot;legend-row&quot;&gt;&lt;span class=&quot;legend-dot&quot; style=&quot;background:&#x27;+tColors[i%tColors.length]+&#x27;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;lg-name&quot;&gt;&#x27;+esc(k)+&#x27;&lt;/span&gt;&lt;span class=&quot;lg-val&quot;&gt;&#x27;+pct+&#x27;%&lt;/span&gt;&lt;/div&gt;&#x27;;
+  }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No data yet.&lt;/div&gt;&#x27;;
 
   var top = withStatus.slice().sort(function(a,b){ return (b.bookings||0)-(a.bookings||0); }).slice(0,5);
-  document.getElementById(&quot;pr-top&quot;).innerHTML = top.length ? top.map(function(p){
-    return &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&amp;#127881;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+(p.views||0)+&#x27; views &amp;middot; &#x27;+(p.bookings||0)+&#x27; bookings&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  document.getElementById(&quot;pr-top&quot;).innerHTML = top.length ? top.map(function(p,i){
+    return &#x27;&lt;div class=&quot;list-row&quot; style=&quot;cursor:pointer&quot; onclick=&quot;openPromoDetail(\&#x27;&#x27;+p.id+&#x27;\&#x27;)&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&#x27;+(i+1)+&#x27;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+(p.bookings||0)+&#x27; bookings &amp;middot; &#x27;+NGN(p.revenue||0)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
   }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No promotions yet.&lt;/div&gt;&#x27;;
+}
+function resetPromoFilters() {
+  document.getElementById(&quot;pr-search&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;pr-type-filter&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;pr-status-filter&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;pr-date-from&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;pr-date-to&quot;).value = &quot;&quot;;
+  _prTab = &quot;&quot;; _prPage = 1;
+  renderPromotions();
+}
+function openPromoDetail(id, silent) {
+  _prDetailId = id;
+  var p = _allPromotions.find(function(x){ return x.id===id; });
+  var wrap = document.getElementById(&quot;pr-detail-wrap&quot;);
+  if (!p) { wrap.innerHTML = &#x27;&lt;div class=&quot;empty&quot;&gt;Promotion not found.&lt;/div&gt;&#x27;; return; }
+  var status = promoComputedStatus(p);
+  var actions = &quot;&quot;;
+  if (status === &quot;Draft&quot;) {
+    actions += &#x27;&lt;button class=&quot;btn btn-p&quot; style=&quot;background:var(--green)&quot; onclick=&quot;publishPromo(\&#x27;&#x27;+id+&#x27;\&#x27;)&quot;&gt;&amp;#9989; Publish Now&lt;/button&gt;&#x27;;
+  } else if (status === &quot;Active&quot; || status === &quot;Scheduled&quot;) {
+    actions += &#x27;&lt;button class=&quot;btn btn-p&quot; style=&quot;background:var(--red)&quot; onclick=&quot;expirePromo(\&#x27;&#x27;+id+&#x27;\&#x27;)&quot;&gt;&amp;#9209; End Promotion&lt;/button&gt;&#x27;;
+  }
+  actions += &#x27;&lt;button class=&quot;btn btn-o&quot; onclick=&quot;deletePromo(\&#x27;&#x27;+id+&#x27;\&#x27;)&quot; style=&quot;color:var(--red);border-color:var(--red-bd)&quot;&gt;&amp;#128465; Delete&lt;/button&gt;&#x27;;
+  wrap.innerHTML =
+    &#x27;&lt;span class=&quot;pill &#x27;+(PR_PILL[status]||&quot;pill-gray&quot;)+&#x27;&quot; style=&quot;float:right&quot;&gt;&#x27;+status+&#x27;&lt;/span&gt;&#x27;+
+    &#x27;&lt;div class=&quot;fgrid2&quot;&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Promotion Name&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.name)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Type&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.type||&quot;-&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Target Audience&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.target||&quot;-&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Discount / Benefit&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.benefit||&quot;-&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Start Date&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.startDate||&quot;-&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;End Date&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(p.endDate||&quot;-&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Total Views&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+(p.views||0)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div&gt;&lt;div class=&quot;lr-sub&quot;&gt;Total Bookings&lt;/div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+(p.bookings||0)+&#x27; &amp;middot; &#x27;+NGN(p.revenue||0)+&#x27; revenue&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;hv-actions&quot;&gt;&#x27;+actions+&#x27;&lt;/div&gt;&#x27;;
+  if (!silent) window.scrollTo({top: wrap.getBoundingClientRect().top + window.scrollY - 80, behavior:&quot;smooth&quot;});
+}
+function expirePromo(id) {
+  db.collection(&quot;promotions&quot;).doc(id).update({ endDate: new Date().toISOString().split(&quot;T&quot;)[0] }).then(function(){
+    var p = _allPromotions.find(function(x){ return x.id===id; });
+    if (p) p.endDate = new Date().toISOString().split(&quot;T&quot;)[0];
+    renderPromotions();
+    T(&quot;Promotion Ended&quot;, &quot;This promotion has been marked as expired.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update this promotion.&quot;); });
+}
+function publishPromo(id) {
+  db.collection(&quot;promotions&quot;).doc(id).update({ isDraft: false }).then(function(){
+    var p = _allPromotions.find(function(x){ return x.id===id; });
+    if (p) p.isDraft = false;
+    renderPromotions();
+    T(&quot;Promotion Published&quot;, &quot;This promotion is now live.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not publish this promotion.&quot;); });
+}
+function deletePromo(id) {
+  db.collection(&quot;promotions&quot;).doc(id).delete().then(function(){
+    _allPromotions = _allPromotions.filter(function(x){ return x.id!==id; });
+    _prDetailId = null;
+    renderPromotions();
+    document.getElementById(&quot;pr-detail-wrap&quot;).innerHTML = &#x27;&lt;div class=&quot;empty&quot;&gt;Select a promotion above to view its details.&lt;/div&gt;&#x27;;
+    T(&quot;Promotion Deleted&quot;, &quot;The promotion has been removed.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not delete this promotion.&quot;); });
 }
 function openPromoModal() { openModalEl(&quot;promo-modal&quot;); }
 function savePromotion() {
@@ -4688,8 +5382,8 @@ function savePromotion() {
   var startDate = document.getElementById(&quot;pr-start&quot;).value;
   var endDate = document.getElementById(&quot;pr-end&quot;).value;
   if (!name) { T(&quot;Missing info&quot;, &quot;Promotion name is required.&quot;); return; }
-  db.collection(&quot;promotions&quot;).add({ name:name, type:type, target:target, benefit:benefit, startDate:startDate, endDate:endDate, views:0, bookings:0, createdAt:firebase.firestore.FieldValue.serverTimestamp() }).then(function(ref){
-    _allPromotions.push({ id:ref.id, name:name, type:type, target:target, benefit:benefit, startDate:startDate, endDate:endDate, views:0, bookings:0 });
+  db.collection(&quot;promotions&quot;).add({ name:name, type:type, target:target, benefit:benefit, startDate:startDate, endDate:endDate, views:0, bookings:0, revenue:0, createdAt:firebase.firestore.FieldValue.serverTimestamp() }).then(function(ref){
+    _allPromotions.push({ id:ref.id, name:name, type:type, target:target, benefit:benefit, startDate:startDate, endDate:endDate, views:0, bookings:0, revenue:0 });
     closeModal(&quot;promo-modal&quot;);
     [&quot;pr-name&quot;,&quot;pr-benefit&quot;,&quot;pr-start&quot;,&quot;pr-end&quot;].forEach(function(id){ document.getElementById(id).value=&quot;&quot;; });
     renderPromotions();
@@ -5193,7 +5887,7 @@ db.collection("settings").doc("roomInventory").onSnapshot(function(doc) {
 }, function(e) { console.warn("roomInventory listener:", e); });
 
 // ═══════════════════════════════════════════
-// MARKETPLACE BOOTSTRAP: make sure Hotels Continental itself is
+// MARKETPLACE BOOTSTRAP: make sure Hotels Africa itself is
 // listed as a hotel in the marketplace, with its 7 room types,
 // so guests can find and book it from the "Hotels" marketplace
 // page just like any other partner hotel.
@@ -5214,10 +5908,10 @@ function ensureHotelsContinentalListing() {
   ref.get().then(function(doc) {
     if (!doc.exists) {
       ref.set({
-        name: "Hotels Continental", location: "Lagos, Nigeria",
+        name: "Hotels Africa", location: "Lagos, Nigeria",
         description: "Where Lagos's finest hospitality meets modern comfort.",
         status: "Active", walletBalance: 0, totalEarned: 0, isPrimary: true,
-        ownerName: "Hotels Continental", ownerEmail: "HotelsContinental@gmail.com",
+        ownerName: "Hotels Africa", ownerEmail: "HotelsContinental@gmail.com",
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true }).catch(function(){});
     }
@@ -5543,7 +6237,7 @@ function verifyCode() {
     }
     d.ref.update({codeStatus:"used"});
     showAR("granted", "OK", "Access Granted",
-      "Welcome, " + b.name + "!\n\nRoom: " + (b.roomNumber || "See reception") + " (" + b.roomType + ")\nCheck-in: " + b.checkIn + "\nCheck-out: " + b.checkOut + "\n\nEnjoy your stay at Hotels Continental!");
+      "Welcome, " + b.name + "!\n\nRoom: " + (b.roomNumber || "See reception") + " (" + b.roomType + ")\nCheck-in: " + b.checkIn + "\nCheck-out: " + b.checkOut + "\n\nEnjoy your stay at Hotels Africa!");
     T("Welcome!", "Access granted for " + b.name);
   }).catch(function(e) {
     btn.disabled = false;
@@ -5638,7 +6332,7 @@ function showHotelBookingReceipt(id) {
     var ppn = Math.round((b.amount || 0) / nights);
     var rw = document.getElementById("receipt-" + id);
     rw.style.display = "block";
-    rw.innerHTML = '<div class="receipt-header"><div class="receipt-logo">' + esc(b.hotelName || "Hotels Continental") + '</div></div>' +
+    rw.innerHTML = '<div class="receipt-header"><div class="receipt-logo">' + esc(b.hotelName || "Hotels Africa") + '</div></div>' +
       '<div class="receipt-rows">' +
       '<div class="receipt-row"><span class="receipt-lbl">Guest</span><span class="receipt-val">' + esc(b.name || "") + '</span></div>' +
       '<div class="receipt-row"><span class="receipt-lbl">Room</span><span class="receipt-val">' + esc(b.roomType || "") + '</span></div>' +
@@ -5661,7 +6355,7 @@ function showReceipt(id) {
     var total = ppn * nights;
     var rw = document.getElementById("receipt-" + id);
     rw.style.display = "block";
-    rw.innerHTML = '<div class="receipt-header"><div class="receipt-logo">Hotels Continental</div>' +
+    rw.innerHTML = '<div class="receipt-header"><div class="receipt-logo">Hotels Africa</div>' +
       '<div style="font-size:.78rem;color:var(--muted);margin-top:.3rem">Lagos, Nigeria - 09123213212</div></div>' +
       '<div class="receipt-rows">' +
       '<div class="receipt-row"><span class="receipt-lbl">Guest</span><span class="receipt-val">' + b.name + '</span></div>' +
@@ -5673,7 +6367,7 @@ function showReceipt(id) {
       '<div class="receipt-row"><span class="receipt-lbl">Rate/Night</span><span class="receipt-val">&#x20A6;' + ppn.toLocaleString() + '</span></div>' +
       '<div class="receipt-row" style="font-weight:700"><span class="receipt-lbl" style="color:var(--text)">Total</span><span class="receipt-val" style="color:var(--gold)">&#x20A6;' + total.toLocaleString() + '</span></div></div>' +
       (b.accessCode ? '<div class="receipt-code"><div class="receipt-code-lbl">Access Code</div><div class="receipt-code-val">' + b.accessCode + '</div></div>' : "") +
-      '<div class="receipt-footer">Thank you for choosing Hotels Continental!</div>';
+      '<div class="receipt-footer">Thank you for choosing Hotels Africa!</div>';
   });
 }
 
@@ -5726,7 +6420,7 @@ function loadHomeReviews() {
           return '<span class="rev-cat-chip">' + RV_CAT_LABELS[k] + ' ' + v + '&#9733;</span>';
         }).join("") + '</div>';
       }
-      var replyHtml = r.ownerReply ? '<div class="rev-reply"><div class="rev-reply-label">&#127974; Response from Hotels Continental</div><div class="rev-reply-text">' + r.ownerReply + '</div></div>' : "";
+      var replyHtml = r.ownerReply ? '<div class="rev-reply"><div class="rev-reply-label">&#127974; Response from Hotels Africa</div><div class="rev-reply-text">' + r.ownerReply + '</div></div>' : "";
       html += '<div class="rev-card"><div class="rev-stars">' + st + '</div><div class="rev-text">"' + r.text + '"</div><div class="rev-author">' + r.name + '</div><div class="rev-room">' + r.room + ' Suite</div>' + catChips + replyHtml + '</div>';
     });
     el.innerHTML = html;
@@ -6398,7 +7092,7 @@ function sendEmail(d) {
   emailjs.send(EJS_SVC, EJS_TPL, {
     to_name:d.name, to_email:d.email, room_type:d.roomType, room_number:d.roomNumber,
     check_in:d.checkIn, check_out:d.checkOut, access_code:d.code,
-    hotel_name:"Hotels Continental", hotel_phone:"09123213212",
+    hotel_name:"Hotels Africa", hotel_phone:"09123213212",
     hotel_email:"HotelsContinental@gmail.com", hotel_address:"Lagos, Nigeria"
   }).then(function() { T("Email Sent", "Sent to " + d.email); })
     .catch(function(e) { console.warn("EmailJS:", e); });
@@ -6791,7 +7485,7 @@ function accOpenSub(key) {
     bookings: "My Bookings", wishlist: "My Wishlist", profile: "My Profile",
     payments: "Payments & Wallet", inbox: "Inbox", notifications: "Notifications", chats: "Messages",
     support: "Contact Admin",
-    refer: "Refer & Earn", help: "Help & Support", about: "About Hotels Continental",
+    refer: "Refer & Earn", help: "Help & Support", about: "About Hotels Africa",
     terms: "Terms & Conditions", privacy: "Privacy Policy"
   };
   document.getElementById("acc-sub-title").textContent = titles[key] || "";
@@ -6807,8 +7501,8 @@ function accOpenSub(key) {
   else if (key === "notifications") accRenderNotifications(body);
   else if (key === "refer") accRenderRefer(body);
   else if (key === "help") accRenderStatic(body, "Need a hand?", "Call or WhatsApp us on <a href=\"tel:09123213212\" style=\"color:var(--gold)\">09123213212</a>, or email <a href=\"mailto:HotelsContinental@gmail.com\" style=\"color:var(--gold)\">HotelsContinental@gmail.com</a>. Our team is available 24/7.");
-  else if (key === "about") accRenderStatic(body, "About Us", "Hotels Continental offers luxury hospitality in the heart of Lagos, Nigeria, with secure digital room access and seamless online booking.");
-  else if (key === "terms") accRenderStatic(body, "Terms & Conditions", "By booking with Hotels Continental you agree to our booking, cancellation and access-code policies. Access codes are personal and non-transferable.");
+  else if (key === "about") accRenderStatic(body, "About Us", "Hotels Africa offers luxury hospitality in the heart of Lagos, Nigeria, with secure digital room access and seamless online booking.");
+  else if (key === "terms") accRenderStatic(body, "Terms & Conditions", "By booking with Hotels Africa you agree to our booking, cancellation and access-code policies. Access codes are personal and non-transferable.");
   else if (key === "privacy") accRenderStatic(body, "Privacy Policy", "We collect only the information required to process your booking and never share your data with third parties beyond payment processing.");
 }
 
