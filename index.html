@@ -419,18 +419,18 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
     <div class="hgrid"></div>
     <div class="hglow"></div>
     <div class="hcon">
-      <div class="heye">Lagos, Nigeria</div>
+      <div class="heye" id="home-eyebrow">Nigeria's Trusted Hotel Marketplace</div>
       <h1 class="htitle">Hotels<em>Continental</em></h1>
-      <p class="hsub">Where Lagos's finest hospitality meets modern comfort</p>
+      <p class="hsub" id="home-subtitle">Compare, book and manage stays at verified partner hotels across Nigeria — all in one place.</p>
       <div class="hbtns">
         <button class="btn bg" onclick="SP('hotels')">Book Now</button>
         <button class="btn bo" onclick="SP('hotels')">Explore Rooms</button>
         <button class="btn bo" onclick="goAccount()">Sign Up / Log In</button>
       </div>
       <div class="hstats">
-        <div><div class="hsn">7</div><div class="hsl">Room Types</div></div>
-        <div><div class="hsn">24/7</div><div class="hsl">Concierge</div></div>
-        <div><div class="hsn">100%</div><div class="hsl">Secure Access</div></div>
+        <div><div class="hsn" id="hst1v">0+</div><div class="hsl" id="hst1l">Partner Hotels</div></div>
+        <div><div class="hsn" id="hst2v">24/7</div><div class="hsl" id="hst2l">Concierge</div></div>
+        <div><div class="hsn" id="hst3v">100%</div><div class="hsl" id="hst3l">Secure Access</div></div>
         <div><div class="hsn" id="hrc">0</div><div class="hsl">Guest Reviews</div></div>
       </div>
     </div>
@@ -1707,6 +1707,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       <div class=&quot;st-wrap&quot;>
         <div class=&quot;st-nav&quot; id=&quot;st-nav&quot;>
           <div class=&quot;st-nav-item on&quot; data-sec=&quot;general&quot; onclick=&quot;setSettingsSection('general')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#9881;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>General Settings</span><span class=&quot;st-nav-sub&quot;>Basic platform info</span></span></div>
+          <div class=&quot;st-nav-item&quot; data-sec=&quot;homepage&quot; onclick=&quot;setSettingsSection('homepage')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#127760;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Homepage Content</span><span class=&quot;st-nav-sub&quot;>Hero text &amp;amp; stats</span></span></div>
           <div class=&quot;st-nav-item&quot; data-sec=&quot;company&quot; onclick=&quot;setSettingsSection('company')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#127970;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Company Profile</span><span class=&quot;st-nav-sub&quot;>Update company details</span></span></div>
           <div class=&quot;st-nav-item&quot; data-sec=&quot;localization&quot; onclick=&quot;setSettingsSection('localization')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#127760;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Localization</span><span class=&quot;st-nav-sub&quot;>Language, timezone, currency</span></span></div>
           <div class=&quot;st-nav-item&quot; data-sec=&quot;payment&quot; onclick=&quot;setSettingsSection('payment')&quot;><span class=&quot;st-nav-ico&quot;>&amp;#128179;</span><span class=&quot;st-nav-txt&quot;><span class=&quot;st-nav-title&quot;>Payment Settings</span><span class=&quot;st-nav-sub&quot;>Payment methods &amp;amp; fees</span></span></div>
@@ -1735,6 +1736,26 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
                 <div class=&quot;fg&quot;><label>Default Timezone</label><select id=&quot;st-timezone&quot;><option>(UTC+01:00) West Africa Time (WAT)</option><option>(UTC+00:00) GMT</option></select></div>
                 <div class=&quot;fg&quot;><label>Date Format</label><select id=&quot;st-date-format&quot;><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option><option>YYYY-MM-DD</option></select></div>
                 <div class=&quot;fg&quot;><label>Time Format</label><select id=&quot;st-time-format&quot;><option>12 Hours</option><option>24 Hours</option></select></div>
+              </div>
+            </div>
+          </div>
+          <div id=&quot;st-homepage&quot; class=&quot;st-pane&quot; style=&quot;display:none&quot;>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Homepage Hero <button class=&quot;btn btn-p btn-sm&quot; onclick=&quot;saveSettings('homepage')&quot;>Save Changes</button></div>
+              <div style=&quot;font-size:.76rem;color:var(--muted);margin:-.4rem 0 1rem&quot;>This is the text and stats shown at the very top of the public homepage (lokiface.com/#home), above the partner hotel listings.</div>
+              <div class=&quot;fg&quot;><label>Eyebrow Text</label><input type=&quot;text&quot; id=&quot;st-home-eyebrow&quot; placeholder=&quot;Nigeria's Trusted Hotel Marketplace&quot;/></div>
+              <div class=&quot;fg&quot;><label>Subtitle</label><textarea id=&quot;st-home-subtitle&quot; rows=&quot;2&quot; placeholder=&quot;Compare, book and manage stays at verified partner hotels across Nigeria — all in one place.&quot;></textarea></div>
+            </div>
+            <div class=&quot;card&quot;>
+              <div class=&quot;card-title&quot;>Hero Stats</div>
+              <div style=&quot;font-size:.76rem;color:var(--muted);margin:-.4rem 0 1rem&quot;>The 4th stat (Guest Reviews) always reflects real review counts and can't be edited. Leave &quot;Partner Hotels&quot; value blank to keep it auto-updating with your live hotel count.</div>
+              <div class=&quot;fgrid2&quot;>
+                <div class=&quot;fg&quot;><label>Stat 1 Label</label><input type=&quot;text&quot; id=&quot;st-home-stat1-label&quot; placeholder=&quot;Partner Hotels&quot;/></div>
+                <div class=&quot;fg&quot;><label>Stat 1 Value <span style=&quot;font-weight:400;color:var(--muted)&quot;>(blank = auto)</span></label><input type=&quot;text&quot; id=&quot;st-home-stat1-value&quot; placeholder=&quot;auto&quot;/></div>
+                <div class=&quot;fg&quot;><label>Stat 2 Label</label><input type=&quot;text&quot; id=&quot;st-home-stat2-label&quot; placeholder=&quot;Concierge&quot;/></div>
+                <div class=&quot;fg&quot;><label>Stat 2 Value</label><input type=&quot;text&quot; id=&quot;st-home-stat2-value&quot; placeholder=&quot;24/7&quot;/></div>
+                <div class=&quot;fg&quot;><label>Stat 3 Label</label><input type=&quot;text&quot; id=&quot;st-home-stat3-label&quot; placeholder=&quot;Secure Access&quot;/></div>
+                <div class=&quot;fg&quot;><label>Stat 3 Value</label><input type=&quot;text&quot; id=&quot;st-home-stat3-value&quot; placeholder=&quot;100%&quot;/></div>
               </div>
             </div>
           </div>
@@ -2506,12 +2527,16 @@ function adminLogin() {
       return;
     }
     // Not the super admin — confirm this email is on the sub-admin allow-list
-    // before granting access to the dashboard.
-    return db.collection(&quot;subadmins&quot;).where(&quot;username&quot;,&quot;==&quot;,email).limit(1).get().then(function(snap){
+    // before granting access to the dashboard. Looked up by document ID
+    // (doc id === username/email) rather than a where() query, because the
+    // Firestore rule for this collection only permits a signed-in user to
+    // read the single subadmins doc matching their own email — a where()
+    // query can't be proven safe against that rule and gets rejected.
+    return db.collection(&quot;subadmins&quot;).doc(email).get().then(function(doc){
       resetBtn();
-      if (!snap.empty) {
+      if (doc.exists) {
         _isSuperAdmin = false; _currentSubAdmin = email;
-        _currentSubAdminPerms = snap.docs[0].data().permissions || [];
+        _currentSubAdminPerms = doc.data().permissions || [];
         loginSuccess(email, &quot;Staff Admin&quot;);
       } else {
         auth.signOut();
@@ -4332,6 +4357,7 @@ function renderSettings() {
     return '<div class=&quot;toggle-row&quot;><div><div class=&quot;toggle-lbl&quot;>'+n+'</div></div><label class=&quot;tgl&quot;><input type=&quot;checkbox&quot; data-notif=&quot;'+n+'&quot; '+(checked?&quot;checked&quot;:&quot;&quot;)+'/><span class=&quot;tgl-slider&quot;></span></label></div>';
   }).join(&quot;&quot;);
   applySettingsToForm(_settings.general);
+  applySettingsToForm(_settings.homepage, &quot;st-home-&quot;);
   applySettingsToForm(_settings.company);
   applySettingsToForm(_settings.localization);
   applySettingsToForm(_settings.email);
@@ -4370,6 +4396,18 @@ function collectGeneralSettings() {
     &quot;timezone&quot;: document.getElementById(&quot;st-timezone&quot;).value,
     &quot;date-format&quot;: document.getElementById(&quot;st-date-format&quot;).value,
     &quot;time-format&quot;: document.getElementById(&quot;st-time-format&quot;).value
+  };
+}
+function collectHomepageSettings() {
+  return {
+    &quot;eyebrow&quot;: document.getElementById(&quot;st-home-eyebrow&quot;).value,
+    &quot;subtitle&quot;: document.getElementById(&quot;st-home-subtitle&quot;).value,
+    &quot;stat1-label&quot;: document.getElementById(&quot;st-home-stat1-label&quot;).value,
+    &quot;stat1-value&quot;: document.getElementById(&quot;st-home-stat1-value&quot;).value,
+    &quot;stat2-label&quot;: document.getElementById(&quot;st-home-stat2-label&quot;).value,
+    &quot;stat2-value&quot;: document.getElementById(&quot;st-home-stat2-value&quot;).value,
+    &quot;stat3-label&quot;: document.getElementById(&quot;st-home-stat3-label&quot;).value,
+    &quot;stat3-value&quot;: document.getElementById(&quot;st-home-stat3-value&quot;).value
   };
 }
 function collectCompanySettings() {
@@ -4437,6 +4475,7 @@ function collectApiSettings() {
 function saveSettings(section) {
   var update = {};
   if (section === &quot;general&quot;) { _settings.general = collectGeneralSettings(); update.general = _settings.general; }
+  if (section === &quot;homepage&quot;) { _settings.homepage = collectHomepageSettings(); update.homepage = _settings.homepage; }
   if (section === &quot;company&quot;) { _settings.company = collectCompanySettings(); update.company = _settings.company; }
   if (section === &quot;localization&quot;) { _settings.localization = collectLocalizationSettings(); update.localization = _settings.localization; }
   if (section === &quot;email&quot;) { _settings.email = collectEmailSettings(); update.email = _settings.email; }
@@ -4656,6 +4695,19 @@ function applyPublicBranding(logo) {
 db.collection("config").doc("settings").get().then(function(doc) {
   var logo = doc.exists && doc.data().company && doc.data().company["company-logo"];
   applyPublicBranding(logo);
+  // Homepage hero copy (eyebrow / subtitle / the first three stat tiles) is
+  // editable from Admin -> Settings -> Homepage Content. Anything the admin
+  // hasn't set yet falls back to marketplace-appropriate defaults already
+  // in the HTML, so this never shows blank text.
+  var home = (doc.exists && doc.data().homepage) || {};
+  if (home["eyebrow"]) { var eyeEl = document.getElementById("home-eyebrow"); if (eyeEl) eyeEl.textContent = home["eyebrow"]; }
+  if (home["subtitle"]) { var subEl = document.getElementById("home-subtitle"); if (subEl) subEl.textContent = home["subtitle"]; }
+  [1, 2, 3].forEach(function(n) {
+    var lbl = home["stat" + n + "-label"], val = home["stat" + n + "-value"];
+    if (lbl) { var lEl = document.getElementById("hst" + n + "l"); if (lEl) lEl.textContent = lbl; }
+    if (val) { var vEl = document.getElementById("hst" + n + "v"); if (vEl) vEl.textContent = val; }
+  });
+  window._homeStat1Overridden = !!home["stat1-value"];
 }).catch(function() {});
 
 // RIPPLE
@@ -6525,6 +6577,11 @@ function loadHomeMarketplace() {
   var wrap = document.getElementById("home-mp-list");
   if (wrap) wrap.innerHTML = '<div class="empty">Loading hotels...</div>';
   loadMarketplaceHotels().then(function() {
+    // The "Partner Hotels" hero stat mirrors the live count of active
+    // hotels automatically, UNLESS the admin has typed a specific override
+    // value in Settings -> Homepage Content.
+    var stat1 = document.getElementById("hst1v");
+    if (stat1 && !window._homeStat1Overridden) stat1.textContent = _mpHotels.length + "+";
     if (!wrap) return;
     if (!_mpHotels.length) { wrap.innerHTML = '<div class="empty">No partner hotels are live yet. Check back soon!</div>'; return; }
     wrap.innerHTML = _mpHotels.slice(0, 6).map(function(h) {
@@ -6975,6 +7032,10 @@ function hdSetTab(tab) {
   document.querySelectorAll(".hd-tab").forEach(function(el) { el.style.display = "none"; });
   document.getElementById("hd-tab-" + tab).style.display = "block";
   if (tab === "settings") hdRenderSettings();
+  // Opening the Notifications tab means the owner has now seen these, so
+  // clear the unread badge automatically instead of requiring a manual
+  // "Mark as Read" click on every single notification.
+  if (tab === "notifications") hdMarkAllNotifRead(true);
   hdToggleSidebar(false);
 }
 function hdLoadRooms() {
@@ -7132,13 +7193,13 @@ function pillMini(status) {
 function hdMarkNotifRead(id) {
   db.collection("hotelNotifications").doc(id).update({ read: true }).catch(function() { T("Error", "Could not mark this notification as read."); });
 }
-function hdMarkAllNotifRead() {
+function hdMarkAllNotifRead(silent) {
   var unread = _hdNotifications.filter(function(n) { return !n.read; });
   if (!unread.length) return;
   var batch = db.batch();
   unread.forEach(function(n) { batch.update(db.collection("hotelNotifications").doc(n.id), { read: true }); });
-  batch.commit().then(function() { T("All Caught Up", "All notifications marked as read."); })
-    .catch(function() { T("Error", "Could not mark all as read."); });
+  batch.commit().then(function() { if (!silent) T("All Caught Up", "All notifications marked as read."); })
+    .catch(function(e) { console.warn("mark all hotel notifications read failed:", e); if (!silent) T("Error", "Could not mark all as read."); });
 }
 function hdLoadWithdrawals() {
   db.collection("withdrawals").where("hotelId", "==", _hotelSession).get().then(function(snap) {
