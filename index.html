@@ -92,13 +92,14 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text);min
   .hz-quick-item .dd{font-size:.5rem}
 }
 .hz-banner{width:100%;margin:1rem auto 0;max-width:640px}
-.hz-banner-in{background:var(--ink);border-radius:12px;padding:1rem 1.1rem;display:flex;align-items:center;gap:.9rem;flex-wrap:wrap;justify-content:space-between;position:relative;overflow:hidden}
-.hz-banner-tag{display:inline-block;background:var(--ha-gold);color:var(--ink);font-size:.58rem;font-weight:700;letter-spacing:.08em;padding:.2rem .5rem;border-radius:5px;margin-bottom:.35rem}
+.hz-banner-in{background:var(--ink);border-radius:12px;padding:.8rem 1rem;position:relative;overflow:hidden}
+.hz-banner-tag{display:inline-block;background:var(--ha-gold);color:var(--ink);font-size:.58rem;font-weight:700;letter-spacing:.08em;padding:.2rem .5rem;border-radius:5px;margin-bottom:.3rem}
 .hz-banner-h{font-family:'Playfair Display',serif;color:#fff;font-size:1.02rem;font-weight:700}
-.hz-banner-p{color:rgba(255,255,255,.65);font-size:.72rem;margin-top:.2rem;max-width:360px}
-.hz-banner-price{color:var(--ha-gold);font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;text-align:right}
-.hz-banner-price small{display:block;font-family:'Jost',sans-serif;font-size:.58rem;color:rgba(255,255,255,.55);font-weight:400;letter-spacing:.04em}
-.hz-banner-btn{background:#fff;color:var(--ink);border:none;border-radius:8px;padding:.5rem 1.05rem;font-weight:700;font-size:.72rem;cursor:pointer;margin-top:.45rem}
+.hz-banner-p{color:rgba(255,255,255,.65);font-size:.72rem;margin-top:.15rem}
+.hz-banner-row{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.55rem}
+.hz-banner-price{color:var(--ha-gold);font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;text-align:right;flex-shrink:0}
+.hz-banner-price small{display:block;font-family:'Jost',sans-serif;font-size:.56rem;color:rgba(255,255,255,.55);font-weight:400;letter-spacing:.04em}
+.hz-banner-btn{background:#fff;color:var(--ink);border:none;border-radius:8px;padding:.5rem 1.05rem;font-weight:700;font-size:.72rem;cursor:pointer;flex-shrink:0}
 @media(max-width:860px){
   .hz-fields{grid-template-columns:repeat(6,1fr);grid-template-areas:"a a a a a a" "b b b c c c" "d d e e f f" "g g g g g g";}
   .hz-fields>.hz-fld:nth-child(1){grid-area:a}
@@ -112,7 +113,8 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text);min
   .hz-fld label{font-size:.6rem}
   .hz-card{margin:1.3rem 0 0}
   .hz-trust{margin:1.1rem auto 0;padding:0 1.5rem 1.4rem;gap:.7rem 1.3rem}
-  .hz-banner-price{text-align:left}
+  .hz-banner{margin-left:-1.5rem;margin-right:-1.5rem;max-width:none;width:calc(100% + 3rem)}
+  .hz-banner-in{border-radius:0}
   .hz-quick-item{border-right:none}
   .hz-hero{padding-bottom:.2rem}
   .hz-hero + .sec{padding-top:1.1rem!important}
@@ -744,13 +746,13 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:1.6rem 1.5rem;te
   <div class="sec" style="padding-top:0">
     <div class="hz-banner">
       <div class="hz-banner-in">
-        <div>
-          <span class="hz-banner-tag">TOP PICKS</span>
-          <div class="hz-banner-h">Get More Visibility for Your Hotel</div>
-          <div class="hz-banner-p">List your property as a Top Pick and reach thousands of travelers.</div>
+        <span class="hz-banner-tag">TOP PICKS</span>
+        <div class="hz-banner-h">Get More Visibility for Your Hotel</div>
+        <div class="hz-banner-p">List your property as a Top Pick and reach thousands of travelers.</div>
+        <div class="hz-banner-row">
           <button class="hz-banner-btn" onclick="SP('registerhotel')">Become a Top Pick</button>
+          <div class="hz-banner-price">&#8358;5,000<small>per month</small></div>
         </div>
-        <div class="hz-banner-price">&#8358;5,000<small>per month</small></div>
       </div>
     </div>
   </div>
@@ -10221,7 +10223,7 @@ function statCardMain(icon, color, bg, label, val) {
 // Show the "Top Pick" promo banner at the bottom of every customer-facing
 // page (not on the admin panel or hotel-owner dashboard).
 (function injectTopPickBanner() {
-  var bannerHTML = '<div class="hz-banner" style="max-width:640px;margin:0 auto 1rem"><div class="hz-banner-in"><div><span class="hz-banner-tag">TOP PICKS</span><div class="hz-banner-h">Get More Visibility for Your Hotel</div><div class="hz-banner-p">List your property as a Top Pick and reach thousands of travelers.</div><button class="hz-banner-btn" onclick="SP(\'registerhotel\')">Become a Top Pick</button></div><div class="hz-banner-price">&#8358;5,000<small>per month</small></div></div></div>';
+  var bannerHTML = '<div class="hz-banner" style="max-width:640px;margin:0 auto 1rem"><div class="hz-banner-in"><span class="hz-banner-tag">TOP PICKS</span><div class="hz-banner-h">Get More Visibility for Your Hotel</div><div class="hz-banner-p">List your property as a Top Pick and reach thousands of travelers.</div><div class="hz-banner-row"><button class="hz-banner-btn" onclick="SP(\'registerhotel\')">Become a Top Pick</button><div class="hz-banner-price">&#8358;5,000<small>per month</small></div></div></div></div>';
   var excluded = ["page-admin", "page-hoteldash"];
   document.querySelectorAll(".page").forEach(function(pg) {
     if (excluded.indexOf(pg.id) !== -1) return;
