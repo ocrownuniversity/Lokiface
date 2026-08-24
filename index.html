@@ -1559,8 +1559,8 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
 &lt;script src=&quot;https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js&quot;&gt;&lt;/script&gt;
 &lt;style&gt;
 :root{
-  --navy:#0d1b4a;--navy2:#132a6b;--orange:#f7941d;
-  --blue:#2f5fdb;--blue-dim:rgba(47,95,219,.1);--blue-bd:rgba(47,95,219,.28);
+  --navy:#0b2545;--navy2:#132a6b;--navy3:#0e2f5c;--orange:#f0a83c;
+  --blue:#1a56db;--blue-dim:rgba(26,86,219,.1);--blue-bd:rgba(26,86,219,.28);
   --bg:#f4f6fb;--surface:#fff;--border:#e6e9f2;
   --text:#1a2233;--muted:#6b7280;--muted2:#9aa3b2;
   --green:#16a34a;--green-bg:rgba(22,163,74,.1);--green-bd:rgba(22,163,74,.25);
@@ -1569,6 +1569,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   --teal:#0ea5e9;--teal-bg:rgba(14,165,233,.1);
   --amber:#f59e0b;--amber-bg:rgba(245,158,11,.1);
   --shadow:0 2px 14px rgba(20,30,60,.06);--shadow-lg:0 12px 40px rgba(20,30,60,.14);
+  --sb-w:270px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -1604,22 +1605,32 @@ button,input,select{font-family:&#x27;Inter&#x27;,sans-serif}
 /* ---- app shell ---- */
 #app{display:none}
 #app.active{display:block}
-.topbar{position:fixed;top:0;left:0;right:0;z-index:400;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1rem;height:58px;overflow:hidden;gap:.5rem}
-.tb-left{display:flex;align-items:center;gap:.55rem;flex:1 1 auto;min-width:0;overflow:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:400;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1rem;height:64px;overflow:hidden;gap:.7rem;transition:left .25s ease}
+.tb-left{display:flex;align-items:center;gap:.7rem;flex:1 1 auto;min-width:0}
 .ham{background:none;border:none;cursor:pointer;padding:.3rem;display:flex;flex-direction:column;justify-content:center;gap:4px;flex-shrink:0}
 .ham span{display:block;width:20px;height:2px;background:var(--text);border-radius:2px}
 .tb-logo-ico{width:26px;height:26px;flex-shrink:0}
 .tb-logo-txt{font-weight:800;font-size:.92rem;line-height:1.05}
 .tb-logo-txt .h1{color:var(--navy)}
 .tb-logo-txt .h2{color:var(--orange)}
-.tb-right{display:flex;align-items:center;gap:.7rem;flex-shrink:0;margin-left:auto}
-.tb-bell{position:relative;background:none;border:none;cursor:pointer;font-size:1.15rem;flex-shrink:0}
+.tb-searchwrap{flex:1 1 auto;min-width:0;max-width:420px;position:relative;display:none}
+.tb-searchwrap input{width:100%;padding:.6rem .9rem .6rem 2.3rem;border:1.5px solid var(--border);border-radius:10px;font-size:.82rem;outline:none;background:var(--bg)}
+.tb-searchwrap input:focus{border-color:var(--blue);background:#fff}
+.tb-searchwrap .si{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:.9rem}
+.tb-right{display:flex;align-items:center;gap:.9rem;flex-shrink:0;margin-left:auto}
+.tb-bell{position:relative;background:none;border:none;cursor:pointer;font-size:1.2rem;flex-shrink:0;color:var(--text)}
 .tb-badge{position:absolute;top:-4px;right:-6px;background:var(--red);color:#fff;font-size:.58rem;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center}
-.tb-acct{display:flex;align-items:center;gap:.5rem;background:none;border:none;cursor:pointer;flex:1 1 auto;min-width:0;max-width:100%;text-align:left;overflow:hidden}
-.tb-avatar{width:32px;height:32px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;flex-shrink:0}
-.tb-acct-txt{text-align:left;line-height:1.2;flex:1 1 auto;min-width:0;max-width:100%;overflow:hidden}
-.tb-acct-name{font-size:.8rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.tb-acct-role{font-size:.64rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tb-acct{display:flex;align-items:center;gap:.55rem;background:none;border:none;cursor:pointer;flex:0 1 auto;min-width:0;max-width:100%;text-align:left;overflow:hidden}
+.tb-avatar{width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.78rem;flex-shrink:0;overflow:hidden}
+.tb-acct-txt{text-align:left;line-height:1.2;flex:1 1 auto;min-width:0;max-width:100%;overflow:hidden;display:none}
+.tb-acct-name{font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tb-acct-role{font-size:.66rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tb-acct-caret{font-size:.65rem;color:var(--muted2);flex-shrink:0;display:none}
+@media(min-width:640px){
+  .tb-searchwrap{display:block}
+  .tb-acct-txt{display:block}
+  .tb-acct-caret{display:block}
+}
 @media(max-width:400px){
   .tb-acct-name{font-size:.74rem}
   .tb-acct-role{font-size:.6rem}
@@ -1629,19 +1640,44 @@ button,input,select{font-family:&#x27;Inter&#x27;,sans-serif}
 /* ---- drawers ---- */
 .overlay{position:fixed;inset:0;background:rgba(10,15,30,.45);z-index:490;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.open{opacity:1;pointer-events:auto}
-.sidebar{position:fixed;top:0;left:0;bottom:0;width:270px;background:#fff;z-index:500;transform:translateX(-100%);transition:transform .25s ease;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sb-w);background:var(--navy);z-index:500;transform:translateX(-100%);transition:transform .25s ease;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);color:#fff}
 .sidebar.open{transform:translateX(0)}
-.sb-head{background:var(--navy);padding:1.4rem 1.2rem;color:#fff}
-.sb-logo{font-weight:800;font-size:1rem}
+.sb-head{padding:1.3rem 1.2rem 1.1rem;display:flex;align-items:center;gap:.65rem;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-head-ico{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--orange),#ffce6e);display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;color:var(--navy)}
+.sb-logo{font-weight:800;font-size:.95rem;line-height:1.15}
 .sb-logo span{color:var(--orange)}
-.sb-tag{font-size:.68rem;color:rgba(255,255,255,.6);margin-top:.15rem}
-.sb-nav{flex:1;overflow-y:auto;padding:.6rem}
-.sb-item{display:flex;align-items:center;gap:.7rem;padding:.7rem .8rem;border-radius:9px;cursor:pointer;font-size:.83rem;font-weight:500;color:var(--text);transition:all .15s}
-.sb-item:hover{background:var(--blue-dim)}
-.sb-item.on{background:var(--blue-dim);color:var(--blue);font-weight:700}
-.sb-item .ic{width:20px;text-align:center;font-size:1rem}
-.sb-foot{padding:.9rem;border-top:1px solid var(--border)}
-.sb-logout{width:100%;padding:.7rem;background:var(--red-bg);color:var(--red);border:none;border-radius:9px;font-weight:700;font-size:.8rem;cursor:pointer}
+.sb-tag{font-size:.6rem;color:rgba(255,255,255,.55);margin-top:.1rem;letter-spacing:.04em}
+.sb-profile{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.5rem;padding:1.3rem 1rem;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-profile-avatar{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#ffce6e);color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;overflow:hidden;flex-shrink:0}
+.sb-profile-avatar img{width:100%;height:100%;object-fit:cover}
+.sb-profile-name{font-weight:700;font-size:.92rem}
+.sb-profile-role{display:inline-block;background:rgba(240,168,60,.2);color:var(--orange);border:1px solid rgba(240,168,60,.4);font-size:.62rem;font-weight:700;padding:.18rem .6rem;border-radius:100px}
+.sb-nav{flex:1;overflow-y:auto;padding:.7rem .6rem}
+.sb-section-label{font-size:.62rem;font-weight:700;letter-spacing:.09em;color:rgba(255,255,255,.4);text-transform:uppercase;padding:.9rem .7rem .4rem}
+.sb-section-label:first-child{padding-top:.3rem}
+.sb-item{display:flex;align-items:center;gap:.75rem;padding:.68rem .8rem;border-radius:9px;cursor:pointer;font-size:.82rem;font-weight:500;color:rgba(255,255,255,.8);transition:all .15s;position:relative}
+.sb-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.sb-item.on{background:var(--blue);color:#fff;font-weight:700}
+.sb-item .ic{width:20px;text-align:center;font-size:1rem;flex-shrink:0}
+.sb-foot{padding:.9rem;border-top:1px solid rgba(255,255,255,.08)}
+.sb-status{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.9rem .9rem;text-align:left}
+.sb-status-top{display:flex;align-items:center;gap:.4rem;font-size:.68rem;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.04em}
+.sb-status-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.25);flex-shrink:0}
+.sb-status-line{font-size:.82rem;font-weight:700;color:#4ade80;margin-top:.45rem}
+.sb-status-sub{font-size:.68rem;color:rgba(255,255,255,.55);margin-top:.15rem;margin-bottom:.65rem}
+.sb-help{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.9rem .9rem;margin-bottom:.7rem;text-align:left}
+.sb-help-ico{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:.95rem;margin-bottom:.5rem}
+.sb-help-title{font-weight:700;font-size:.8rem;margin-bottom:.15rem}
+.sb-help-sub{font-size:.68rem;color:rgba(255,255,255,.55);line-height:1.4;margin-bottom:.65rem}
+.sb-help-btn{width:100%;padding:.55rem;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:.74rem;font-weight:700;cursor:pointer}
+.sb-logout{width:100%;padding:.7rem;background:rgba(220,38,38,.16);color:#ff8686;border:none;border-radius:9px;font-weight:700;font-size:.8rem;cursor:pointer}
+@media(min-width:1024px){
+  .sidebar{transform:translateX(0)}
+  .overlay{display:none}
+  .ham{display:none}
+  .topbar{left:var(--sb-w)}
+  .bnav{display:none}
+}
 /* ---- logout confirmation &amp; lock screen ---- */
 .lgo-overlay{position:fixed;inset:0;background:rgba(15,20,40,.5);z-index:900;display:none;align-items:center;justify-content:center;padding:1.2rem}
 .lgo-overlay.open{display:flex}
@@ -1696,7 +1732,10 @@ button,input,select{font-family:&#x27;Inter&#x27;,sans-serif}
 .bnav-item.on{color:var(--blue)}
 
 /* ---- main ---- */
-main{padding:74px 1rem 78px;max-width:1200px;margin:0 auto}
+main{padding:80px 1rem 78px;max-width:1200px;margin:0 auto}
+@media(min-width:1024px){
+  main{margin-left:var(--sb-w);max-width:1400px;padding:96px 2rem 2rem}
+}
 .apage{display:none}
 .apage.active{display:block}
 .ph{margin-bottom:1.1rem}
@@ -1744,6 +1783,96 @@ main{padding:74px 1rem 78px;max-width:1200px;margin:0 auto}
 .sa-menu-row.open .sa-menu-arrow{transform:rotate(90deg)}
 .sa-menu-panel{display:none;padding:0 1.1rem 1.1rem}
 .sa-menu-panel.open{display:block}
+
+/* ---- Sub-Admin (&quot;Hotel Manager&quot;) branded dashboard: the welcome hero,
+   role/permissions snapshot, stat cards, assigned hotels, recent bookings,
+   pending tasks and quick actions a sub-admin sees on login. ---- */
+.sad-hero{background:linear-gradient(135deg,var(--navy),var(--navy2));border-radius:18px;padding:1.4rem 1.4rem 1.6rem;color:#fff;margin-top:1rem;box-shadow:var(--shadow-lg)}
+.sad-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.sad-greet-h{font-size:1.25rem;font-weight:800}
+.sad-greet-sub{font-size:.8rem;opacity:.7;margin-top:.4rem;max-width:440px;line-height:1.5}
+.sad-role-tag{display:inline-flex;align-items:center;gap:.4rem;background:rgba(247,148,29,.18);color:var(--orange);border:1px solid rgba(247,148,29,.35);font-size:.7rem;font-weight:700;padding:.2rem .65rem;border-radius:100px;margin-bottom:.55rem}
+.sad-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.3rem}
+@media(max-width:720px){.sad-grid{grid-template-columns:1fr}}
+.sad-panel{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:1rem 1.1rem}
+.sad-panel h4{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;opacity:.65;margin-bottom:.6rem;font-weight:700}
+.sad-access-pill{display:inline-block;background:rgba(22,163,74,.22);color:#4ade80;font-size:.72rem;font-weight:700;padding:.25rem .7rem;border-radius:100px}
+.sad-perm-row{display:flex;align-items:center;gap:.5rem;font-size:.78rem;padding:.28rem 0}
+.sad-perm-row .ck{color:#4ade80;font-weight:700}
+.sad-view-all{display:inline-block;margin-top:.5rem;font-size:.72rem;color:var(--orange);text-decoration:none;font-weight:700;cursor:pointer;background:none;border:none;padding:0;font-family:inherit}
+.sad-view-all:hover{text-decoration:underline}
+.sad-qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-top:1rem}
+@media(max-width:640px){.sad-qa-grid{grid-template-columns:repeat(2,1fr)}}
+.sad-qa-item{display:flex;align-items:center;gap:.7rem;padding:1rem;border:1px solid var(--border);border-radius:12px;cursor:pointer;background:#fff;transition:box-shadow .15s}
+.sad-qa-item:hover{box-shadow:var(--shadow)}
+.sad-qa-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.sad-qa-txt b{display:block;font-size:.82rem}
+.sad-qa-txt span{display:block;font-size:.68rem;color:var(--muted);margin-top:.1rem}
+.sad-task-row{display:flex;align-items:center;gap:.7rem;padding:.75rem 0;border-bottom:1px solid var(--border)}
+.sad-task-row:last-child{border-bottom:none}
+.sad-task-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
+.sad-task-txt{flex:1;min-width:0}
+.sad-task-txt b{display:block;font-size:.82rem;font-weight:600}
+.sad-task-txt span{display:block;font-size:.7rem;color:var(--muted);margin-top:.1rem}
+.sad-task-meta{text-align:right;flex-shrink:0}
+.sad-task-due{display:block;font-size:.65rem;color:var(--muted2);margin-top:.25rem}
+/* ---- sub-admin dashboard: welcome header row + date pill ---- */
+.sad-topline{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:1rem}
+.sad-welcome-h{font-family:inherit;font-weight:800;font-size:1.3rem;color:var(--text)}
+.sad-welcome-sub{font-size:.82rem;color:var(--muted);margin-top:.25rem}
+.sad-date-pill{display:flex;align-items:center;gap:.5rem;background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:.55rem .9rem;font-size:.8rem;font-weight:600;color:var(--text);box-shadow:var(--shadow);white-space:nowrap}
+/* ---- stat cards: exactly 4 across on desktop ---- */
+.stat-grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin-top:1rem}
+@media(max-width:900px){.stat-grid4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.stat-grid4{grid-template-columns:1fr 1fr}}
+.stat-card2{background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.2rem;box-shadow:var(--shadow)}
+.stat-card2 .stat-top2{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem}
+.stat-card2 .stat-ico{width:40px;height:40px;border-radius:10px}
+.stat-card2 .stat-lbl2{font-size:.78rem;font-weight:600;color:var(--text)}
+.stat-card2 .stat-sub2{font-size:.66rem;color:var(--muted);margin-top:.1rem}
+.stat-card2 .stat-val2{font-size:1.6rem;font-weight:800;margin-top:.7rem}
+.stat-card2 .stat-delta2{font-size:.7rem;margin-top:.35rem;font-weight:700;display:inline-flex;align-items:center;gap:.25rem}
+.stat-card2 .stat-delta2.up{color:var(--green)}
+.stat-card2 .stat-delta2.down{color:var(--orange)}
+/* ---- revenue + bookings-overview row ---- */
+.sad-chartrow{display:grid;grid-template-columns:1.3fr 1fr;gap:1rem}
+@media(max-width:900px){.sad-chartrow{grid-template-columns:1fr}}
+.sad-select{padding:.4rem .7rem;border:1.5px solid var(--border);border-radius:8px;font-size:.72rem;background:#fff;cursor:pointer;color:var(--text)}
+.sad-rev-total{font-size:1.7rem;font-weight:800;margin-top:.2rem}
+.sad-rev-sub{display:flex;align-items:center;gap:.6rem;font-size:.76rem;color:var(--muted);margin-top:.15rem;flex-wrap:wrap}
+.sad-rev-delta{background:var(--green-bg);color:var(--green);font-weight:700;padding:.15rem .5rem;border-radius:100px;font-size:.7rem}
+.sad-donut-wrap{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.sad-donut-canvas-wrap{position:relative;width:180px;height:180px;margin:.3rem auto .6rem}
+.sad-donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.sad-donut-center .n{font-size:1.6rem;font-weight:800;color:var(--text)}
+.sad-donut-center .l{font-size:.66rem;color:var(--muted)}
+.sad-donut-legend{width:100%;display:flex;flex-direction:column;gap:.55rem;margin-top:.3rem}
+.sad-donut-legend-row{display:flex;align-items:center;gap:.55rem;font-size:.8rem}
+.sad-donut-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.sad-donut-legend-row .lbl{flex:1;color:var(--text)}
+.sad-donut-legend-row .val{font-weight:700;color:var(--muted)}
+/* ---- recent bookings / my hotels rows ---- */
+.sad-row2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:900px){.sad-row2{grid-template-columns:1fr}}
+.sad-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+@media(max-width:1100px){.sad-row3{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.sad-row3{grid-template-columns:1fr}}
+.platform-ov-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.5rem}
+.plov-item{display:flex;align-items:center;gap:.6rem;padding:.7rem .6rem;border:1px solid var(--border);border-radius:10px}
+.plov-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
+.plov-val{font-size:1rem;font-weight:800;line-height:1.1}
+.plov-lbl{font-size:.64rem;color:var(--muted);margin-top:.1rem}
+.list-row .lr-thumb{width:46px;height:46px;border-radius:10px;object-fit:cover;flex-shrink:0;background:var(--bg)}
+.list-row .lr-date-ico{color:var(--muted2);margin-right:.2rem}
+/* ---- access summary footer bar ---- */
+.sad-access-bar{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.2rem;margin-top:1rem;box-shadow:var(--shadow)}
+.sad-access-ico{width:42px;height:42px;border-radius:10px;background:var(--blue-dim);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.sad-access-txt{flex:1 1 220px;min-width:0}
+.sad-access-txt b{font-size:.85rem;display:block}
+.sad-access-txt span{font-size:.74rem;color:var(--muted);line-height:1.4}
+.sad-access-stats{display:flex;gap:1.6rem;flex-wrap:wrap}
+.sad-access-stat{font-size:.72rem;color:var(--muted)}
+.sad-access-stat b{display:block;font-size:.82rem;color:var(--text);margin-top:.1rem;font-weight:700}
 
 .toolbar{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem}
 .tb-search{flex:1;min-width:180px;position:relative}
@@ -1927,16 +2056,18 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
   &lt;div class=&quot;topbar&quot;&gt;
     &lt;div class=&quot;tb-left&quot;&gt;
       &lt;button class=&quot;ham&quot; onclick=&quot;toggleSidebar(true)&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/button&gt;
+      &lt;div class=&quot;tb-searchwrap&quot;&gt;&lt;span class=&quot;si&quot;&gt;&amp;#128269;&lt;/span&gt;&lt;input type=&quot;text&quot; placeholder=&quot;Search anything...&quot; onclick=&quot;T(&#x27;Search&#x27;,&#x27;Global search is coming soon.&#x27;)&quot; readonly/&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;tb-right&quot;&gt;
+      &lt;button class=&quot;tb-bell&quot; onclick=&quot;T(&#x27;Notifications&#x27;,&#x27;You are all caught up.&#x27;)&quot;&gt;&amp;#128276;&lt;span class=&quot;tb-badge&quot; id=&quot;notif-badge&quot;&gt;0&lt;/span&gt;&lt;/button&gt;
       &lt;button class=&quot;tb-acct&quot; onclick=&quot;toggleAcctDrawer(true)&quot;&gt;
         &lt;div class=&quot;tb-avatar&quot; id=&quot;tb-avatar&quot;&gt;A&lt;/div&gt;
         &lt;div class=&quot;tb-acct-txt&quot;&gt;
           &lt;div class=&quot;tb-acct-name&quot; id=&quot;tb-name&quot;&gt;Admin&lt;/div&gt;
           &lt;div class=&quot;tb-acct-role&quot; id=&quot;tb-role&quot;&gt;Super Admin&lt;/div&gt;
         &lt;/div&gt;
+        &lt;span class=&quot;tb-acct-caret&quot;&gt;&amp;#9662;&lt;/span&gt;
       &lt;/button&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;tb-right&quot;&gt;
-      &lt;button class=&quot;tb-bell&quot; onclick=&quot;T(&#x27;Notifications&#x27;,&#x27;You are all caught up.&#x27;)&quot;&gt;&amp;#128276;&lt;span class=&quot;tb-badge&quot; id=&quot;notif-badge&quot;&gt;0&lt;/span&gt;&lt;/button&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 
@@ -1944,13 +2075,17 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 
   &lt;div class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
     &lt;div class=&quot;sb-head&quot;&gt;
-      &lt;div class=&quot;sb-logo&quot;&gt;HOTELS &lt;span&gt;CONTINENTAL&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;sb-tag&quot;&gt;Admin &amp;amp; Partner Portal&lt;/div&gt;
+      &lt;div class=&quot;sb-head-ico&quot;&gt;&amp;#9875;&lt;/div&gt;
+      &lt;div&gt;
+        &lt;div class=&quot;sb-logo&quot;&gt;Hotels &lt;span&gt;Continental&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;sb-tag&quot;&gt;ADMIN &amp;amp; PARTNER PORTAL&lt;/div&gt;
+      &lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;sb-nav&quot;&gt;
+      &lt;div class=&quot;sb-section-label&quot;&gt;Main Menu&lt;/div&gt;
       &lt;div class=&quot;sb-item on&quot; data-page=&quot;dashboard&quot; onclick=&quot;goPage(&#x27;dashboard&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128202;&lt;/span&gt;Dashboard&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;hotels&quot; onclick=&quot;goPage(&#x27;hotels&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#127974;&lt;/span&gt;Hotels&lt;/div&gt;
-      &lt;div class=&quot;sb-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage(&#x27;hotelbookings&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128273;&lt;/span&gt;Marketplace Bookings&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage(&#x27;hotelbookings&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128197;&lt;/span&gt;Marketplace Bookings&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;payments&quot; onclick=&quot;goPage(&#x27;payments&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128179;&lt;/span&gt;Payments&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;payouts&quot; onclick=&quot;goPage(&#x27;payouts&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128176;&lt;/span&gt;Payouts&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;users&quot; onclick=&quot;goPage(&#x27;users&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128101;&lt;/span&gt;Users&lt;/div&gt;
@@ -1961,13 +2096,27 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
       &lt;div class=&quot;sb-item&quot; data-page=&quot;disputes&quot; onclick=&quot;goPage(&#x27;disputes&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#9878;&lt;/span&gt;Disputes&lt;span class=&quot;abadge&quot; id=&quot;disp-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem&quot;&gt;&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;support&quot; onclick=&quot;goPage(&#x27;support&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128172;&lt;/span&gt;Messages&lt;span class=&quot;abadge&quot; id=&quot;support-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;align-items:center;justify-content:center;padding:0 .3rem&quot;&gt;0&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;hotelregs&quot; onclick=&quot;goPage(&#x27;hotelregs&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128196;&lt;/span&gt;Hotel Registrations&lt;span class=&quot;abadge&quot; id=&quot;hr-sidebar-badge&quot; style=&quot;display:none;margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:100px;min-width:18px;height:18px;display:none;align-items:center;justify-content:center;padding:0 .3rem&quot;&gt;&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;sb-item&quot; id=&quot;sb-subadmin&quot; data-page=&quot;subadmins&quot; onclick=&quot;goPage(&#x27;subadmins&#x27;)&quot; style=&quot;display:none&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128272;&lt;/span&gt;Sub-Admins&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; id=&quot;sb-subadmin&quot; data-page=&quot;subadmins&quot; onclick=&quot;goPage(&#x27;subadmins&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128272;&lt;/span&gt;Sub-Admins&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;rooms&quot; onclick=&quot;goPage(&#x27;rooms&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128716;&lt;/span&gt;Rooms&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;withdrawals&quot; onclick=&quot;goPage(&#x27;withdrawals&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128179;&lt;/span&gt;Withdrawals&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;walletfundings&quot; onclick=&quot;goPage(&#x27;walletfundings&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128176;&lt;/span&gt;Wallet Fundings&lt;/div&gt;
       &lt;div class=&quot;sb-item&quot; data-page=&quot;settings&quot; onclick=&quot;goPage(&#x27;settings&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#9881;&lt;/span&gt;Settings&lt;/div&gt;
+      &lt;div class=&quot;sb-section-label&quot;&gt;System&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; onclick=&quot;T(&#x27;Roles &amp;amp; Permissions&#x27;,&#x27;This feature is coming soon.&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128273;&lt;/span&gt;Roles &amp;amp; Permissions&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; onclick=&quot;T(&#x27;Activity Logs&#x27;,&#x27;This feature is coming soon.&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128337;&lt;/span&gt;Activity Logs&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; onclick=&quot;T(&#x27;Email Templates&#x27;,&#x27;This feature is coming soon.&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128231;&lt;/span&gt;Email Templates&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; onclick=&quot;T(&#x27;System Settings&#x27;,&#x27;This feature is coming soon.&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#9881;&lt;/span&gt;System Settings&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; onclick=&quot;T(&#x27;SEO Manager&#x27;,&#x27;This feature is coming soon.&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128269;&lt;/span&gt;SEO Manager&lt;/div&gt;
+      &lt;div class=&quot;sb-item&quot; onclick=&quot;T(&#x27;Backup &amp;amp; Restore&#x27;,&#x27;This feature is coming soon.&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128190;&lt;/span&gt;Backup &amp;amp; Restore&lt;/div&gt;
     &lt;/div&gt;
-    &lt;div class=&quot;sb-foot&quot;&gt;&lt;button class=&quot;sb-logout&quot; onclick=&quot;openLogoutConfirm()&quot;&gt;&amp;#128682; Log Out&lt;/button&gt;&lt;/div&gt;
+    &lt;div class=&quot;sb-foot&quot;&gt;
+      &lt;div class=&quot;sb-status&quot;&gt;
+        &lt;div class=&quot;sb-status-top&quot;&gt;&lt;span class=&quot;sb-status-dot&quot;&gt;&lt;/span&gt;System Status&lt;/div&gt;
+        &lt;div class=&quot;sb-status-line&quot;&gt;All Systems Operational&lt;/div&gt;
+        &lt;div class=&quot;sb-status-sub&quot;&gt;Everything is running smoothly.&lt;/div&gt;
+        &lt;button class=&quot;sb-help-btn&quot; onclick=&quot;T(&#x27;System Health&#x27;,&#x27;All services are operating normally.&#x27;)&quot;&gt;View System Health&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
   &lt;/div&gt;
 
   &lt;!-- ============ LOGOUT CONFIRMATION ============ --&gt;
@@ -2037,51 +2186,170 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
   &lt;main&gt;
     &lt;!-- ============ DASHBOARD ============ --&gt;
     &lt;div class=&quot;apage active&quot; id=&quot;page-dashboard&quot;&gt;
-      &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-title&quot; id=&quot;dash-ph-title&quot;&gt;Dashboard&lt;/div&gt;&lt;div class=&quot;ph-sub&quot; id=&quot;dash-ph-sub&quot;&gt;Platform overview at a glance.&lt;/div&gt;&lt;/div&gt;
-      &lt;div class=&quot;card&quot; id=&quot;sa-profile-card&quot; style=&quot;display:none&quot;&gt;
-        &lt;div class=&quot;sa-hero&quot;&gt;
-          &lt;div class=&quot;sa-hero-top&quot;&gt;
-            &lt;div id=&quot;sa-prof-avatar&quot; style=&quot;width:56px;height:56px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;color:#fff;overflow:hidden;flex-shrink:0&quot;&gt;A&lt;/div&gt;
-            &lt;div&gt;
-              &lt;div class=&quot;sa-hero-name&quot; id=&quot;sa-hero-name&quot;&gt;Sub-Admin&lt;/div&gt;
-              &lt;span class=&quot;sa-hero-badge&quot;&gt;Sub-Admin&lt;/span&gt;
+
+      &lt;!-- ===== SUB-ADMIN welcome dashboard (matches the Hotels Continental admin mock) ===== --&gt;
+      &lt;div id=&quot;sad-wrap&quot; style=&quot;display:none&quot;&gt;
+
+        &lt;div class=&quot;sad-topline&quot;&gt;
+          &lt;div&gt;
+            &lt;div class=&quot;sad-welcome-h&quot; id=&quot;sad-greet&quot;&gt;Welcome back! &amp;#128075;&lt;/div&gt;
+            &lt;div class=&quot;sad-welcome-sub&quot;&gt;Here&#x27;s what&#x27;s happening with your hotels today.&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;sad-date-pill&quot;&gt;&amp;#128197; &lt;span id=&quot;sad-today-date&quot;&gt;Today&lt;/span&gt;&lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;stat-grid4&quot; id=&quot;sad-stats&quot;&gt;&lt;/div&gt;
+
+        &lt;div class=&quot;sad-chartrow&quot; style=&quot;margin-top:1rem&quot;&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Revenue Overview &lt;select class=&quot;sad-select&quot; id=&quot;sad-rev-range&quot; onchange=&quot;renderSubAdminDashboard()&quot;&gt;&lt;option value=&quot;30&quot;&gt;This Month&lt;/option&gt;&lt;option value=&quot;7&quot;&gt;This Week&lt;/option&gt;&lt;option value=&quot;365&quot;&gt;This Year&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;
+            &lt;div class=&quot;sad-rev-total&quot; id=&quot;sad-rev-total&quot;&gt;&amp;#8358;0&lt;/div&gt;
+            &lt;div class=&quot;sad-rev-sub&quot;&gt;Total Revenue &lt;span class=&quot;sad-rev-delta&quot; id=&quot;sad-rev-delta&quot;&gt;&amp;#8593; 0%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;chart-wrap&quot; style=&quot;height:190px;margin-top:.6rem&quot;&gt;&lt;canvas id=&quot;sad-chart&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Bookings Overview &lt;select class=&quot;sad-select&quot; id=&quot;sad-book-range&quot; onchange=&quot;renderSubAdminDashboard()&quot;&gt;&lt;option value=&quot;30&quot;&gt;This Month&lt;/option&gt;&lt;option value=&quot;7&quot;&gt;This Week&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;
+            &lt;div class=&quot;sad-donut-wrap&quot;&gt;
+              &lt;div class=&quot;sad-donut-canvas-wrap&quot;&gt;
+                &lt;canvas id=&quot;sad-donut&quot;&gt;&lt;/canvas&gt;
+                &lt;div class=&quot;sad-donut-center&quot;&gt;&lt;span class=&quot;n&quot; id=&quot;sad-donut-total&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;l&quot;&gt;Total&lt;/span&gt;&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;sad-donut-legend&quot; id=&quot;sad-donut-legend&quot;&gt;&lt;/div&gt;
             &lt;/div&gt;
           &lt;/div&gt;
         &lt;/div&gt;
-        &lt;div class=&quot;sa-menu&quot;&gt;
-          &lt;div class=&quot;sa-menu-row&quot; onclick=&quot;saToggleMenuRow(&#x27;sa-panel-profile&#x27;)&quot;&gt;
-            &lt;div class=&quot;sa-menu-ico&quot;&gt;&amp;#128100;&lt;/div&gt;
-            &lt;div class=&quot;sa-menu-lbl&quot;&gt;Edit Profile&lt;/div&gt;
-            &lt;div class=&quot;sa-menu-arrow&quot;&gt;&amp;#8250;&lt;/div&gt;
+
+        &lt;div class=&quot;sad-row2&quot; style=&quot;margin-top:1rem&quot;&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Recent Bookings &lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage(&#x27;hotelbookings&#x27;)&quot;&gt;View All&lt;/button&gt;&lt;/div&gt;
+            &lt;div id=&quot;sad-recent&quot;&gt;&lt;/div&gt;
           &lt;/div&gt;
-          &lt;div class=&quot;sa-menu-panel&quot; id=&quot;sa-panel-profile&quot;&gt;
-            &lt;div class=&quot;avatar-upload&quot; style=&quot;margin-bottom:.8rem&quot;&gt;&lt;label for=&quot;sa-prof-photo-input&quot; style=&quot;background:var(--blue);color:#fff&quot;&gt;&amp;#128247; Change Photo&lt;/label&gt;&lt;input type=&quot;file&quot; id=&quot;sa-prof-photo-input&quot; accept=&quot;image/*&quot; onchange=&quot;uploadAdminPhoto(this)&quot;/&gt;&lt;/div&gt;
-            &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Full Name&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;sa-prof-name&quot; placeholder=&quot;Your full name&quot;/&gt;&lt;/div&gt;
-            &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Email&lt;/label&gt;&lt;input type=&quot;email&quot; id=&quot;sa-prof-email&quot; disabled style=&quot;opacity:.6&quot;/&gt;&lt;/div&gt;
-            &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Phone Number&lt;/label&gt;&lt;input type=&quot;tel&quot; id=&quot;sa-prof-phone&quot; placeholder=&quot;Your phone number&quot;/&gt;&lt;/div&gt;
-            &lt;button class=&quot;fsub&quot; onclick=&quot;saSaveProfile()&quot;&gt;Save Changes&lt;/button&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;My Hotels &lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage(&#x27;hotels&#x27;)&quot;&gt;View All&lt;/button&gt;&lt;/div&gt;
+            &lt;div id=&quot;sad-hotels&quot;&gt;&lt;/div&gt;
           &lt;/div&gt;
-          &lt;div class=&quot;sa-menu-row&quot; onclick=&quot;saToggleMenuRow(&#x27;sa-panel-password&#x27;)&quot;&gt;
-            &lt;div class=&quot;sa-menu-ico&quot;&gt;&amp;#128272;&lt;/div&gt;
-            &lt;div class=&quot;sa-menu-lbl&quot;&gt;Change Password&lt;/div&gt;
-            &lt;div class=&quot;sa-menu-arrow&quot;&gt;&amp;#8250;&lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;sad-row2&quot; style=&quot;margin-top:1rem&quot;&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Pending Tasks &lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;T(&#x27;Pending Tasks&#x27;,&#x27;See the list below for everything awaiting your action.&#x27;)&quot;&gt;View All&lt;/button&gt;&lt;/div&gt;
+            &lt;div id=&quot;sad-tasks&quot;&gt;&lt;/div&gt;
           &lt;/div&gt;
-          &lt;div class=&quot;sa-menu-panel&quot; id=&quot;sa-panel-password&quot;&gt;
-            &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Current Password&lt;/label&gt;&lt;input type=&quot;password&quot; id=&quot;sa-prof-pw-current&quot; placeholder=&quot;Your current password&quot;/&gt;&lt;/div&gt;
-            &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;New Password&lt;/label&gt;&lt;input type=&quot;password&quot; id=&quot;sa-prof-pw-new&quot; placeholder=&quot;At least 6 characters&quot;/&gt;&lt;/div&gt;
-            &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Confirm New Password&lt;/label&gt;&lt;input type=&quot;password&quot; id=&quot;sa-prof-pw-confirm&quot; placeholder=&quot;Re-enter new password&quot;/&gt;&lt;/div&gt;
-            &lt;button class=&quot;fsub&quot; onclick=&quot;saChangePassword()&quot;&gt;Update Password&lt;/button&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Quick Actions&lt;/div&gt;
+            &lt;div class=&quot;sad-qa-grid&quot; style=&quot;grid-template-columns:1fr 1fr&quot;&gt;
+              &lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(&#x27;hotels&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:var(--blue-dim);color:var(--blue)&quot;&gt;&amp;#127974;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;Add New Hotel&lt;/b&gt;&lt;span&gt;Add a hotel to your list&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+              &lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(&#x27;hotelbookings&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:var(--purple-bg);color:var(--purple)&quot;&gt;&amp;#128197;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;Add Booking&lt;/b&gt;&lt;span&gt;Create a new booking&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+              &lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(&#x27;reports&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:var(--green-bg);color:var(--green)&quot;&gt;&amp;#128203;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;View Reports&lt;/b&gt;&lt;span&gt;Check detailed reports&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+              &lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(&#x27;support&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:rgba(247,148,29,.12);color:var(--orange)&quot;&gt;&amp;#128276;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;Send Notification&lt;/b&gt;&lt;span&gt;Notify your customers&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;sad-access-bar&quot;&gt;
+          &lt;div class=&quot;sad-access-ico&quot;&gt;&amp;#128737;&lt;/div&gt;
+          &lt;div class=&quot;sad-access-txt&quot;&gt;&lt;b&gt;Access Summary&lt;/b&gt;&lt;span&gt;You have limited access based on your role and permissions. &lt;button class=&quot;sad-view-all&quot; style=&quot;margin-top:0&quot; onclick=&quot;saShowAllPerms()&quot;&gt;View permissions &amp;#8250;&lt;/button&gt;&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;sad-access-stats&quot;&gt;
+            &lt;div class=&quot;sad-access-stat&quot;&gt;Role&lt;b id=&quot;sad-access-role&quot;&gt;Sub-Admin&lt;/b&gt;&lt;/div&gt;
+            &lt;div class=&quot;sad-access-stat&quot;&gt;Access Level&lt;b id=&quot;sad-access-level&quot;&gt;Standard&lt;/b&gt;&lt;/div&gt;
+            &lt;div class=&quot;sad-access-stat&quot;&gt;Last Login&lt;b id=&quot;sad-access-login&quot;&gt;&amp;mdash;&lt;/b&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;card&quot; id=&quot;sa-profile-card&quot;&gt;
+          &lt;div class=&quot;sa-menu&quot; style=&quot;margin-bottom:0;box-shadow:none;border:none&quot;&gt;
+            &lt;div class=&quot;sa-menu-row&quot; onclick=&quot;saToggleMenuRow(&#x27;sa-panel-profile&#x27;)&quot; style=&quot;padding-left:0;padding-right:0&quot;&gt;
+              &lt;div class=&quot;sa-menu-ico&quot;&gt;&amp;#128100;&lt;/div&gt;
+              &lt;div class=&quot;sa-menu-lbl&quot;&gt;Edit Profile&lt;/div&gt;
+              &lt;div class=&quot;sa-menu-arrow&quot;&gt;&amp;#8250;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;sa-menu-panel&quot; id=&quot;sa-panel-profile&quot;&gt;
+              &lt;div class=&quot;avatar-upload&quot; style=&quot;margin-bottom:.8rem&quot;&gt;&lt;label for=&quot;sa-prof-photo-input&quot; style=&quot;background:var(--blue);color:#fff&quot;&gt;&amp;#128247; Change Photo&lt;/label&gt;&lt;input type=&quot;file&quot; id=&quot;sa-prof-photo-input&quot; accept=&quot;image/*&quot; onchange=&quot;uploadAdminPhoto(this)&quot;/&gt;&lt;/div&gt;
+              &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Full Name&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;sa-prof-name&quot; placeholder=&quot;Your full name&quot;/&gt;&lt;/div&gt;
+              &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Email&lt;/label&gt;&lt;input type=&quot;email&quot; id=&quot;sa-prof-email&quot; disabled style=&quot;opacity:.6&quot;/&gt;&lt;/div&gt;
+              &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Phone Number&lt;/label&gt;&lt;input type=&quot;tel&quot; id=&quot;sa-prof-phone&quot; placeholder=&quot;Your phone number&quot;/&gt;&lt;/div&gt;
+              &lt;button class=&quot;fsub&quot; onclick=&quot;saSaveProfile()&quot;&gt;Save Changes&lt;/button&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;sa-menu-row&quot; onclick=&quot;saToggleMenuRow(&#x27;sa-panel-password&#x27;)&quot; style=&quot;padding-left:0;padding-right:0&quot;&gt;
+              &lt;div class=&quot;sa-menu-ico&quot;&gt;&amp;#128272;&lt;/div&gt;
+              &lt;div class=&quot;sa-menu-lbl&quot;&gt;Change Password&lt;/div&gt;
+              &lt;div class=&quot;sa-menu-arrow&quot;&gt;&amp;#8250;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;sa-menu-panel&quot; id=&quot;sa-panel-password&quot;&gt;
+              &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Current Password&lt;/label&gt;&lt;input type=&quot;password&quot; id=&quot;sa-prof-pw-current&quot; placeholder=&quot;Your current password&quot;/&gt;&lt;/div&gt;
+              &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;New Password&lt;/label&gt;&lt;input type=&quot;password&quot; id=&quot;sa-prof-pw-new&quot; placeholder=&quot;At least 6 characters&quot;/&gt;&lt;/div&gt;
+              &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Confirm New Password&lt;/label&gt;&lt;input type=&quot;password&quot; id=&quot;sa-prof-pw-confirm&quot; placeholder=&quot;Re-enter new password&quot;/&gt;&lt;/div&gt;
+              &lt;button class=&quot;fsub&quot; onclick=&quot;saChangePassword()&quot;&gt;Update Password&lt;/button&gt;
+            &lt;/div&gt;
           &lt;/div&gt;
         &lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;stat-grid&quot; id=&quot;dash-stats&quot;&gt;&lt;/div&gt;
-      &lt;div class=&quot;chart-grid2&quot;&gt;
-        &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Bookings (Last 7 Days)&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;dash-chart-bookings&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
-        &lt;div class=&quot;card&quot; id=&quot;dash-revenue-chart-card&quot;&gt;&lt;div class=&quot;card-title&quot;&gt;Revenue (Last 7 Days)&lt;/div&gt;&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;dash-chart-revenue&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;&lt;/div&gt;
-      &lt;/div&gt;
-      &lt;div class=&quot;card&quot;&gt;
-        &lt;div class=&quot;card-title&quot;&gt;Recent Bookings &lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage(&#x27;hotelbookings&#x27;)&quot;&gt;View All&lt;/button&gt;&lt;/div&gt;
-        &lt;div id=&quot;dash-recent&quot; class=&quot;tbl-wrap&quot;&gt;&lt;/div&gt;
+
+      &lt;!-- ===== SUPER ADMIN dashboard (matches the Hotels Continental admin mock) ===== --&gt;
+      &lt;div id=&quot;admin-dash-wrap&quot;&gt;
+
+        &lt;div class=&quot;sad-topline&quot;&gt;
+          &lt;div&gt;
+            &lt;div class=&quot;sad-welcome-h&quot; id=&quot;ad-greet&quot;&gt;Welcome back, Super Admin! &amp;#128075;&lt;/div&gt;
+            &lt;div class=&quot;sad-welcome-sub&quot;&gt;Here&#x27;s what&#x27;s happening on your platform today.&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;sad-date-pill&quot; onclick=&quot;T(&#x27;Date Range&#x27;,&#x27;Custom date-range filtering is coming soon.&#x27;)&quot;&gt;&amp;#128197; &lt;span id=&quot;ad-today-date&quot;&gt;Today&lt;/span&gt; &lt;span style=&quot;color:var(--muted2)&quot;&gt;&amp;#9662;&lt;/span&gt;&lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;stat-grid4&quot; id=&quot;dash-stats-row1&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;stat-grid4&quot; id=&quot;dash-stats-row2&quot; style=&quot;margin-top:.9rem&quot;&gt;&lt;/div&gt;
+
+        &lt;div class=&quot;sad-chartrow&quot; style=&quot;margin-top:1rem&quot;&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Revenue Overview &lt;select class=&quot;sad-select&quot; id=&quot;dash-rev-range&quot; onchange=&quot;renderDashboard()&quot;&gt;&lt;option value=&quot;30&quot;&gt;This Month&lt;/option&gt;&lt;option value=&quot;7&quot;&gt;This Week&lt;/option&gt;&lt;option value=&quot;365&quot;&gt;This Year&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;
+            &lt;div class=&quot;sad-rev-total&quot; id=&quot;dash-rev-total&quot;&gt;&amp;#8358;0&lt;/div&gt;
+            &lt;div class=&quot;sad-rev-sub&quot;&gt;Total Revenue &lt;span class=&quot;sad-rev-delta&quot; id=&quot;dash-rev-delta&quot;&gt;&amp;#8593; 0%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;chart-wrap&quot; style=&quot;height:190px;margin-top:.6rem&quot;&gt;&lt;canvas id=&quot;dash-chart-revenue&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Bookings Overview &lt;select class=&quot;sad-select&quot; id=&quot;dash-book-range&quot; onchange=&quot;renderDashboard()&quot;&gt;&lt;option value=&quot;30&quot;&gt;This Month&lt;/option&gt;&lt;option value=&quot;7&quot;&gt;This Week&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;
+            &lt;div class=&quot;sad-donut-wrap&quot;&gt;
+              &lt;div class=&quot;sad-donut-canvas-wrap&quot;&gt;
+                &lt;canvas id=&quot;dash-donut&quot;&gt;&lt;/canvas&gt;
+                &lt;div class=&quot;sad-donut-center&quot;&gt;&lt;span class=&quot;n&quot; id=&quot;dash-donut-total&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;l&quot;&gt;Total&lt;/span&gt;&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;sad-donut-legend&quot; id=&quot;dash-donut-legend&quot;&gt;&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;sad-row2&quot; style=&quot;margin-top:1rem&quot;&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Recent Bookings &lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage(&#x27;hotelbookings&#x27;)&quot;&gt;View All&lt;/button&gt;&lt;/div&gt;
+            &lt;div id=&quot;dash-recent&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Top Performing Hotels &lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;goPage(&#x27;hotels&#x27;)&quot;&gt;View All&lt;/button&gt;&lt;/div&gt;
+            &lt;div id=&quot;dash-top-hotels&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;sad-row3&quot; style=&quot;margin-top:1rem&quot;&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Platform Overview&lt;/div&gt;
+            &lt;div class=&quot;platform-ov-grid&quot; id=&quot;dash-platform-ov&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;User Growth&lt;/div&gt;
+            &lt;div class=&quot;sad-rev-total&quot; id=&quot;dash-users-total&quot;&gt;0&lt;/div&gt;
+            &lt;div class=&quot;sad-rev-sub&quot;&gt;Total Users &lt;span class=&quot;sad-rev-delta&quot; id=&quot;dash-users-delta&quot;&gt;&amp;#8593; 0%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;chart-wrap&quot; style=&quot;height:150px;margin-top:.6rem&quot;&gt;&lt;canvas id=&quot;dash-chart-usergrowth&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;card&quot; style=&quot;margin-top:0&quot;&gt;
+            &lt;div class=&quot;card-title&quot;&gt;Pending Approvals &lt;button class=&quot;btn btn-o btn-sm&quot; onclick=&quot;T(&#x27;Pending Approvals&#x27;,&#x27;See the list below for everything awaiting review.&#x27;)&quot;&gt;View All&lt;/button&gt;&lt;/div&gt;
+            &lt;div id=&quot;dash-pending-approvals&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;card&quot; style=&quot;margin-top:1rem&quot;&gt;
+          &lt;div class=&quot;card-title&quot;&gt;Quick Actions&lt;/div&gt;
+          &lt;div class=&quot;sad-qa-grid&quot; id=&quot;dash-quick-actions&quot;&gt;&lt;/div&gt;
+        &lt;/div&gt;
       &lt;/div&gt;
     &lt;/div&gt;
 
@@ -2615,10 +2883,10 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 
   &lt;div class=&quot;bnav&quot;&gt;
     &lt;button class=&quot;bnav-item on&quot; data-page=&quot;dashboard&quot; onclick=&quot;goPage(&#x27;dashboard&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#127968;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;Dashboard&lt;/span&gt;&lt;/button&gt;
-    &lt;button class=&quot;bnav-item&quot; data-page=&quot;hotels&quot; onclick=&quot;goPage(&#x27;hotels&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#127974;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;Hotels&lt;/span&gt;&lt;/button&gt;
-    &lt;button class=&quot;bnav-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage(&#x27;hotelbookings&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128273;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;Bookings&lt;/span&gt;&lt;/button&gt;
-    &lt;button class=&quot;bnav-item&quot; id=&quot;bnav-dynamic&quot; data-page=&quot;users&quot; onclick=&quot;goPage(document.getElementById(&#x27;bnav-dynamic&#x27;).dataset.page)&quot;&gt;&lt;span class=&quot;ic&quot; id=&quot;bnav-dynamic-ic&quot;&gt;&amp;#128101;&lt;/span&gt;&lt;span class=&quot;lbl&quot; id=&quot;bnav-dynamic-lbl&quot;&gt;Users&lt;/span&gt;&lt;/button&gt;
-    &lt;button class=&quot;bnav-item&quot; onclick=&quot;toggleSidebar(true)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#9776;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;More&lt;/span&gt;&lt;/button&gt;
+    &lt;button class=&quot;bnav-item&quot; data-page=&quot;hotels&quot; onclick=&quot;goPage(&#x27;hotels&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#127974;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;My Hotels&lt;/span&gt;&lt;/button&gt;
+    &lt;button class=&quot;bnav-item&quot; data-page=&quot;hotelbookings&quot; onclick=&quot;goPage(&#x27;hotelbookings&#x27;)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128197;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;Bookings&lt;/span&gt;&lt;/button&gt;
+    &lt;button class=&quot;bnav-item&quot; id=&quot;bnav-dynamic&quot; onclick=&quot;var p=document.getElementById(&#x27;bnav-dynamic&#x27;).dataset.page; if(p){goPage(p);}else{T(&#x27;Notifications&#x27;,&#x27;You are all caught up.&#x27;);}&quot;&gt;&lt;span class=&quot;ic&quot; id=&quot;bnav-dynamic-ic&quot;&gt;&amp;#128276;&lt;/span&gt;&lt;span class=&quot;lbl&quot; id=&quot;bnav-dynamic-lbl&quot;&gt;Notifications&lt;/span&gt;&lt;/button&gt;
+    &lt;button class=&quot;bnav-item&quot; onclick=&quot;toggleSidebar(true)&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#8942;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;More&lt;/span&gt;&lt;/button&gt;
   &lt;/div&gt;
 &lt;/div&gt;
 
@@ -3300,25 +3568,33 @@ function loginSuccess(name, role) {
   document.getElementById(&quot;tb-role&quot;).textContent = role;
   document.getElementById(&quot;ad-name&quot;).textContent = name;
   document.getElementById(&quot;ad-role&quot;).textContent = role;
+  var sbNameEl = document.getElementById(&quot;sb-name&quot;); if (sbNameEl) sbNameEl.textContent = name;
+  var sbRoleEl = document.getElementById(&quot;sb-role&quot;); if (sbRoleEl) sbRoleEl.textContent = role;
   var initial = (name || &quot;A&quot;).trim().charAt(0).toUpperCase();
   document.getElementById(&quot;tb-avatar&quot;).textContent = initial;
   document.getElementById(&quot;ad-avatar&quot;).textContent = initial;
+  var sbAvEl0 = document.getElementById(&quot;sb-avatar&quot;); if (sbAvEl0) sbAvEl0.textContent = initial;
   document.getElementById(&quot;sb-subadmin&quot;).style.display = _isSuperAdmin ? &quot;flex&quot; : &quot;none&quot;;
   document.getElementById(&quot;ad-subadmin-item&quot;).style.display = _isSuperAdmin ? &quot;flex&quot; : &quot;none&quot;;
   // The sub-admin dashboard shouldn&#x27;t look identical to the super admin&#x27;s:
   // swap the dashboard header copy and reveal a self-service profile card
   // (name / phone / password) in the space above the stats. Super admin
   // view is untouched.
-  document.getElementById(&quot;sa-profile-card&quot;).style.display = _isSuperAdmin ? &quot;none&quot; : &quot;block&quot;;
-  document.getElementById(&quot;dash-ph-title&quot;).textContent = _isSuperAdmin ? &quot;Dashboard&quot; : &quot;My Dashboard&quot;;
-  document.getElementById(&quot;dash-ph-sub&quot;).textContent = _isSuperAdmin ? &quot;Platform overview at a glance.&quot; : &quot;Your profile and platform overview.&quot;;
+  // Sub-admins get a dedicated branded &quot;Hotel Manager&quot;-style welcome
+  // dashboard (hero + role/permissions snapshot + stat cards) instead of
+  // the raw platform overview a super admin sees; toggle the two wraps.
+  document.getElementById(&quot;sad-wrap&quot;).style.display = _isSuperAdmin ? &quot;none&quot; : &quot;block&quot;;
+  document.getElementById(&quot;admin-dash-wrap&quot;).style.display = _isSuperAdmin ? &quot;block&quot; : &quot;none&quot;;
   if (!_isSuperAdmin) {
     var saEmailEl = document.getElementById(&quot;sa-prof-email&quot;);
     if (saEmailEl) saEmailEl.value = _currentSubAdmin;
     // Fallback display name until adminProfiles loads (below), so the hero
-    // card never shows a blank/placeholder name.
+    // cards never show a blank/placeholder name.
     var saHeroFallback = document.getElementById(&quot;sa-hero-name&quot;);
     if (saHeroFallback) saHeroFallback.textContent = _currentSubAdmin;
+    var firstName = (name || _currentSubAdmin || &quot;there&quot;).trim().split(&quot; &quot;)[0];
+    document.getElementById(&quot;sad-greet&quot;).innerHTML = &quot;Welcome back, &quot; + esc(firstName) + &quot;! &amp;#128075;&quot;;
+    var sadAccessRoleEl = document.getElementById(&quot;sad-access-role&quot;); if (sadAccessRoleEl) sadAccessRoleEl.textContent = role || &quot;Sub-Admin&quot;;
   }
   applyPermissionRestrictions();
   _adminEmail = (document.getElementById(&quot;li-email&quot;).value || &quot;&quot;).trim().toLowerCase();
@@ -3351,11 +3627,14 @@ function loadAdminPhoto() {
       if (d.name) {
         document.getElementById(&quot;tb-name&quot;).textContent = d.name;
         document.getElementById(&quot;ad-name&quot;).textContent = d.name;
+        var sbNameEl1 = document.getElementById(&quot;sb-name&quot;); if (sbNameEl1) sbNameEl1.textContent = d.name;
         var saHeroN0 = document.getElementById(&quot;sa-hero-name&quot;); if (saHeroN0) saHeroN0.textContent = d.name;
+        var sadGreet0 = document.getElementById(&quot;sad-greet&quot;); if (sadGreet0) sadGreet0.innerHTML = &quot;Welcome back, &quot; + esc(d.name.trim().split(&quot; &quot;)[0]) + &quot;! &amp;#128075;&quot;;
         if (!d.photoURL) {
           var initial = d.name.trim().charAt(0).toUpperCase() || &quot;A&quot;;
           document.getElementById(&quot;tb-avatar&quot;).textContent = initial;
           document.getElementById(&quot;ad-avatar&quot;).textContent = initial;
+          var sbAvEl1 = document.getElementById(&quot;sb-avatar&quot;); if (sbAvEl1) sbAvEl1.textContent = initial;
           var saAv0 = document.getElementById(&quot;sa-prof-avatar&quot;); if (saAv0) saAv0.textContent = initial;
         }
       }
@@ -3367,6 +3646,7 @@ function loadAdminPhoto() {
 function setAdminAvatar(url) {
   document.getElementById(&quot;tb-avatar&quot;).innerHTML = &#x27;&lt;img src=&quot;&#x27;+url+&#x27;&quot;/&gt;&#x27;;
   document.getElementById(&quot;ad-avatar&quot;).innerHTML = &#x27;&lt;img src=&quot;&#x27;+url+&#x27;&quot;/&gt;&#x27;;
+  var sbAv = document.getElementById(&quot;sb-avatar&quot;); if (sbAv) sbAv.innerHTML = &#x27;&lt;img src=&quot;&#x27;+url+&#x27;&quot;/&gt;&#x27;;
   var saAv = document.getElementById(&quot;sa-prof-avatar&quot;); if (saAv) saAv.innerHTML = &#x27;&lt;img src=&quot;&#x27;+url+&#x27;&quot;/&gt;&#x27;;
 }
 /* ============ SUB-ADMIN: OWN PROFILE (name/phone) + PASSWORD ============ */
@@ -3382,12 +3662,16 @@ function saSaveProfile() {
   db.collection(&quot;adminProfiles&quot;).doc(_adminEmail).set({ name: name, phone: phone, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, {merge:true}).then(function(){
     document.getElementById(&quot;tb-name&quot;).textContent = name;
     document.getElementById(&quot;ad-name&quot;).textContent = name;
+    var sbNameEl2 = document.getElementById(&quot;sb-name&quot;); if (sbNameEl2) sbNameEl2.textContent = name;
     var saHeroN = document.getElementById(&quot;sa-hero-name&quot;); if (saHeroN) saHeroN.textContent = name;
+    var sadGreet = document.getElementById(&quot;sad-greet&quot;); if (sadGreet) sadGreet.innerHTML = &quot;Welcome back, &quot; + esc(name.trim().split(&quot; &quot;)[0]) + &quot;! &amp;#128075;&quot;;
     var tbAv = document.getElementById(&quot;tb-avatar&quot;);
     var adAv = document.getElementById(&quot;ad-avatar&quot;);
+    var sbAv2 = document.getElementById(&quot;sb-avatar&quot;);
     var saAv = document.getElementById(&quot;sa-prof-avatar&quot;);
     if (tbAv &amp;&amp; !tbAv.querySelector(&quot;img&quot;)) tbAv.textContent = name.charAt(0).toUpperCase();
     if (adAv &amp;&amp; !adAv.querySelector(&quot;img&quot;)) adAv.textContent = name.charAt(0).toUpperCase();
+    if (sbAv2 &amp;&amp; !sbAv2.querySelector(&quot;img&quot;)) sbAv2.textContent = name.charAt(0).toUpperCase();
     if (saAv &amp;&amp; !saAv.querySelector(&quot;img&quot;)) saAv.textContent = name.charAt(0).toUpperCase();
     T(&quot;Profile Updated&quot;, &quot;Your changes have been saved.&quot;);
   }).catch(function(){ T(&quot;Error&quot;, &quot;Could not save profile.&quot;, 5000); });
@@ -3847,64 +4131,286 @@ function bkDate(b) { return b.createdAt &amp;&amp; b.createdAt.toDate ? b.create
 function datesOverlap(aStart, aEnd, bStart, bEnd) { return aStart &lt; bEnd &amp;&amp; bStart &lt; aEnd; }
 
 /* ============ DASHBOARD ============ */
-var _chartDashB, _chartDashR;
+var _chartDashB, _chartDashR, _chartDashDonut, _chartDashUsers, _chartSAD, _chartSADDonut;
 function renderDashboard() {
+  if (!_isSuperAdmin) { renderSubAdminDashboard(); return; }
+
+  var dateEl = document.getElementById(&quot;ad-today-date&quot;);
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString(&quot;en-US&quot;, {month:&quot;long&quot;, day:&quot;numeric&quot;, year:&quot;numeric&quot;});
+
+  var now = new Date();
+  var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  var lastMonthStart = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  var inRange = function(dt, start, end) { return dt &gt;= start &amp;&amp; (!end || dt &lt; end); };
+  var itemDate = function(o) { var d = o.createdAt ? bkDate(o) : null; return (d &amp;&amp; !isNaN(d)) ? d : now; };
+  var countThis = function(arr, extra) { return arr.filter(function(o){ return inRange(itemDate(o), monthStart) &amp;&amp; (!extra || extra(o)); }).length; };
+  var countLast = function(arr, extra) { return arr.filter(function(o){ return inRange(itemDate(o), lastMonthStart, monthStart) &amp;&amp; (!extra || extra(o)); }).length; };
+
   var totalRevenue = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; ? (Number(b.amountPaid)||0) : 0); }, 0);
-  var totalCommission = (_allHotelBookings||[]).reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; ? (Number(b.platformShare)||0) : 0); }, 0);
-  var topPickCount = _allHotels.filter(isTopPickActive).length;
-  var today = new Date();
-  var todayRevenue = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; &amp;&amp; isSameDay(bkDate(b), today) ? (Number(b.amountPaid)||0) : 0); }, 0);
-  var pending = _allBookings.filter(function(b){ return b.status===&quot;Pending&quot;; }).length;
+  var todayRevenue = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot; &amp;&amp; isSameDay(bkDate(b), now) ? (Number(b.amountPaid)||0) : 0); }, 0);
+  var revThis = _allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot; &amp;&amp; inRange(itemDate(b), monthStart); }).reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0);
+  var revLast = _allBookings.filter(function(b){ return b.paymentStatus===&quot;paid&quot; &amp;&amp; inRange(itemDate(b), lastMonthStart, monthStart); }).reduce(function(s,b){ return s+(Number(b.amountPaid)||0); }, 0);
+
+  var pendingBookings = _allBookings.filter(function(b){ return b.status===&quot;Pending&quot;; });
   var pendingWithdrawals = (_allWithdrawals||[]).filter(function(w){ return w.status===&quot;Pending&quot;; });
   var pendingWithdrawalTotal = pendingWithdrawals.reduce(function(s,w){ return s+(Number(w.amount)||0); }, 0);
-  var totalWithdrawn = (_allWithdrawals||[]).filter(function(w){ return w.status===&quot;Approved&quot;; }).reduce(function(s,w){ return s+(Number(w.amount)||0); }, 0);
-  var netRevenue = totalRevenue - totalWithdrawn;
-  // Sub-admins don&#x27;t get to see money figures on their overview: revenue,
-  // withdrawals and net revenue are all skipped for them, leaving only the
-  // operational stats (hotels, bookings, pending, users).
-  var cards = [
-    statCard(&quot;&amp;#127974;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Hotels&quot;, _allHotels.length),
-    statCard(&quot;&amp;#128197;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Bookings&quot;, _allBookings.length)
-  ];
-  if (_isSuperAdmin) {
-    cards.push(statCard(&quot;&amp;#128176;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Total Revenue&quot;, NGN(totalRevenue)));
-    cards.push(statCard(&quot;&amp;#9752;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Today&#x27;s Revenue&quot;, NGN(todayRevenue)));
-    cards.push(statCard(&quot;&amp;#128184;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Commission Earned&quot;, NGN(totalCommission)));
-    cards.push(statCard(&quot;&amp;#11088;&quot;, &quot;var(--orange)&quot;, &quot;rgba(247,148,29,.12)&quot;, &quot;Top Pick Hotels&quot;, topPickCount));
-  }
-  cards.push(statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Bookings&quot;, pending));
-  cards.push(statCard(&quot;&amp;#128101;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Total Users&quot;, _allUsers.length));
-  if (_isSuperAdmin) {
-    cards.push(statCard(&quot;&amp;#128179;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Pending Withdrawals&quot;, NGN(pendingWithdrawalTotal)+&quot; (&quot;+pendingWithdrawals.length+&quot;)&quot;));
-    cards.push(statCard(&quot;&amp;#128181;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Withdrawn&quot;, NGN(totalWithdrawn)));
-    cards.push(statCard(&quot;&amp;#128200;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Net Revenue&quot;, NGN(netRevenue)));
-  }
-  document.getElementById(&quot;dash-stats&quot;).innerHTML = cards.join(&quot;&quot;);
-  var revChartCard = document.getElementById(&quot;dash-revenue-chart-card&quot;);
-  if (revChartCard) revChartCard.style.display = _isSuperAdmin ? &quot;&quot; : &quot;none&quot;;
+  var activeSubAdmins = (_allSubAdmins||[]).filter(function(sa){ return saStatus(sa)===&quot;active&quot;; }).length;
+  var openDisputes = (_allDisputes||[]).filter(function(d){ return d.status===&quot;Open&quot;; }).length;
 
-  var days = [], bCounts = [], rSums = [];
-  for (var i=6;i&gt;=0;i--) {
+  // ---- row 1 ----
+  document.getElementById(&quot;dash-stats-row1&quot;).innerHTML = [
+    statCard2(&quot;&amp;#127974;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Hotels&quot;, _allHotels.length, (function(){var c=countThis(_allHotels),p=countLast(_allHotels);var d=pctChange(c,p);return d?d.txt:null;})(), (function(){var c=countThis(_allHotels),p=countLast(_allHotels);var d=pctChange(c,p);return d?d.dir:&quot;up&quot;;})()),
+    statCard2(&quot;&amp;#128197;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Bookings&quot;, _allBookings.length, (function(){var c=countThis(_allBookings),p=countLast(_allBookings);var d=pctChange(c,p);return d?d.txt:null;})(), (function(){var c=countThis(_allBookings),p=countLast(_allBookings);var d=pctChange(c,p);return d?d.dir:&quot;up&quot;;})()),
+    statCard2(&quot;&amp;#128176;&quot;, &quot;var(--teal)&quot;, &quot;var(--teal-bg)&quot;, &quot;Today&#x27;s Revenue&quot;, NGN(todayRevenue), (function(){var d=pctChange(revThis,revLast);return d?d.txt:null;})(), (function(){var d=pctChange(revThis,revLast);return d?d.dir:&quot;up&quot;;})()),
+    statCard2(&quot;&amp;#128101;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Users&quot;, _allUsers.length, (function(){var c=countThis(_allUsers),p=countLast(_allUsers);var d=pctChange(c,p);return d?d.txt:null;})(), (function(){var c=countThis(_allUsers),p=countLast(_allUsers);var d=pctChange(c,p);return d?d.dir:&quot;up&quot;;})())
+  ].join(&quot;&quot;);
+
+  // ---- row 2 ----
+  document.getElementById(&quot;dash-stats-row2&quot;).innerHTML = [
+    statCard2(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Pending Bookings&quot;, pendingBookings.length, &quot;Awaiting Confirmation&quot;, &quot;down&quot;),
+    statCard2(&quot;&amp;#128272;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Active Sub-Admins&quot;, activeSubAdmins, &quot;With Access&quot;, &quot;up&quot;),
+    statCard2(&quot;&amp;#128179;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Pending Withdrawals&quot;, NGN(pendingWithdrawalTotal), &quot;To Approve&quot;, &quot;up&quot;),
+    statCard2(&quot;&amp;#9878;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Disputes&quot;, openDisputes, &quot;Open Cases&quot;, &quot;down&quot;)
+  ].join(&quot;&quot;);
+
+  // ---- revenue overview (line chart over selected range) ----
+  var revRangeSel = document.getElementById(&quot;dash-rev-range&quot;);
+  var revRange = revRangeSel ? Number(revRangeSel.value) : 30;
+  var days = [], rSums = [];
+  for (var i=revRange-1;i&gt;=0;i--) {
     var d = daysAgo(i);
     days.push(d.toLocaleDateString(&quot;en-GB&quot;,{day:&quot;2-digit&quot;,month:&quot;short&quot;}));
     var dayBk = _allBookings.filter(function(b){ return isSameDay(bkDate(b), d); });
-    bCounts.push(dayBk.length);
     rSums.push(dayBk.reduce(function(s,b){ return s + (b.paymentStatus===&quot;paid&quot;?(Number(b.amountPaid)||0):0); }, 0));
   }
-  if (_chartDashB) _chartDashB.destroy();
-  _chartDashB = new Chart(document.getElementById(&quot;dash-chart-bookings&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:bCounts, borderColor:&quot;#2f5fdb&quot;, backgroundColor:&quot;rgba(47,95,219,.1)&quot;, fill:true, tension:.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}});
-  if (_isSuperAdmin) {
-    if (_chartDashR) _chartDashR.destroy();
-    _chartDashR = new Chart(document.getElementById(&quot;dash-chart-revenue&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:rSums, borderColor:&quot;#16a34a&quot;, backgroundColor:&quot;rgba(22,163,74,.1)&quot;, fill:true, tension:.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000)+&quot;k&quot;;}}}}}});
+  document.getElementById(&quot;dash-rev-total&quot;).innerHTML = NGN(totalRevenue);
+  var revDelta = pctChange(revThis, revLast);
+  var revDeltaEl = document.getElementById(&quot;dash-rev-delta&quot;);
+  if (revDeltaEl) { revDeltaEl.textContent = (revDelta ? ((revDelta.dir===&quot;up&quot;?&quot;\u2191 &quot;:&quot;\u2193 &quot;)+revDelta.txt) : &quot;\u2014&quot;); revDeltaEl.className = &quot;sad-rev-delta&quot;; }
+  if (_chartDashR) _chartDashR.destroy();
+  _chartDashR = new Chart(document.getElementById(&quot;dash-chart-revenue&quot;), {type:&quot;line&quot;, data:{labels:days, datasets:[{data:rSums, borderColor:&quot;#1a56db&quot;, backgroundColor:&quot;rgba(26,86,219,.1)&quot;, fill:true, tension:.4, pointRadius:2}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20A6&quot;+(v/1000000).toFixed(1)+&quot;M&quot;;}}}}}});
+
+  // ---- bookings overview (donut) ----
+  var confirmed = _allBookings.filter(function(b){ return b.status===&quot;Confirmed&quot;; }).length;
+  var pendingCount = pendingBookings.length;
+  var cancelled = _allBookings.filter(function(b){ return b.status===&quot;Cancelled&quot;; }).length;
+  var totalBk = _allBookings.length || 1;
+  document.getElementById(&quot;dash-donut-total&quot;).textContent = _allBookings.length;
+  var pct = function(n){ return ((n/totalBk)*100).toFixed(1)+&quot;%&quot;; };
+  document.getElementById(&quot;dash-donut-legend&quot;).innerHTML =
+    &#x27;&lt;div class=&quot;sad-donut-legend-row&quot;&gt;&lt;span class=&quot;sad-donut-dot&quot; style=&quot;background:#16a34a&quot;&gt;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;Confirmed&lt;/span&gt;&lt;span class=&quot;val&quot;&gt;&#x27;+confirmed+&#x27; (&#x27;+pct(confirmed)+&#x27;)&lt;/span&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-donut-legend-row&quot;&gt;&lt;span class=&quot;sad-donut-dot&quot; style=&quot;background:#f59e0b&quot;&gt;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;Pending&lt;/span&gt;&lt;span class=&quot;val&quot;&gt;&#x27;+pendingCount+&#x27; (&#x27;+pct(pendingCount)+&#x27;)&lt;/span&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-donut-legend-row&quot;&gt;&lt;span class=&quot;sad-donut-dot&quot; style=&quot;background:#dc2626&quot;&gt;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;Cancelled&lt;/span&gt;&lt;span class=&quot;val&quot;&gt;&#x27;+cancelled+&#x27; (&#x27;+pct(cancelled)+&#x27;)&lt;/span&gt;&lt;/div&gt;&#x27;;
+  if (_chartDashDonut) _chartDashDonut.destroy();
+  _chartDashDonut = new Chart(document.getElementById(&quot;dash-donut&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Confirmed&quot;,&quot;Pending&quot;,&quot;Cancelled&quot;], datasets:[{data:[confirmed,pendingCount,cancelled], backgroundColor:[&quot;#16a34a&quot;,&quot;#f59e0b&quot;,&quot;#dc2626&quot;], borderWidth:0}]}, options:{cutout:&quot;72%&quot;, plugins:{legend:{display:false}}}});
+
+  // ---- recent bookings ----
+  var recent = _allBookings.slice(0,5);
+  document.getElementById(&quot;dash-recent&quot;).innerHTML = recent.length ? recent.map(function(b){
+    var initials = (b.name||&quot;?&quot;).trim().split(/\s+/).map(function(w){return w[0];}).slice(0,2).join(&quot;&quot;).toUpperCase();
+    return &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div class=&quot;tb-avatar&quot; style=&quot;width:38px;height:38px;font-size:.72rem&quot;&gt;&#x27;+esc(initials)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-main&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(b.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(b.hotelName||&quot;-&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;lr-meta&quot;&gt;&lt;span class=&quot;lr-sub&quot;&gt;&lt;span class=&quot;lr-date-ico&quot;&gt;&amp;#128197;&lt;/span&gt;&#x27;+fmtDate(b.createdAt)+&#x27;&lt;/span&gt;&#x27;+pill(b.status)+&#x27;&lt;b&gt;&#x27;+NGN(Number(b.amountPaid)||0)+&#x27;&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No bookings yet.&lt;/div&gt;&#x27;;
+
+  // ---- top performing hotels ----
+  var hotelStats = _allHotels.map(function(h){
+    var hb = _allBookings.filter(function(b){ return b.hotelId===h.id || b.hotelName===h.name; });
+    var rev = hb.reduce(function(s,b){ return s+(b.paymentStatus===&quot;paid&quot;?(Number(b.amountPaid)||0):0); }, 0);
+    return { h:h, bookings:hb.length, revenue:rev };
+  }).sort(function(a,b){ return b.revenue-a.revenue; }).slice(0,5);
+  document.getElementById(&quot;dash-top-hotels&quot;).innerHTML = hotelStats.length ? hotelStats.map(function(s){
+    return &#x27;&lt;div class=&quot;list-row&quot;&gt;&#x27;+(s.h.coverImage ? &#x27;&lt;img class=&quot;lr-thumb&quot; src=&quot;&#x27;+s.h.coverImage+&#x27;&quot;/&gt;&#x27; : &#x27;&lt;div class=&quot;lr-thumb&quot; style=&quot;display:flex;align-items:center;justify-content:center;background:var(--blue-dim);color:var(--blue)&quot;&gt;&amp;#127974;&lt;/div&gt;&#x27;)+
+      &#x27;&lt;div class=&quot;lr-main&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(s.h.name||&quot;Hotel&quot;)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&amp;#11088; &#x27;+(Number(s.h.rating)||0).toFixed(1)+&#x27; &amp;middot; &#x27;+esc(s.h.location||&quot;-&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+
+      &#x27;&lt;div class=&quot;lr-meta&quot;&gt;&lt;span class=&quot;lr-sub&quot;&gt;&#x27;+s.bookings+&#x27; bookings&lt;/span&gt;&lt;b&gt;&#x27;+NGN(s.revenue)+&#x27;&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No hotels yet.&lt;/div&gt;&#x27;;
+
+  // ---- platform overview ----
+  var totalRooms = _allHotels.reduce(function(s,h){ return s+(Number(h.roomCount)||0); }, 0);
+  var activePromotions = (_allPromotions||[]).filter(function(p){ return p.status!==&quot;Expired&quot; &amp;&amp; p.active!==false; }).length;
+  var verifiedHotels = _allHotels.filter(function(h){ return h.verified || h.isVerified || h.verificationStatus===&quot;Verified&quot;; }).length;
+  var countries = Array.from(new Set(_allHotels.map(function(h){ return (h.country||&quot;&quot;).trim(); }).filter(Boolean))).length;
+  document.getElementById(&quot;dash-platform-ov&quot;).innerHTML =
+    &#x27;&lt;div class=&quot;plov-item&quot;&gt;&lt;div class=&quot;plov-ico&quot; style=&quot;background:var(--blue-dim);color:var(--blue)&quot;&gt;&amp;#128716;&lt;/div&gt;&lt;div&gt;&lt;div class=&quot;plov-val&quot;&gt;&#x27;+totalRooms+&#x27;&lt;/div&gt;&lt;div class=&quot;plov-lbl&quot;&gt;Total Rooms&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;plov-item&quot;&gt;&lt;div class=&quot;plov-ico&quot; style=&quot;background:rgba(247,148,29,.12);color:var(--orange)&quot;&gt;&amp;#127881;&lt;/div&gt;&lt;div&gt;&lt;div class=&quot;plov-val&quot;&gt;&#x27;+activePromotions+&#x27;&lt;/div&gt;&lt;div class=&quot;plov-lbl&quot;&gt;Active Promotions&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;plov-item&quot;&gt;&lt;div class=&quot;plov-ico&quot; style=&quot;background:var(--green-bg);color:var(--green)&quot;&gt;&amp;#9989;&lt;/div&gt;&lt;div&gt;&lt;div class=&quot;plov-val&quot;&gt;&#x27;+verifiedHotels+&#x27;&lt;/div&gt;&lt;div class=&quot;plov-lbl&quot;&gt;Verified Hotels&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;plov-item&quot;&gt;&lt;div class=&quot;plov-ico&quot; style=&quot;background:var(--purple-bg);color:var(--purple)&quot;&gt;&amp;#127760;&lt;/div&gt;&lt;div&gt;&lt;div class=&quot;plov-val&quot;&gt;&#x27;+countries+&#x27;&lt;/div&gt;&lt;div class=&quot;plov-lbl&quot;&gt;Countries&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+
+  // ---- user growth (bar chart, last 8 buckets) ----
+  var uDays = [], uCounts = [];
+  for (var j=27;j&gt;=0;j-=4) {
+    var ud = daysAgo(j);
+    uDays.push(ud.toLocaleDateString(&quot;en-GB&quot;,{day:&quot;2-digit&quot;,month:&quot;short&quot;}));
+    uCounts.push(_allUsers.filter(function(u){ return itemDate(u) &lt;= ud; }).length);
+  }
+  document.getElementById(&quot;dash-users-total&quot;).textContent = _allUsers.length;
+  var usersDelta = pctChange(countThis(_allUsers), countLast(_allUsers));
+  var usersDeltaEl = document.getElementById(&quot;dash-users-delta&quot;);
+  if (usersDeltaEl) usersDeltaEl.textContent = usersDelta ? ((usersDelta.dir===&quot;up&quot;?&quot;\u2191 &quot;:&quot;\u2193 &quot;)+usersDelta.txt) : &quot;\u2014&quot;;
+  if (_chartDashUsers) _chartDashUsers.destroy();
+  _chartDashUsers = new Chart(document.getElementById(&quot;dash-chart-usergrowth&quot;), {type:&quot;bar&quot;, data:{labels:uDays, datasets:[{data:uCounts, backgroundColor:&quot;#1a56db&quot;, borderRadius:4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+
+  // ---- pending approvals ----
+  var newHotelRegs = (_allHotelRegs||[]).filter(function(r){ return r.status===&quot;Pending&quot; || !r.status; }).length;
+  var payoutReqs = (_allPayouts||[]).filter(function(p){ return p.status===&quot;Pending&quot;; });
+  var payoutTotal = payoutReqs.reduce(function(s,p){ return s+(Number(p.amount)||0); }, 0);
+  var hotelVerifs = _allHotels.filter(function(h){ return h.verificationStatus===&quot;Pending&quot; || h.verificationStatus===&quot;Submitted&quot;; }).length;
+  var subAdminReqs = (_allSubAdmins||[]).filter(function(sa){ return saStatus(sa)===&quot;pending&quot;; }).length;
+  document.getElementById(&quot;dash-pending-approvals&quot;).innerHTML =
+    &#x27;&lt;div class=&quot;sad-task-row&quot;&gt;&lt;div class=&quot;sad-task-ico&quot; style=&quot;background:var(--blue-dim);color:var(--blue)&quot;&gt;&amp;#128196;&lt;/div&gt;&lt;div class=&quot;sad-task-txt&quot;&gt;&lt;b&gt;New Hotel Registrations&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;sad-task-meta&quot;&gt;&lt;b&gt;&#x27;+newHotelRegs+&#x27;&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-task-row&quot;&gt;&lt;div class=&quot;sad-task-ico&quot; style=&quot;background:var(--green-bg);color:var(--green)&quot;&gt;&amp;#128176;&lt;/div&gt;&lt;div class=&quot;sad-task-txt&quot;&gt;&lt;b&gt;Payout Requests&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;sad-task-meta&quot;&gt;&lt;b&gt;&#x27;+payoutReqs.length+&#x27;&lt;/b&gt;&lt;span class=&quot;sad-task-due&quot;&gt;&#x27;+NGN(payoutTotal)+&#x27;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-task-row&quot;&gt;&lt;div class=&quot;sad-task-ico&quot; style=&quot;background:rgba(247,148,29,.12);color:var(--orange)&quot;&gt;&amp;#9989;&lt;/div&gt;&lt;div class=&quot;sad-task-txt&quot;&gt;&lt;b&gt;Hotel Verifications&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;sad-task-meta&quot;&gt;&lt;b&gt;&#x27;+hotelVerifs+&#x27;&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-task-row&quot;&gt;&lt;div class=&quot;sad-task-ico&quot; style=&quot;background:var(--purple-bg);color:var(--purple)&quot;&gt;&amp;#128101;&lt;/div&gt;&lt;div class=&quot;sad-task-txt&quot;&gt;&lt;b&gt;Sub-Admin Requests&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;sad-task-meta&quot;&gt;&lt;b&gt;&#x27;+subAdminReqs+&#x27;&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+
+  // ---- quick actions ----
+  document.getElementById(&quot;dash-quick-actions&quot;).innerHTML =
+    &#x27;&lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(\&#x27;hotels\&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:var(--blue-dim);color:var(--blue)&quot;&gt;&amp;#127974;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;Add New Hotel&lt;/b&gt;&lt;span&gt;Register a new hotel&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(\&#x27;hotelbookings\&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:rgba(247,148,29,.12);color:var(--orange)&quot;&gt;&amp;#11088;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;Manage Bookings&lt;/b&gt;&lt;span&gt;View all bookings&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(\&#x27;payouts\&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:var(--green-bg);color:var(--green)&quot;&gt;&amp;#128176;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;Approve Payouts&lt;/b&gt;&lt;span&gt;Review payouts&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(\&#x27;promotions\&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:var(--red-bg);color:var(--red)&quot;&gt;&amp;#11088;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;Create Promotion&lt;/b&gt;&lt;span&gt;Launch new promo&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(\&#x27;subadmins\&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:var(--purple-bg);color:var(--purple)&quot;&gt;&amp;#128101;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;Add Sub-Admin&lt;/b&gt;&lt;span&gt;Create new admin&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(\&#x27;reports\&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:var(--blue-dim);color:var(--blue)&quot;&gt;&amp;#128200;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;View Reports&lt;/b&gt;&lt;span&gt;Analytics &amp;amp; insights&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(\&#x27;settings\&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:var(--teal-bg);color:var(--teal)&quot;&gt;&amp;#9881;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;System Settings&lt;/b&gt;&lt;span&gt;Configure system&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-qa-item&quot; onclick=&quot;goPage(\&#x27;support\&#x27;)&quot;&gt;&lt;div class=&quot;sad-qa-ico&quot; style=&quot;background:rgba(247,148,29,.12);color:var(--orange)&quot;&gt;&amp;#128172;&lt;/div&gt;&lt;div class=&quot;sad-qa-txt&quot;&gt;&lt;b&gt;Send Message&lt;/b&gt;&lt;span&gt;Broadcast message&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+}
+
+/* ============ SUB-ADMIN (&quot;Hotel Manager&quot;) WELCOME DASHBOARD ============ */
+// Populates the branded hero + stat cards + assigned hotels + recent
+// bookings + chart + pending tasks a sub-admin sees on the Dashboard page.
+// Everything here is derived from the same live data already loaded for
+// the super admin view (_allHotels/_allBookings/etc.) — nothing is faked.
+function statCard2(icon, color, bg, label, val, deltaTxt, deltaDir) {
+  return &#x27;&lt;div class=&quot;stat-card2&quot;&gt;&lt;div class=&quot;stat-top2&quot;&gt;&lt;div class=&quot;stat-ico&quot; style=&quot;background:&#x27;+bg+&#x27;;color:&#x27;+color+&#x27;&quot;&gt;&#x27;+icon+&#x27;&lt;/div&gt;&lt;div&gt;&lt;div class=&quot;stat-lbl2&quot;&gt;&#x27;+label+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;stat-val2&quot;&gt;&#x27;+val+&#x27;&lt;/div&gt;&#x27;+
+    (deltaTxt ? &#x27;&lt;div class=&quot;stat-delta2 &#x27;+deltaDir+&#x27;&quot;&gt;&#x27;+(deltaDir===&quot;up&quot;?&quot;&amp;#8593;&quot;:&quot;&amp;#8595;&quot;)+&#x27; &#x27;+deltaTxt+&#x27;&lt;/div&gt;&#x27; : &#x27;&#x27;)+
+    &#x27;&lt;/div&gt;&#x27;;
+}
+function pctChange(cur, prev) {
+  if (!prev) return cur ? {txt:&quot;New this month&quot;, dir:&quot;up&quot;} : null;
+  var pct = ((cur - prev) / prev) * 100;
+  return {txt: Math.abs(pct).toFixed(0) + &quot;% from last month&quot;, dir: pct &gt;= 0 ? &quot;up&quot; : &quot;down&quot;};
+}
+function renderSubAdminDashboard() {
+  if (!document.getElementById(&quot;sad-stats&quot;)) return;
+
+  var now = new Date();
+  var dateEl = document.getElementById(&quot;sad-today-date&quot;);
+  if (dateEl) dateEl.textContent = now.toLocaleDateString(&quot;en-US&quot;, {month:&quot;long&quot;, day:&quot;numeric&quot;, year:&quot;numeric&quot;});
+  var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  var lastMonthStart = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  var inRange = function(dt, start, end) { return dt &gt;= start &amp;&amp; (!end || dt &lt; end); };
+  var itemDate = function(o) { var d = o.createdAt ? bkDate(o) : null; return (d &amp;&amp; !isNaN(d)) ? d : now; };
+
+  var totalBookings = _allBookings.length;
+  var pendingB = _allBookings.filter(function(b){ return b.status === &quot;Pending&quot;; }).length;
+  var pendingBThis = _allBookings.filter(function(b){ return b.status === &quot;Pending&quot; &amp;&amp; inRange(itemDate(b), monthStart); }).length;
+  var pendingBLast = _allBookings.filter(function(b){ return b.status === &quot;Pending&quot; &amp;&amp; inRange(itemDate(b), lastMonthStart, monthStart); }).length;
+  var bookingsThis = _allBookings.filter(function(b){ return inRange(itemDate(b), monthStart); }).length;
+  var bookingsLast = _allBookings.filter(function(b){ return inRange(itemDate(b), lastMonthStart, monthStart); }).length;
+  var hotelsThis = _allHotels.filter(function(h){ return inRange(itemDate(h), monthStart); }).length;
+  var hotelsLast = _allHotels.filter(function(h){ return inRange(itemDate(h), lastMonthStart, monthStart); }).length;
+  var usersThis = (_allUsers||[]).filter(function(u){ return inRange(itemDate(u), monthStart); }).length;
+  var usersLast = (_allUsers||[]).filter(function(u){ return inRange(itemDate(u), lastMonthStart, monthStart); }).length;
+
+  var hrPending = (_allHotelRegs||[]).filter(function(r){ return r.status === &quot;Pending&quot;; }).length;
+  var dispOpen = (_allDisputes||[]).filter(function(d){ return d.status === &quot;Open&quot;; }).length;
+  var supportBadgeEl = document.getElementById(&quot;support-sidebar-badge&quot;);
+  var unreadMsgs = (supportBadgeEl &amp;&amp; supportBadgeEl.style.display !== &quot;none&quot;) ? (parseInt(supportBadgeEl.textContent,10) || 0) : 0;
+
+  var dHotels = pctChange(_allHotels.length, _allHotels.length - hotelsThis + hotelsLast);
+  var dBookings = pctChange(totalBookings, totalBookings - bookingsThis + bookingsLast);
+  var dPending = pctChange(pendingBThis, pendingBLast);
+  var dUsers = pctChange((_allUsers||[]).length, (_allUsers||[]).length - usersThis + usersLast);
+
+  document.getElementById(&quot;sad-stats&quot;).innerHTML =
+    statCard2(&quot;&amp;#127974;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Hotels&quot;, _allHotels.length, dHotels &amp;&amp; dHotels.txt, dHotels ? dHotels.dir : &quot;up&quot;) +
+    statCard2(&quot;&amp;#128197;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Total Bookings&quot;, totalBookings, dBookings &amp;&amp; dBookings.txt, dBookings ? dBookings.dir : &quot;up&quot;) +
+    statCard2(&quot;&amp;#9203;&quot;, &quot;var(--orange)&quot;, &quot;rgba(240,168,60,.14)&quot;, &quot;Pending Bookings&quot;, pendingB, dPending &amp;&amp; dPending.txt, dPending ? dPending.dir : &quot;down&quot;) +
+    statCard2(&quot;&amp;#128101;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Users&quot;, (_allUsers||[]).length, dUsers &amp;&amp; dUsers.txt, dUsers ? dUsers.dir : &quot;up&quot;);
+
+  /* ---- Revenue overview: line chart + big total for the selected range ---- */
+  var revRangeSel = document.getElementById(&quot;sad-rev-range&quot;);
+  var revDays = revRangeSel ? parseInt(revRangeSel.value,10) : 30;
+  var revStart = daysAgo(revDays-1); revStart.setHours(0,0,0,0);
+  var prevRevStart = daysAgo(revDays*2-1); var prevRevEnd = revStart;
+  var revenueRange = _allBookings.reduce(function(s,b){ return s + (b.paymentStatus === &quot;paid&quot; &amp;&amp; bkDate(b) &gt;= revStart ? (Number(b.amountPaid)||0) : 0); }, 0);
+  var revenuePrev = _allBookings.reduce(function(s,b){ var d=bkDate(b); return s + (b.paymentStatus === &quot;paid&quot; &amp;&amp; d &gt;= prevRevStart &amp;&amp; d &lt; prevRevEnd ? (Number(b.amountPaid)||0) : 0); }, 0);
+  document.getElementById(&quot;sad-rev-total&quot;).innerHTML = NGN(revenueRange);
+  var revDelta = pctChange(revenueRange, revenuePrev);
+  var revDeltaEl = document.getElementById(&quot;sad-rev-delta&quot;);
+  if (revDelta) { revDeltaEl.textContent = (revDelta.dir===&quot;up&quot;?&quot;\u2191 &quot;:&quot;\u2193 &quot;)+revDelta.txt.replace(&quot; from last month&quot;,&quot; vs last period&quot;); revDeltaEl.style.background = revDelta.dir===&quot;up&quot; ? &quot;var(--green-bg)&quot; : &quot;var(--red-bg)&quot;; revDeltaEl.style.color = revDelta.dir===&quot;up&quot; ? &quot;var(--green)&quot; : &quot;var(--red)&quot;; }
+  else { revDeltaEl.textContent = &quot;No prior data&quot;; }
+
+  var revLabels = [], revSeries = [];
+  var step = revDays &gt; 60 ? 30 : (revDays &gt; 14 ? 5 : 1);
+  for (var i=revDays-1;i&gt;=0;i-=step) {
+    var d = daysAgo(i);
+    revLabels.push((d.getMonth()+1)+&quot;/&quot;+d.getDate());
+    var dayEnd = daysAgo(Math.max(i-step,0));
+    var sum = _allBookings.reduce(function(s,b){ var bd=bkDate(b); return s + (b.paymentStatus===&quot;paid&quot; &amp;&amp; isSameDay(bd,d) ? (Number(b.amountPaid)||0) : 0); }, 0);
+    revSeries.push(sum);
+  }
+  var sadCtx = document.getElementById(&quot;sad-chart&quot;);
+  if (sadCtx) {
+    if (_chartSAD) _chartSAD.destroy();
+    _chartSAD = new Chart(sadCtx, {type:&quot;line&quot;, data:{labels:revLabels, datasets:[{data:revSeries, borderColor:&quot;#1a56db&quot;, backgroundColor:&quot;rgba(26,86,219,.1)&quot;, fill:true, tension:.4, pointRadius:2}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:function(v){return &quot;\u20a6&quot;+(v&gt;=1000?(v/1000)+&quot;K&quot;:v);}}}}}});
   }
 
-  var recent = _allBookings.slice(0,5);
-  var html = &#x27;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Guest&lt;/th&gt;&lt;th&gt;Hotel&lt;/th&gt;&lt;th&gt;Room&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Date&lt;/th&gt;&lt;/tr&gt;&#x27;;
-  recent.forEach(function(b){
-    html += &#x27;&lt;tr&gt;&lt;td&gt;&#x27;+esc(b.name)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(b.hotelName)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+esc(b.roomType||&quot;-&quot;)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+pill(b.status)+&#x27;&lt;/td&gt;&lt;td&gt;&#x27;+fmtDate(b.createdAt)+&#x27;&lt;/td&gt;&lt;/tr&gt;&#x27;;
-  });
-  html += &#x27;&lt;/table&gt;&#x27;;
-  document.getElementById(&quot;dash-recent&quot;).innerHTML = recent.length ? html : &#x27;&lt;div class=&quot;empty&quot;&gt;No bookings yet.&lt;/div&gt;&#x27;;
+  /* ---- Bookings overview: donut of Confirmed / Pending / Cancelled ---- */
+  var bookRangeSel = document.getElementById(&quot;sad-book-range&quot;);
+  var bookDays = bookRangeSel ? parseInt(bookRangeSel.value,10) : 30;
+  var bookStart = daysAgo(bookDays-1); bookStart.setHours(0,0,0,0);
+  var bookingsInRange = _allBookings.filter(function(b){ return bkDate(b) &gt;= bookStart; });
+  var confirmedN = bookingsInRange.filter(function(b){ return b.status===&quot;Approved&quot; || b.status===&quot;CheckedOut&quot; || b.status===&quot;Confirmed&quot;; }).length;
+  var pendingN = bookingsInRange.filter(function(b){ return b.status===&quot;Pending&quot;; }).length;
+  var cancelledN = bookingsInRange.filter(function(b){ return b.status===&quot;Cancelled&quot; || b.status===&quot;Rejected&quot;; }).length;
+  var donutTotal = confirmedN + pendingN + cancelledN;
+  document.getElementById(&quot;sad-donut-total&quot;).textContent = donutTotal;
+  var pctOf = function(n){ return donutTotal ? Math.round((n/donutTotal)*100) : 0; };
+  document.getElementById(&quot;sad-donut-legend&quot;).innerHTML =
+    &#x27;&lt;div class=&quot;sad-donut-legend-row&quot;&gt;&lt;span class=&quot;sad-donut-dot&quot; style=&quot;background:var(--green)&quot;&gt;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;Confirmed&lt;/span&gt;&lt;span class=&quot;val&quot;&gt;&#x27;+confirmedN+&#x27; (&#x27;+pctOf(confirmedN)+&#x27;%)&lt;/span&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-donut-legend-row&quot;&gt;&lt;span class=&quot;sad-donut-dot&quot; style=&quot;background:var(--orange)&quot;&gt;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;Pending&lt;/span&gt;&lt;span class=&quot;val&quot;&gt;&#x27;+pendingN+&#x27; (&#x27;+pctOf(pendingN)+&#x27;%)&lt;/span&gt;&lt;/div&gt;&#x27;+
+    &#x27;&lt;div class=&quot;sad-donut-legend-row&quot;&gt;&lt;span class=&quot;sad-donut-dot&quot; style=&quot;background:var(--red)&quot;&gt;&lt;/span&gt;&lt;span class=&quot;lbl&quot;&gt;Cancelled&lt;/span&gt;&lt;span class=&quot;val&quot;&gt;&#x27;+cancelledN+&#x27; (&#x27;+pctOf(cancelledN)+&#x27;%)&lt;/span&gt;&lt;/div&gt;&#x27;;
+  var donutCtx = document.getElementById(&quot;sad-donut&quot;);
+  if (donutCtx) {
+    if (_chartSADDonut) _chartSADDonut.destroy();
+    _chartSADDonut = new Chart(donutCtx, {type:&quot;doughnut&quot;, data:{labels:[&quot;Confirmed&quot;,&quot;Pending&quot;,&quot;Cancelled&quot;], datasets:[{data:[confirmedN,pendingN,cancelledN], backgroundColor:[&quot;#16a34a&quot;,&quot;#f0a83c&quot;,&quot;#dc2626&quot;], borderWidth:0}]}, options:{cutout:&quot;72%&quot;, plugins:{legend:{display:false}}}});
+  }
+
+  /* ---- My Hotels ---- */
+  var hotels = _allHotels.slice(0,4);
+  document.getElementById(&quot;sad-hotels&quot;).innerHTML = hotels.length ? hotels.map(function(h){
+    var thumb = h.coverImage ? &#x27;&lt;img class=&quot;lr-thumb&quot; src=&quot;&#x27;+h.coverImage+&#x27;&quot;/&gt;&#x27; : &#x27;&lt;div class=&quot;avatar-sm&quot;&gt;&amp;#127974;&lt;/div&gt;&#x27;;
+    return &#x27;&lt;div class=&quot;list-row&quot;&gt;&#x27;+thumb+&#x27;&lt;div class=&quot;lr-main&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(h.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(h.location||&quot;-&quot;)+&#x27; &amp;middot; &#x27;+hotelBookingCount(h.id)+&#x27; bookings&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;lr-meta&quot;&gt;&#x27;+pill(h.status||&quot;Active&quot;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No hotels assigned yet.&lt;/div&gt;&#x27;;
+
+  /* ---- Recent Bookings ---- */
+  var recent = _allBookings.slice(0,4);
+  document.getElementById(&quot;sad-recent&quot;).innerHTML = recent.length ? recent.map(function(b){
+    var initials = (b.name||&quot;?&quot;).trim().split(&quot; &quot;).map(function(p){return p.charAt(0);}).slice(0,2).join(&quot;&quot;).toUpperCase();
+    return &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&#x27;+initials+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-main&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(b.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&lt;span class=&quot;lr-date-ico&quot;&gt;&amp;#128197;&lt;/span&gt;&#x27;+esc(b.hotelName||&quot;-&quot;)+&#x27; &amp;middot; &#x27;+fmtDate(b.createdAt)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;lr-meta&quot;&gt;&#x27;+pill(b.status)+&#x27;&lt;b style=&quot;font-size:.8rem&quot;&gt;&#x27;+NGN(b.amountPaid||0)+&#x27;&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No bookings yet.&lt;/div&gt;&#x27;;
+
+  /* ---- Pending Tasks ---- */
+  var tasks = [];
+  if (pendingB) tasks.push({ico:&quot;&amp;#9203;&quot;, color:&quot;var(--amber)&quot;, bg:&quot;var(--amber-bg)&quot;, title:&quot;Approve booking&quot;+(pendingB&gt;1?&quot;s&quot;:&quot;&quot;)+&quot; (&quot;+pendingB+&quot; pending)&quot;, sub:&quot;Awaiting your review&quot;, pr:&quot;High&quot;, due:&quot;Due today&quot;});
+  if (hrPending) tasks.push({ico:&quot;&amp;#128196;&quot;, color:&quot;var(--blue)&quot;, bg:&quot;var(--blue-dim)&quot;, title:&quot;Verify &quot;+hrPending+&quot; hotel registration&quot;+(hrPending&gt;1?&quot;s&quot;:&quot;&quot;), sub:&quot;New partner applications&quot;, pr:&quot;Medium&quot;, due:&quot;Due tomorrow&quot;});
+  if (dispOpen) tasks.push({ico:&quot;&amp;#9878;&quot;, color:&quot;var(--red)&quot;, bg:&quot;var(--red-bg)&quot;, title:dispOpen+&quot; open dispute&quot;+(dispOpen&gt;1?&quot;s&quot;:&quot;&quot;), sub:&quot;Needs resolution&quot;, pr:&quot;High&quot;, due:&quot;Overdue&quot;});
+  if (unreadMsgs) tasks.push({ico:&quot;&amp;#128172;&quot;, color:&quot;var(--purple)&quot;, bg:&quot;var(--purple-bg)&quot;, title:unreadMsgs+&quot; unread message&quot;+(unreadMsgs&gt;1?&quot;s&quot;:&quot;&quot;), sub:&quot;Customers waiting on a reply&quot;, pr:&quot;Low&quot;, due:&quot;3 days left&quot;});
+  var prPill = {High:&quot;pill-red&quot;, Medium:&quot;pill-amber&quot;, Low:&quot;pill-gray&quot;};
+  document.getElementById(&quot;sad-tasks&quot;).innerHTML = tasks.length ? tasks.map(function(t){
+    return &#x27;&lt;div class=&quot;sad-task-row&quot;&gt;&lt;div class=&quot;sad-task-ico&quot; style=&quot;background:&#x27;+t.bg+&#x27;;color:&#x27;+t.color+&#x27;&quot;&gt;&#x27;+t.ico+&#x27;&lt;/div&gt;&lt;div class=&quot;sad-task-txt&quot;&gt;&lt;b&gt;&#x27;+t.title+&#x27;&lt;/b&gt;&lt;span&gt;&#x27;+t.sub+&#x27;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;sad-task-meta&quot;&gt;&lt;span class=&quot;pill &#x27;+prPill[t.pr]+&#x27;&quot;&gt;&#x27;+t.pr+&#x27;&lt;/span&gt;&lt;span class=&quot;sad-task-due&quot;&gt;&#x27;+t.due+&#x27;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;You are all caught up. No pending tasks.&lt;/div&gt;&#x27;;
+
+  /* ---- Access Summary footer ---- */
+  var levelEl = document.getElementById(&quot;sad-access-level&quot;); if (levelEl) levelEl.textContent = _isSuperAdmin ? &quot;Full Access&quot; : &quot;Standard&quot;;
+  var loginEl = document.getElementById(&quot;sad-access-login&quot;);
+  if (loginEl) {
+    var sa = (_allSubAdmins||[]).find(function(x){ return x.id === _currentSubAdmin; });
+    loginEl.textContent = (sa &amp;&amp; sa.lastLogin) ? fmtDate(sa.lastLogin) : &quot;Just now&quot;;
+  }
+}
+function saShowAllPerms() {
+  var labels = ADMIN_PERMISSION_PAGES.filter(function(p){ return _currentSubAdminPerms.indexOf(p.key) !== -1; }).map(function(p){ return p.label; });
+  T(&quot;Your Permissions&quot;, labels.length ? labels.join(&quot;, &quot;) : &quot;No extra sections granted yet. Contact the super admin for access.&quot;);
 }
 
 function statCard(icon, color, bg, label, val, delta) {
