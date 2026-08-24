@@ -3943,7 +3943,31 @@ function loadBookings() {
 function loadUsers() {
   return db.collection(&quot;users&quot;).get().then(function(snap){
     _allUsers = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; });
+    repairUserRecords();
   });
+}
+
+// Some older/manually-created &quot;users&quot; documents in Firestore are missing the
+// role (and sometimes status/name) field. Every real signup path in this app
+// always writes role:&quot;customer&quot;, so a missing role is treated the same way
+// &#x2014; both immediately in the UI (no more &quot;undefined&quot; pills, and the
+// Customers/Hotel Partners/Admins stat cards now add up to Total Users) and
+// written back to Firestore once so the fix sticks for good instead of
+// reappearing next time the dashboard loads.
+function repairUserRecords() {
+  var toFix = [];
+  _allUsers.forEach(function(u){
+    var patch = {};
+    var needsPatch = false;
+    if (!u.role) { patch.role = &quot;customer&quot;; u.role = &quot;customer&quot;; needsPatch = true; }
+    if (!u.status) { patch.status = &quot;active&quot;; u.status = &quot;active&quot;; needsPatch = true; }
+    if (!u.name || !String(u.name).trim()) { u.name = u.email ? u.email.split(&quot;@&quot;)[0] : &quot;Guest User&quot;; }
+    if (needsPatch) toFix.push({ id: u.id, patch: patch });
+  });
+  if (!toFix.length) return;
+  var batch = db.batch();
+  toFix.forEach(function(f){ batch.update(db.collection(&quot;users&quot;).doc(f.id), f.patch); });
+  batch.commit().catch(function(e){ console.warn(&quot;user repair failed&quot;, e); });
 }
 
 function loadSubAdmins() {
