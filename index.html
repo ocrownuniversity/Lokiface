@@ -579,7 +579,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
       <div class="hz-card">
         <div class="hz-fields">
           <div class="hz-fld"><label>&#128205; Where are you going?</label>
-            <select id="hz-country" onchange="hzSyncLocation()">
+            <select id="hz-country" onchange="hzPopulateStates()">
               <option>Nigeria</option><option>Kenya</option><option>South Africa</option>
               <option>Ghana</option><option>Egypt</option><option>Morocco</option>
               <option>Rwanda</option><option>Tanzania</option><option>Uganda</option>
@@ -589,10 +589,10 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
             </select>
           </div>
           <div class="hz-fld"><label>State / Region</label>
-            <select id="hz-state" onchange="hzSyncLocation()"><option>Lagos State</option><option>Abuja (FCT)</option><option>Rivers State</option></select>
+            <select id="hz-state" onchange="hzPopulateCities()"></select>
           </div>
           <div class="hz-fld"><label>City</label>
-            <select id="hz-city" onchange="hzSyncLocation()"><option>Lagos</option><option>Abuja</option><option>Port Harcourt</option></select>
+            <select id="hz-city" onchange="hzSyncLocation()"></select>
           </div>
           <div class="hz-fld"><label>Check-in</label><input type="date" id="hz-checkin" value="2026-07-30"/></div>
           <div class="hz-fld"><label>Check-out</label><input type="date" id="hz-checkout" value="2026-08-02"/></div>
@@ -653,10 +653,46 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:2.8rem 1.5rem;te
   </div>
 
   <script>
+  var HZ_LOCATIONS = {
+    "Nigeria": { "Lagos State":["Lagos","Ikeja","Lekki"], "Abuja (FCT)":["Abuja"], "Rivers State":["Port Harcourt"], "Oyo State":["Ibadan"], "Kano State":["Kano"] },
+    "Kenya": { "Nairobi County":["Nairobi"], "Mombasa County":["Mombasa"], "Kisumu County":["Kisumu"], "Nakuru County":["Nakuru"] },
+    "South Africa": { "Gauteng":["Johannesburg","Pretoria"], "Western Cape":["Cape Town","Stellenbosch"], "KwaZulu-Natal":["Durban"] },
+    "Ghana": { "Greater Accra":["Accra","Tema"], "Ashanti":["Kumasi"] },
+    "Egypt": { "Cairo Governorate":["Cairo"], "Alexandria Governorate":["Alexandria"], "Red Sea Governorate":["Hurghada"] },
+    "Morocco": { "Casablanca-Settat":["Casablanca"], "Rabat-Salé-Kénitra":["Rabat"], "Marrakesh-Safi":["Marrakesh"] },
+    "Rwanda": { "Kigali City":["Kigali"], "Northern Province":["Musanze"] },
+    "Tanzania": { "Dar es Salaam":["Dar es Salaam"], "Arusha":["Arusha"], "Zanzibar":["Zanzibar City"] },
+    "Uganda": { "Central Region":["Kampala"], "Western Region":["Mbarara"] },
+    "Ethiopia": { "Addis Ababa":["Addis Ababa"], "Oromia":["Adama"] },
+    "Senegal": { "Dakar":["Dakar"], "Thiès":["Thiès"] },
+    "Ivory Coast": { "Abidjan":["Abidjan"], "Yamoussoukro":["Yamoussoukro"] },
+    "Zambia": { "Lusaka Province":["Lusaka"], "Copperbelt":["Ndola","Kitwe"] },
+    "Zimbabwe": { "Harare Province":["Harare"], "Bulawayo Province":["Bulawayo"] },
+    "United Arab Emirates": { "Dubai":["Dubai"], "Abu Dhabi":["Abu Dhabi"], "Sharjah":["Sharjah"] },
+    "United States": { "New York":["New York City"], "California":["Los Angeles","San Francisco"], "Florida":["Miami"] },
+    "United Kingdom": { "England":["London","Manchester"], "Scotland":["Edinburgh","Glasgow"] },
+    "Canada": { "Ontario":["Toronto","Ottawa"], "British Columbia":["Vancouver"] }
+  };
+  function hzPopulateStates(){
+    var country = document.getElementById("hz-country").value;
+    var states = HZ_LOCATIONS[country] || {};
+    var stateSel = document.getElementById("hz-state");
+    stateSel.innerHTML = Object.keys(states).map(function(s){ return "<option>"+s+"</option>"; }).join("");
+    hzPopulateCities();
+  }
+  function hzPopulateCities(){
+    var country = document.getElementById("hz-country").value;
+    var state = document.getElementById("hz-state").value;
+    var cities = (HZ_LOCATIONS[country] && HZ_LOCATIONS[country][state]) || [];
+    var citySel = document.getElementById("hz-city");
+    citySel.innerHTML = cities.map(function(c){ return "<option>"+c+"</option>"; }).join("");
+    hzSyncLocation();
+  }
   function hzSyncLocation(){
     var mp = document.getElementById("mp-search");
     if (mp) mp.value = document.getElementById("hz-city").value;
   }
+  hzPopulateStates();
   function hzSearch(){
     var city = document.getElementById("hz-city").value;
     SP('hotels');
@@ -2565,14 +2601,15 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 
     &lt;!-- ============ SUB-ADMINS ============ --&gt;
     &lt;div class=&quot;apage&quot; id=&quot;page-subadmins&quot;&gt;
-      &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-row&quot;&gt;&lt;div&gt;&lt;div class=&quot;ph-title&quot;&gt;Sub-Admins&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Staff accounts with limited dashboard access.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-row&quot;&gt;&lt;div&gt;&lt;div class=&quot;ph-title&quot;&gt;Sub Admins&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Manage and monitor all sub admin accounts.&lt;/div&gt;&lt;/div&gt;&lt;button class=&quot;btn btn-p&quot; onclick=&quot;openAddSubAdminModal()&quot;&gt;&amp;#43; Add Sub Admin&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;stat-grid&quot; id=&quot;sa-stats&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;card&quot;&gt;
-        &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Email&lt;/label&gt;&lt;input type=&quot;email&quot; id=&quot;sa-user&quot; placeholder=&quot;e.g. staff@hotelscontinental.com&quot;/&gt;&lt;/div&gt;
-        &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Temporary Password&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;sa-pass&quot; placeholder=&quot;Set an initial password (min 6 characters)&quot;/&gt;&lt;/div&gt;
-        &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Access Permissions (Roles)&lt;/label&gt;&lt;div style=&quot;font-size:.76rem;color:var(--muted);margin:-.3rem 0 .6rem&quot;&gt;Pick the sections this sub-admin should be able to open. They&#x27;ll only see and access what&#x27;s checked here.&lt;/div&gt;&lt;div id=&quot;sa-new-perm-list&quot;&gt;&lt;/div&gt;&lt;/div&gt;
-        &lt;button class=&quot;btn btn-p&quot; onclick=&quot;addSubAdmin()&quot;&gt;&amp;#43; Add Sub-Admin&lt;/button&gt;
+        &lt;div class=&quot;toolbar&quot;&gt;&lt;div class=&quot;tb-search&quot;&gt;&lt;span class=&quot;si&quot;&gt;&amp;#128269;&lt;/span&gt;&lt;input type=&quot;text&quot; id=&quot;sa-search&quot; placeholder=&quot;Search sub admins...&quot; oninput=&quot;_saPage=1;renderSubAdmins()&quot;/&gt;&lt;/div&gt;&lt;select class=&quot;tb-select&quot; id=&quot;sa-role-filter&quot; onchange=&quot;_saPage=1;renderSubAdmins()&quot;&gt;&lt;option value=&quot;&quot;&gt;All Roles&lt;/option&gt;&lt;/select&gt;&lt;select class=&quot;tb-select&quot; id=&quot;sa-status-filter&quot; onchange=&quot;_saPage=1;renderSubAdmins()&quot;&gt;&lt;option value=&quot;&quot;&gt;All Status&lt;/option&gt;&lt;option value=&quot;active&quot;&gt;Active&lt;/option&gt;&lt;option value=&quot;inactive&quot;&gt;Inactive&lt;/option&gt;&lt;option value=&quot;suspended&quot;&gt;Suspended&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;
+        &lt;div style=&quot;overflow-x:auto&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Sub Admin&lt;/th&gt;&lt;th&gt;Role&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Last Login&lt;/th&gt;&lt;th&gt;&lt;/th&gt;&lt;/tr&gt;&lt;tbody id=&quot;sa-list&quot;&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;
+        &lt;div class=&quot;pager&quot; id=&quot;sa-pager-count&quot; style=&quot;font-size:.72rem;color:var(--muted);margin-top:.6rem&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;pager&quot; id=&quot;sa-pager&quot;&gt;&lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;card&quot;&gt;&lt;div id=&quot;sa-list&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;info-banner&quot;&gt;&lt;span class=&quot;ic&quot;&gt;&amp;#128737;&amp;#65039;&lt;/span&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;b&gt;Sub Admin Management&lt;/b&gt;&lt;br/&gt;Create and manage sub admin accounts with specific roles and permissions. Monitor their activity and access levels.&lt;/div&gt;&lt;/div&gt;
     &lt;/div&gt;
   &lt;/main&gt;
 
@@ -2652,10 +2689,45 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 
 &lt;div class=&quot;modal-ov&quot; id=&quot;sa-perm-modal&quot;&gt;
   &lt;div class=&quot;modal&quot;&gt;
-    &lt;div class=&quot;modal-title&quot;&gt;Sub-Admin Access &lt;button class=&quot;modal-close&quot; onclick=&quot;closeModal(&#x27;sa-perm-modal&#x27;)&quot;&gt;&amp;#10005;&lt;/button&gt;&lt;/div&gt;
+    &lt;div class=&quot;modal-title&quot;&gt;Edit Access &lt;button class=&quot;modal-close&quot; onclick=&quot;closeModal(&#x27;sa-perm-modal&#x27;)&quot;&gt;&amp;#10005;&lt;/button&gt;&lt;/div&gt;
     &lt;p style=&quot;font-size:.78rem;color:var(--muted);margin:-.4rem 0 1rem&quot;&gt;Choose which dashboard sections &lt;b id=&quot;sa-perm-email&quot;&gt;&lt;/b&gt; can access. Dashboard overview is always included; only a super admin can manage Sub-Admins.&lt;/p&gt;
     &lt;div id=&quot;sa-perm-list&quot;&gt;&lt;/div&gt;
     &lt;button class=&quot;fsub&quot; onclick=&quot;saveSubAdminPerms()&quot;&gt;Save Access&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- Add Sub Admin Modal --&gt;
+&lt;div class=&quot;modal-ov&quot; id=&quot;add-subadmin-modal&quot;&gt;
+  &lt;div class=&quot;modal&quot;&gt;
+    &lt;div class=&quot;modal-title&quot;&gt;Add Sub Admin &lt;button class=&quot;modal-close&quot; onclick=&quot;closeModal(&#x27;add-subadmin-modal&#x27;)&quot;&gt;&amp;#10005;&lt;/button&gt;&lt;/div&gt;
+    &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Full Name&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;sa-name&quot; placeholder=&quot;e.g. Michael Obi&quot;/&gt;&lt;/div&gt;
+    &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Email&lt;/label&gt;&lt;input type=&quot;email&quot; id=&quot;sa-user&quot; placeholder=&quot;e.g. staff@hotelscontinental.com&quot;/&gt;&lt;/div&gt;
+    &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Role / Job Title&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;sa-role-title&quot; placeholder=&quot;e.g. Hotel Manager, Finance Manager&quot;/&gt;&lt;/div&gt;
+    &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Temporary Password&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;sa-pass&quot; placeholder=&quot;Set an initial password (min 6 characters)&quot;/&gt;&lt;/div&gt;
+    &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Access Permissions (Roles)&lt;/label&gt;&lt;div style=&quot;font-size:.76rem;color:var(--muted);margin:-.3rem 0 .6rem&quot;&gt;Pick the sections this sub-admin should be able to open. They&#x27;ll only see and access what&#x27;s checked here.&lt;/div&gt;&lt;div id=&quot;sa-new-perm-list&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;button class=&quot;fsub&quot; onclick=&quot;addSubAdmin()&quot;&gt;&amp;#43; Add Sub Admin&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- View Sub Admin Modal --&gt;
+&lt;div class=&quot;modal-ov&quot; id=&quot;view-subadmin-modal&quot;&gt;
+  &lt;div class=&quot;modal&quot;&gt;
+    &lt;div class=&quot;modal-title&quot;&gt;Sub Admin Details &lt;button class=&quot;modal-close&quot; onclick=&quot;closeModal(&#x27;view-subadmin-modal&#x27;)&quot;&gt;&amp;#10005;&lt;/button&gt;&lt;/div&gt;
+    &lt;div style=&quot;display:flex;align-items:center;gap:.7rem;margin-bottom:1rem&quot;&gt;
+      &lt;div class=&quot;avatar-sm&quot; id=&quot;sav-avatar&quot; style=&quot;width:48px;height:48px;font-size:1.1rem&quot;&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;div class=&quot;lr-name&quot; id=&quot;sav-name&quot; style=&quot;font-size:.95rem&quot;&gt;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot; id=&quot;sav-email&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div style=&quot;display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem&quot;&gt;
+      &lt;span class=&quot;pill pill-blue&quot; id=&quot;sav-role&quot;&gt;&lt;/span&gt;
+      &lt;span id=&quot;sav-status&quot;&gt;&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div style=&quot;font-size:.78rem;color:var(--muted);margin-bottom:1rem&quot;&gt;Last login: &lt;b id=&quot;sav-lastlogin&quot; style=&quot;color:var(--text)&quot;&gt;&lt;/b&gt;&lt;/div&gt;
+    &lt;div class=&quot;fg&quot;&gt;&lt;label&gt;Access Permissions&lt;/label&gt;&lt;div id=&quot;sav-perms&quot; style=&quot;display:flex;flex-wrap:wrap;gap:.35rem&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div style=&quot;display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem&quot;&gt;
+      &lt;button class=&quot;btn btn-o btn-sm&quot; id=&quot;sav-edit-btn&quot; onclick=&quot;&quot;&gt;Edit Access&lt;/button&gt;
+      &lt;button class=&quot;btn btn-o btn-sm&quot; id=&quot;sav-toggle-btn&quot; onclick=&quot;&quot;&gt;Suspend&lt;/button&gt;
+      &lt;button class=&quot;btn btn-o btn-sm&quot; style=&quot;color:var(--red);border-color:var(--red-bd)&quot; id=&quot;sav-remove-btn&quot; onclick=&quot;&quot;&gt;Remove&lt;/button&gt;
+    &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
 
@@ -3180,9 +3252,18 @@ function adminLogin() {
     return db.collection(&quot;subadmins&quot;).doc(email).get().then(function(doc){
       resetBtn();
       if (doc.exists) {
+        var saData = doc.data();
+        var status = saData.status || &quot;active&quot;;
+        if (status === &quot;suspended&quot; || status === &quot;inactive&quot;) {
+          auth.signOut();
+          err.textContent = status === &quot;suspended&quot; ? &quot;This account has been suspended. Contact the super admin for access.&quot; : &quot;This account is inactive. Contact the super admin for access.&quot;;
+          err.classList.add(&quot;show&quot;);
+          return;
+        }
         _isSuperAdmin = false; _currentSubAdmin = email;
-        _currentSubAdminPerms = doc.data().permissions || [];
-        loginSuccess(email, &quot;Staff Admin&quot;);
+        _currentSubAdminPerms = saData.permissions || [];
+        loginSuccess(saData.name || email, saData.roleTitle || &quot;Staff Admin&quot;);
+        db.collection(&quot;subadmins&quot;).doc(email).update({ lastLogin: firebase.firestore.FieldValue.serverTimestamp() }).catch(function(){});
       } else {
         auth.signOut();
         err.textContent = &quot;This account has no admin access.&quot;;
@@ -4607,6 +4688,9 @@ var ADMIN_PERMISSION_PAGES = [
   { key: &quot;settings&quot;, label: &quot;Settings&quot; }
 ];
 var _saPermEditingId = null;
+var _saPage = 1, _saPerPage = 10;
+var SA_STATUS_PILL = { active:&quot;pill-green&quot;, inactive:&quot;pill-gray&quot;, suspended:&quot;pill-red&quot; };
+var SA_STATUS_LABEL = { active:&quot;Active&quot;, inactive:&quot;Inactive&quot;, suspended:&quot;Suspended&quot; };
 
 function permCheckboxesHtml(containerClass, checkedKeys) {
   checkedKeys = checkedKeys || [];
@@ -4620,35 +4704,123 @@ function readCheckedPerms(containerClass) {
   document.querySelectorAll(&quot;.&quot; + containerClass + &quot;:checked&quot;).forEach(function(el) { out.push(el.getAttribute(&quot;data-perm&quot;)); });
   return out;
 }
-
-function renderSubAdmins() {
+function openAddSubAdminModal() {
+  document.getElementById(&quot;sa-name&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;sa-user&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;sa-role-title&quot;).value = &quot;&quot;;
+  document.getElementById(&quot;sa-pass&quot;).value = &quot;&quot;;
   var newList = document.getElementById(&quot;sa-new-perm-list&quot;);
   if (newList) newList.innerHTML = permCheckboxesHtml(&quot;sa-new-perm&quot;);
-  document.getElementById(&quot;sa-list&quot;).innerHTML = _allSubAdmins.length ? _allSubAdmins.map(function(sa){
-    var perms = sa.permissions || [];
-    var tags = perms.length
-      ? perms.map(function(k){
-          var p = ADMIN_PERMISSION_PAGES.find(function(x){ return x.key === k; });
-          return &#x27;&lt;span style=&quot;background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:.2rem .65rem;font-size:.7rem;color:var(--text)&quot;&gt;&#x27; + (p ? p.label : k) + &#x27;&lt;/span&gt;&#x27;;
-        }).join(&quot; &quot;)
-      : &#x27;&lt;span style=&quot;font-size:.75rem;color:var(--muted)&quot;&gt;No access assigned yet&lt;/span&gt;&#x27;;
-    return &#x27;&lt;div class=&quot;list-row&quot; style=&quot;flex-direction:column;align-items:stretch;gap:.5rem&quot;&gt;&#x27; +
-      &#x27;&lt;div style=&quot;display:flex;justify-content:space-between;align-items:center;gap:.6rem&quot;&gt;&#x27; +
-        &#x27;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(sa.username)+&#x27;&lt;/div&gt;&#x27; +
-        &#x27;&lt;div style=&quot;display:flex;gap:.4rem&quot;&gt;&#x27; +
-          &#x27;&lt;button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;openEditSubAdminPerms(\&#x27;&#x27;+sa.id+&#x27;\&#x27;)&quot;&gt;Edit Access&lt;/button&gt;&#x27; +
-          &#x27;&lt;button class=&quot;btn btn-sm btn-o&quot; onclick=&quot;deleteSubAdmin(\&#x27;&#x27;+sa.id+&#x27;\&#x27;)&quot;&gt;Remove&lt;/button&gt;&#x27; +
-        &#x27;&lt;/div&gt;&#x27; +
-      &#x27;&lt;/div&gt;&#x27; +
-      &#x27;&lt;div style=&quot;display:flex;flex-wrap:wrap;gap:.35rem&quot;&gt;&#x27;+tags+&#x27;&lt;/div&gt;&#x27; +
-    &#x27;&lt;/div&gt;&#x27;;
-  }).join(&quot;&quot;) : &#x27;&lt;div class=&quot;empty&quot;&gt;No sub-admins yet.&lt;/div&gt;&#x27;;
+  openModalEl(&quot;add-subadmin-modal&quot;);
+}
+function saDisplayName(sa) { return sa.name || (sa.username||&quot;&quot;).split(&quot;@&quot;)[0]; }
+function saStatus(sa) { return sa.status || &quot;active&quot;; }
+
+function renderSubAdminsStats() {
+  var total = _allSubAdmins.length;
+  var active = _allSubAdmins.filter(function(sa){ return saStatus(sa)===&quot;active&quot;; }).length;
+  var inactive = _allSubAdmins.filter(function(sa){ return saStatus(sa)===&quot;inactive&quot;; }).length;
+  var suspended = _allSubAdmins.filter(function(sa){ return saStatus(sa)===&quot;suspended&quot;; }).length;
+  document.getElementById(&quot;sa-stats&quot;).innerHTML =
+    statCard(&quot;&amp;#128100;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Sub Admins&quot;, total) +
+    statCard(&quot;&amp;#9989;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Active Sub Admins&quot;, active) +
+    statCard(&quot;&amp;#9203;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Inactive Sub Admins&quot;, inactive) +
+    statCard(&quot;&amp;#128274;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Suspended Sub Admins&quot;, suspended);
+}
+function populateSaRoleFilter() {
+  var sel = document.getElementById(&quot;sa-role-filter&quot;);
+  var current = sel.value;
+  var roles = Array.from(new Set(_allSubAdmins.map(function(sa){ return sa.roleTitle || &quot;Staff Admin&quot;; }))).sort();
+  sel.innerHTML = &#x27;&lt;option value=&quot;&quot;&gt;All Roles&lt;/option&gt;&#x27; + roles.map(function(r){ return &#x27;&lt;option&#x27;+(r===current?&quot; selected&quot;:&quot;&quot;)+&#x27;&gt;&#x27;+esc(r)+&#x27;&lt;/option&gt;&#x27;; }).join(&quot;&quot;);
+}
+function filteredSubAdmins() {
+  var q = (document.getElementById(&quot;sa-search&quot;).value||&quot;&quot;).toLowerCase();
+  var roleF = document.getElementById(&quot;sa-role-filter&quot;).value;
+  var statusF = document.getElementById(&quot;sa-status-filter&quot;).value;
+  return _allSubAdmins.filter(function(sa){
+    var match = !q || saDisplayName(sa).toLowerCase().indexOf(q)&gt;-1 || (sa.username||&quot;&quot;).toLowerCase().indexOf(q)&gt;-1;
+    var roleT = !roleF || (sa.roleTitle||&quot;Staff Admin&quot;)===roleF;
+    var stT = !statusF || saStatus(sa)===statusF;
+    return match &amp;&amp; roleT &amp;&amp; stT;
+  });
+}
+function renderSubAdmins() {
+  var newList = document.getElementById(&quot;sa-new-perm-list&quot;);
+  if (newList &amp;&amp; !newList.innerHTML) newList.innerHTML = permCheckboxesHtml(&quot;sa-new-perm&quot;);
+  renderSubAdminsStats();
+  populateSaRoleFilter();
+  var list = filteredSubAdmins();
+  var totalPages = Math.max(1, Math.ceil(list.length / _saPerPage));
+  if (_saPage &gt; totalPages) _saPage = totalPages;
+  var slice = list.slice((_saPage-1)*_saPerPage, _saPage*_saPerPage);
+  document.getElementById(&quot;sa-list&quot;).innerHTML = slice.length ? slice.map(function(sa){
+    var name = saDisplayName(sa);
+    var initial = name.trim().charAt(0).toUpperCase();
+    var status = saStatus(sa);
+    return &#x27;&lt;tr&gt;&#x27; +
+      &#x27;&lt;td&gt;&lt;div style=&quot;display:flex;align-items:center;gap:.6rem&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&#x27;+esc(initial)+&#x27;&lt;/div&gt;&lt;div&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(sa.username)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/td&gt;&#x27; +
+      &#x27;&lt;td&gt;&#x27;+esc(sa.roleTitle||&quot;Staff Admin&quot;)+&#x27;&lt;/td&gt;&#x27; +
+      &#x27;&lt;td&gt;&lt;span class=&quot;pill &#x27;+SA_STATUS_PILL[status]+&#x27;&quot;&gt;&#x27;+SA_STATUS_LABEL[status]+&#x27;&lt;/span&gt;&lt;/td&gt;&#x27; +
+      &#x27;&lt;td&gt;&#x27;+(sa.lastLogin ? fmtDate(sa.lastLogin) : &quot;Never&quot;)+&#x27;&lt;/td&gt;&#x27; +
+      &#x27;&lt;td style=&quot;text-align:right;white-space:nowrap&quot;&gt;&lt;button class=&quot;kebab&quot; title=&quot;View&quot; onclick=&quot;viewSubAdmin(\&#x27;&#x27;+sa.id+&#x27;\&#x27;)&quot;&gt;&amp;#128065;&lt;/button&gt;&lt;button class=&quot;kebab&quot; title=&quot;More&quot; onclick=&quot;cycleSubAdminStatus(\&#x27;&#x27;+sa.id+&#x27;\&#x27;)&quot;&gt;&amp;#8942;&lt;/button&gt;&lt;/td&gt;&#x27; +
+    &#x27;&lt;/tr&gt;&#x27;;
+  }).join(&quot;&quot;) : &#x27;&lt;tr&gt;&lt;td colspan=&quot;5&quot;&gt;&lt;div class=&quot;empty&quot;&gt;No sub admins found.&lt;/div&gt;&lt;/td&gt;&lt;/tr&gt;&#x27;;
+  var startN = list.length ? (_saPage-1)*_saPerPage+1 : 0;
+  var endN = Math.min(_saPage*_saPerPage, list.length);
+  document.getElementById(&quot;sa-pager-count&quot;).textContent = &quot;Showing &quot;+startN+&quot; to &quot;+endN+&quot; of &quot;+list.length+&quot; sub admins&quot;;
+  var pager = &quot;&quot;;
+  for (var i=1;i&lt;=totalPages;i++) pager += &#x27;&lt;button class=&quot;pg-btn&#x27;+(i===_saPage?&quot; on&quot;:&quot;&quot;)+&#x27;&quot; onclick=&quot;_saPage=&#x27;+i+&#x27;;renderSubAdmins()&quot;&gt;&#x27;+i+&#x27;&lt;/button&gt;&#x27;;
+  document.getElementById(&quot;sa-pager&quot;).innerHTML = totalPages&gt;1 ? pager : &quot;&quot;;
+}
+function viewSubAdmin(id) {
+  var sa = _allSubAdmins.find(function(x){ return x.id===id; });
+  if (!sa) return;
+  var name = saDisplayName(sa);
+  var status = saStatus(sa);
+  document.getElementById(&quot;sav-avatar&quot;).textContent = name.trim().charAt(0).toUpperCase();
+  document.getElementById(&quot;sav-name&quot;).textContent = name;
+  document.getElementById(&quot;sav-email&quot;).textContent = sa.username;
+  document.getElementById(&quot;sav-role&quot;).textContent = sa.roleTitle || &quot;Staff Admin&quot;;
+  document.getElementById(&quot;sav-status&quot;).innerHTML = &#x27;&lt;span class=&quot;pill &#x27;+SA_STATUS_PILL[status]+&#x27;&quot;&gt;&#x27;+SA_STATUS_LABEL[status]+&#x27;&lt;/span&gt;&#x27;;
+  document.getElementById(&quot;sav-lastlogin&quot;).textContent = sa.lastLogin ? fmtDate(sa.lastLogin) : &quot;Never&quot;;
+  var perms = sa.permissions || [];
+  document.getElementById(&quot;sav-perms&quot;).innerHTML = perms.length
+    ? perms.map(function(k){ var p = ADMIN_PERMISSION_PAGES.find(function(x){ return x.key === k; }); return &#x27;&lt;span style=&quot;background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:.2rem .65rem;font-size:.7rem;color:var(--text)&quot;&gt;&#x27; + (p ? p.label : k) + &#x27;&lt;/span&gt;&#x27;; }).join(&quot; &quot;)
+    : &#x27;&lt;span style=&quot;font-size:.75rem;color:var(--muted)&quot;&gt;No access assigned yet&lt;/span&gt;&#x27;;
+  document.getElementById(&quot;sav-edit-btn&quot;).onclick = function(){ closeModal(&quot;view-subadmin-modal&quot;); openEditSubAdminPerms(id); };
+  document.getElementById(&quot;sav-toggle-btn&quot;).textContent = status === &quot;suspended&quot; ? &quot;Reactivate&quot; : &quot;Suspend&quot;;
+  document.getElementById(&quot;sav-toggle-btn&quot;).onclick = function(){ toggleSubAdminSuspend(id); closeModal(&quot;view-subadmin-modal&quot;); };
+  document.getElementById(&quot;sav-remove-btn&quot;).onclick = function(){ closeModal(&quot;view-subadmin-modal&quot;); deleteSubAdmin(id); };
+  openModalEl(&quot;view-subadmin-modal&quot;);
+}
+function toggleSubAdminSuspend(id) {
+  var sa = _allSubAdmins.find(function(x){ return x.id===id; });
+  if (!sa) return;
+  var next = saStatus(sa) === &quot;suspended&quot; ? &quot;active&quot; : &quot;suspended&quot;;
+  db.collection(&quot;subadmins&quot;).doc(id).update({ status:next }).then(function(){
+    sa.status = next;
+    renderSubAdmins();
+    T(next === &quot;suspended&quot; ? &quot;Sub Admin Suspended&quot; : &quot;Sub Admin Reactivated&quot;, saDisplayName(sa)+&quot; is now &quot;+SA_STATUS_LABEL[next].toLowerCase()+&quot;.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update this sub admin&#x27;s status.&quot;); });
+}
+function cycleSubAdminStatus(id) {
+  var sa = _allSubAdmins.find(function(x){ return x.id===id; });
+  if (!sa) return;
+  var order = [&quot;active&quot;,&quot;inactive&quot;,&quot;suspended&quot;];
+  var next = order[(order.indexOf(saStatus(sa))+1) % order.length];
+  db.collection(&quot;subadmins&quot;).doc(id).update({ status:next }).then(function(){
+    sa.status = next;
+    renderSubAdmins();
+    T(&quot;Status Updated&quot;, saDisplayName(sa)+&quot; is now &quot;+SA_STATUS_LABEL[next].toLowerCase()+&quot;.&quot;);
+  }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update this sub admin&#x27;s status.&quot;); });
 }
 function addSubAdmin() {
+  var name = document.getElementById(&quot;sa-name&quot;).value.trim();
   var u = document.getElementById(&quot;sa-user&quot;).value.trim().toLowerCase();
+  var roleTitle = document.getElementById(&quot;sa-role-title&quot;).value.trim();
   var p = document.getElementById(&quot;sa-pass&quot;).value;
   var perms = readCheckedPerms(&quot;sa-new-perm&quot;);
-  if (!u || !p) { T(&quot;Missing info&quot;, &quot;Enter an email and a temporary password.&quot;); return; }
+  if (!name || !u || !p) { T(&quot;Missing info&quot;, &quot;Enter a name, email and a temporary password.&quot;); return; }
   if (p.length &lt; 6) { T(&quot;Weak password&quot;, &quot;Password must be at least 6 characters.&quot;); return; }
   if (u === SUPER_EMAIL) { T(&quot;Warning&quot;, &quot;That email is reserved.&quot;); return; }
 
@@ -4662,13 +4834,12 @@ function addSubAdmin() {
     // Add them to the sub-admin allow-list (checked at login, after Firebase
     // Authentication has already verified their password), along with the
     // dashboard sections the super admin just picked for them.
-    return db.collection(&quot;subadmins&quot;).doc(u).set({ username:u, permissions:perms, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+    return db.collection(&quot;subadmins&quot;).doc(u).set({ username:u, name:name, roleTitle:roleTitle||&quot;Staff Admin&quot;, status:&quot;active&quot;, permissions:perms, lastLogin:null, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
   }).then(function(){
-    _allSubAdmins.push({ id:u, username:u, permissions:perms });
-    document.getElementById(&quot;sa-user&quot;).value = &quot;&quot;;
-    document.getElementById(&quot;sa-pass&quot;).value = &quot;&quot;;
+    _allSubAdmins.push({ id:u, username:u, name:name, roleTitle:roleTitle||&quot;Staff Admin&quot;, status:&quot;active&quot;, permissions:perms, lastLogin:null });
+    closeModal(&quot;add-subadmin-modal&quot;);
     renderSubAdmins();
-    T(&quot;Sub-Admin Added&quot;, u+&quot; can now sign in with the password you set.&quot;);
+    T(&quot;Sub Admin Added&quot;, u+&quot; can now sign in with the password you set.&quot;);
   }).catch(function(e){
     var msg = (e &amp;&amp; e.code === &quot;auth/email-already-in-use&quot;) ? &quot;That email already has an account.&quot; : &quot;Could not add sub-admin.&quot;;
     T(&quot;Error&quot;, msg);
@@ -4694,6 +4865,8 @@ function saveSubAdminPerms() {
   }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update access.&quot;); });
 }
 function deleteSubAdmin(id) {
+  var sa = _allSubAdmins.find(function(x){ return x.id===id; });
+  if (!confirm(&quot;Remove &quot;+(sa ? saDisplayName(sa) : &quot;this sub admin&quot;)+&quot;? This revokes their dashboard access immediately.&quot;)) return;
   db.collection(&quot;subadmins&quot;).doc(id).delete().then(function(){
     _allSubAdmins = _allSubAdmins.filter(function(sa){ return sa.id!==id; });
     renderSubAdmins();
