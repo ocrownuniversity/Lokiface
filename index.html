@@ -1555,7 +1555,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:1.6rem 1.5rem;te
 
 <!-- ADMIN -->
 <div class="page" id="page-admin" style="padding-top:62px">
-  <iframe id="admin-frame" title="Hotels Continental Admin" loading="lazy" style="display:block;width:100%;border:none;height:calc(100vh - 62px);background:#f4f6fb" srcdoc="&lt;!DOCTYPE html&gt;
+  <iframe id="admin-frame" title="Hotels Continental Admin" loading="lazy" allow="microphone; camera" style="display:block;width:100%;border:none;height:calc(100vh - 62px);background:#f4f6fb" srcdoc="&lt;!DOCTYPE html&gt;
 &lt;html lang=&quot;en&quot;&gt;
 &lt;head&gt;
 &lt;meta charset=&quot;UTF-8&quot;/&gt;
@@ -1965,6 +1965,11 @@ main{padding:80px 1rem 78px;max-width:1200px;margin:0 auto}
 .lr-name{font-size:.82rem;font-weight:600}
 .lr-sub{font-size:.7rem;color:var(--muted)}
 .pill{display:inline-block;padding:.2rem .6rem;border-radius:100px;font-size:.66rem;font-weight:700}
+.role-select{padding:.2rem .5rem;border-radius:100px;font-size:.66rem;font-weight:700;border:1.5px solid var(--border);background:#fff;color:var(--text);max-width:120px}
+.role-select.r-unassigned{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.role-select.r-customer{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.role-select.r-hotelPartner{border-color:var(--purple);color:var(--purple);background:var(--purple-bg)}
+.role-select.r-admin{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
 .pill-blue{background:var(--blue-dim);color:var(--blue)}
 .pill-green{background:var(--green-bg);color:var(--green)}
 .pill-red{background:var(--red-bg);color:var(--red)}
@@ -2026,8 +2031,10 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 .spt-box{display:flex;flex-direction:column;height:520px;border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
 .spt-box-head{display:flex;align-items:center;gap:.6rem;padding:.8rem 1rem;background:var(--navy);color:#fff}
 .spt-box-head-avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;flex-shrink:0}
-.spt-box-head-name{font-size:.85rem;font-weight:700}
-.spt-box-head-sub{font-size:.68rem;opacity:.75}
+.spt-box-head{min-width:0}
+.spt-box-head&gt;div{min-width:0;overflow:hidden}
+.spt-box-head-name{font-size:.85rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spt-box-head-sub{font-size:.68rem;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .spt-msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.6rem;background:var(--bg)}
 .spt-bubble{max-width:75%;padding:.6rem .85rem;border-radius:14px;font-size:.85rem;line-height:1.5;word-wrap:break-word}
 .spt-bubble.mine{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:3px}
@@ -3943,32 +3950,14 @@ function loadBookings() {
 function loadUsers() {
   return db.collection(&quot;users&quot;).get().then(function(snap){
     _allUsers = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; });
-    repairUserRecords();
   });
 }
 
-// Some older/manually-created &quot;users&quot; documents in Firestore are missing the
-// role (and sometimes status/name) field. Every real signup path in this app
-// always writes role:&quot;customer&quot;, so a missing role is treated the same way
-// &#x2014; both immediately in the UI (no more &quot;undefined&quot; pills, and the
-// Customers/Hotel Partners/Admins stat cards now add up to Total Users) and
-// written back to Firestore once so the fix sticks for good instead of
-// reappearing next time the dashboard loads.
-function repairUserRecords() {
-  var toFix = [];
-  _allUsers.forEach(function(u){
-    var patch = {};
-    var needsPatch = false;
-    if (!u.role) { patch.role = &quot;customer&quot;; u.role = &quot;customer&quot;; needsPatch = true; }
-    if (!u.status) { patch.status = &quot;active&quot;; u.status = &quot;active&quot;; needsPatch = true; }
-    if (!u.name || !String(u.name).trim()) { u.name = u.email ? u.email.split(&quot;@&quot;)[0] : &quot;Guest User&quot;; }
-    if (needsPatch) toFix.push({ id: u.id, patch: patch });
-  });
-  if (!toFix.length) return;
-  var batch = db.batch();
-  toFix.forEach(function(f){ batch.update(db.collection(&quot;users&quot;).doc(f.id), f.patch); });
-  batch.commit().catch(function(e){ console.warn(&quot;user repair failed&quot;, e); });
-}
+// A user missing a role field is now shown as &quot;Unassigned&quot; in the list
+// (see ROLE_LABEL/ROLE_PILL below) instead of the JS word &quot;undefined&quot;, and
+// is never guessed at or written to Firestore automatically. Only the admin
+// knows a user&#x27;s real role &#x2014; use the &quot;Set Role&quot; action in each row&#x27;s
+// kebab (&#8942;) menu on the Users page to assign it by hand.
 
 function loadSubAdmins() {
   return db.collection(&quot;subadmins&quot;).get().then(function(snap){
@@ -4908,7 +4897,15 @@ function renderUsersList() {
   var html = &quot;&quot;;
   slice.forEach(function(u){
     var initial = (u.name||&quot;?&quot;).trim().charAt(0).toUpperCase();
-    html += &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&#x27;+initial+&#x27;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(u.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(u.email)+&#x27; &amp;middot; &#x27;+fmtDate(u.createdAt)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;pill &#x27;+(ROLE_PILL[u.role]||&quot;pill-gray&quot;)+&#x27;&quot;&gt;&#x27;+(ROLE_LABEL[u.role]||u.role)+&#x27;&lt;/span&gt;&amp;nbsp;&#x27;+pill(u.status||&quot;active&quot;)+&#x27;&lt;button class=&quot;kebab&quot; onclick=&quot;cycleUserStatus(\&#x27;&#x27;+u.id+&#x27;\&#x27;)&quot;&gt;&amp;#8942;&lt;/button&gt;&lt;/div&gt;&#x27;;
+    var roleKey = u.role || &quot;&quot;;
+    var roleCls = roleKey ? (&quot;r-&quot;+roleKey) : &quot;r-unassigned&quot;;
+    var roleSelect = &#x27;&lt;select class=&quot;role-select &#x27;+roleCls+&#x27;&quot; onchange=&quot;setUserRole(\&#x27;&#x27;+u.id+&#x27;\&#x27;,this.value)&quot;&gt;&#x27; +
+      &#x27;&lt;option value=&quot;&quot;&#x27;+(roleKey?&quot;&quot;:&quot; selected&quot;)+&#x27;&gt;Unassigned&lt;/option&gt;&#x27; +
+      &#x27;&lt;option value=&quot;customer&quot;&#x27;+(roleKey===&quot;customer&quot;?&quot; selected&quot;:&quot;&quot;)+&#x27;&gt;Customer&lt;/option&gt;&#x27; +
+      &#x27;&lt;option value=&quot;hotelPartner&quot;&#x27;+(roleKey===&quot;hotelPartner&quot;?&quot; selected&quot;:&quot;&quot;)+&#x27;&gt;Hotel Partner&lt;/option&gt;&#x27; +
+      &#x27;&lt;option value=&quot;admin&quot;&#x27;+(roleKey===&quot;admin&quot;?&quot; selected&quot;:&quot;&quot;)+&#x27;&gt;Admin&lt;/option&gt;&#x27; +
+    &#x27;&lt;/select&gt;&#x27;;
+    html += &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&#x27;+initial+&#x27;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(u.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(u.email)+&#x27; &amp;middot; &#x27;+fmtDate(u.createdAt)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+roleSelect+&#x27;&amp;nbsp;&#x27;+pill(u.status||&quot;active&quot;)+&#x27;&lt;button class=&quot;kebab&quot; onclick=&quot;cycleUserStatus(\&#x27;&#x27;+u.id+&#x27;\&#x27;)&quot;&gt;&amp;#8942;&lt;/button&gt;&lt;/div&gt;&#x27;;
   });
   document.getElementById(&quot;users-list&quot;).innerHTML = slice.length ? html : &#x27;&lt;div class=&quot;empty&quot;&gt;No users found.&lt;/div&gt;&#x27;;
   var pager = &quot;&quot;;
@@ -4923,7 +4920,7 @@ function renderUsersList() {
 function exportUsersCSV() {
   var rows = [[&quot;Name&quot;,&quot;Email&quot;,&quot;Role&quot;,&quot;Status&quot;,&quot;Signed Up&quot;]];
   _allUsers.forEach(function(u){
-    rows.push([u.name, u.email, ROLE_LABEL[u.role]||u.role, u.status||&quot;active&quot;, fmtDate(u.createdAt)]);
+    rows.push([u.name, u.email, ROLE_LABEL[u.role]||u.role||&quot;Unassigned&quot;, u.status||&quot;active&quot;, fmtDate(u.createdAt)]);
   });
   var csv = rows.map(function(r){ return r.map(function(c){ return &#x27;&quot;&#x27;+String(c==null?&quot;&quot;:c).replace(/&quot;/g,&#x27;&quot;&quot;&#x27;)+&#x27;&quot;&#x27;; }).join(&quot;,&quot;); }).join(&quot;\n&quot;);
   var blob = new Blob([csv], {type:&quot;text/csv&quot;});
@@ -4931,6 +4928,20 @@ function exportUsersCSV() {
   a.href = URL.createObjectURL(blob);
   a.download = &quot;HotelsContinental_Users_&quot; + new Date().toISOString().split(&quot;T&quot;)[0] + &quot;.csv&quot;;
   a.click();
+}
+function setUserRole(id, role) {
+  var u = _allUsers.find(function(x){ return x.id===id; }); if (!u) return;
+  var prevRole = u.role;
+  if (!role) {
+    db.collection(&quot;users&quot;).doc(id).update({role: firebase.firestore.FieldValue.delete()}).then(function(){
+      u.role = undefined; renderUsersList(); renderUsersStats(); renderUsersTabs(); renderUsersCharts();
+    }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update role.&quot;); renderUsersList(); });
+    return;
+  }
+  db.collection(&quot;users&quot;).doc(id).update({role: role}).then(function(){
+    u.role = role; renderUsersList(); renderUsersStats(); renderUsersTabs(); renderUsersCharts();
+    T(&quot;Role Updated&quot;, (u.name||u.email||&quot;This user&quot;) + &quot; is now &quot; + (ROLE_LABEL[role]||role) + &quot;.&quot;);
+  }).catch(function(){ u.role = prevRole; renderUsersList(); T(&quot;Error&quot;, &quot;Could not update role. Check Firestore rules.&quot;); });
 }
 function cycleUserStatus(id) {
   var u = _allUsers.find(function(x){ return x.id===id; }); if (!u) return;
@@ -6488,9 +6499,10 @@ function sptLoadThreads() {
     var threads = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
     threads.sort(function(a, b) { return (b.lastAt ? b.lastAt.toMillis() : 0) - (a.lastAt ? a.lastAt.toMillis() : 0); });
     wrap.innerHTML = threads.map(function(t) {
-      return &#x27;&lt;div class=&quot;spt-thread&#x27; + (t.id === _sptCurrentUid ? &#x27; on&#x27; : &#x27;&#x27;) + &#x27;&quot; onclick=&quot;sptOpenThread(\&#x27;&#x27; + t.id + &#x27;\&#x27;, \&#x27;&#x27; + esc(t.userName || t.userEmail || &quot;User&quot;).replace(/&#x27;/g, &quot;\\&#x27;&quot;) + &#x27;\&#x27;)&quot;&gt;&#x27; +
+      var displayName = t.userName || (t.userEmail ? t.userEmail.split(&quot;@&quot;)[0] : &quot;User&quot;);
+      return &#x27;&lt;div class=&quot;spt-thread&#x27; + (t.id === _sptCurrentUid ? &#x27; on&#x27; : &#x27;&#x27;) + &#x27;&quot; onclick=&quot;sptOpenThread(\&#x27;&#x27; + t.id + &#x27;\&#x27;, \&#x27;&#x27; + esc(displayName).replace(/&#x27;/g, &quot;\\&#x27;&quot;) + &#x27;\&#x27;)&quot;&gt;&#x27; +
         (t.unreadAdmin ? &#x27;&lt;span class=&quot;spt-thread-dot&quot;&gt;&lt;/span&gt;&#x27; : &#x27;&lt;span style=&quot;width:8px&quot;&gt;&lt;/span&gt;&#x27;) +
-        &#x27;&lt;div style=&quot;min-width:0&quot;&gt;&lt;div class=&quot;spt-thread-name&quot;&gt;&#x27; + esc(t.userName || &quot;User&quot;) + &#x27;&lt;/div&gt;&#x27; +
+        &#x27;&lt;div style=&quot;min-width:0;overflow:hidden&quot;&gt;&lt;div class=&quot;spt-thread-name&quot; style=&quot;white-space:nowrap;overflow:hidden;text-overflow:ellipsis&quot;&gt;&#x27; + esc(displayName) + &#x27;&lt;/div&gt;&#x27; +
         &#x27;&lt;div class=&quot;spt-thread-last&quot;&gt;&#x27; + esc(t.lastMessage || &quot;No messages yet&quot;) + &#x27;&lt;/div&gt;&lt;/div&gt;&#x27; +
       &#x27;&lt;/div&gt;&#x27;;
     }).join(&quot;&quot;);
@@ -6559,11 +6571,58 @@ var _sptRecorder = null;
 var _sptChunks = [];
 var _sptRecording = false;
 
+// Camera photos straight off a phone are often several MB; on a slow mobile
+// connection an uncompressed upload can silently stall for a long time with
+// nothing visible in the chat and no error shown. Downscaling/recompressing
+// to a JPEG client-side before upload keeps sends fast and reliable.
+function _sptCompressImage(file) {
+  return new Promise(function(resolve) {
+    if (!file.type || file.type.indexOf(&quot;image&quot;) !== 0) { resolve(file); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        var maxDim = 1600, w = img.width, h = img.height;
+        if (w &gt; maxDim || h &gt; maxDim) {
+          if (w &gt; h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        var canvas = document.createElement(&quot;canvas&quot;);
+        canvas.width = w; canvas.height = h;
+        canvas.getContext(&quot;2d&quot;).drawImage(img, 0, 0, w, h);
+        canvas.toBlob(function(blob) { resolve(blob || file); }, &quot;image/jpeg&quot;, 0.75);
+      };
+      img.onerror = function() { resolve(file); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function() { resolve(file); };
+    reader.readAsDataURL(file);
+  });
+}
+
 function sptSendImage(file) {
   if (!file || !_sptCurrentUid) return;
   var uid = _sptCurrentUid;
-  var path = &quot;supportChats/&quot; + uid + &quot;/&quot; + Date.now() + &quot;_&quot; + file.name;
-  storage.ref().child(path).put(file).then(function(snap) {
+  var msgsEl = document.getElementById(&quot;spt-msgs&quot;);
+  var phId = &quot;spt-sending-&quot; + Date.now();
+  if (msgsEl) {
+    var ph = document.createElement(&quot;div&quot;);
+    ph.className = &quot;spt-bubble mine&quot;; ph.id = phId; ph.style.opacity = &quot;.6&quot;;
+    ph.textContent = &quot;Sending photo\u2026&quot;;
+    msgsEl.appendChild(ph);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+  var timedOut = false;
+  var timeoutId = setTimeout(function() {
+    timedOut = true;
+    var el = document.getElementById(phId);
+    if (el) el.remove();
+    T(&quot;Slow Connection&quot;, &quot;The photo is taking too long to send. Check your connection and try again.&quot;);
+  }, 30000);
+  _sptCompressImage(file).then(function(blob) {
+    var path = &quot;supportChats/&quot; + uid + &quot;/&quot; + Date.now() + &quot;_&quot; + (file.name || &quot;photo.jpg&quot;);
+    return storage.ref().child(path).put(blob);
+  }).then(function(snap) {
     return snap.ref.getDownloadURL();
   }).then(function(url) {
     return db.collection(&quot;supportChats&quot;).doc(uid).collection(&quot;messages&quot;).add({
@@ -6573,10 +6632,15 @@ function sptSendImage(file) {
     return db.collection(&quot;supportChats&quot;).doc(uid).set({
       lastMessage: &quot;Photo&quot;, lastAt: firebase.firestore.FieldValue.serverTimestamp(), lastSender: &quot;admin&quot;, unreadUser: true
     }, { merge: true });
+  }).then(function() {
+    clearTimeout(timeoutId);
   }).catch(function(err) {
+    clearTimeout(timeoutId);
     console.error(&quot;Could not send image:&quot;, err);
-    T(&quot;Error&quot;, &quot;Could not send the image. Please try again.&quot;);
+    if (!timedOut) T(&quot;Error&quot;, &quot;Could not send the image. Please try again.&quot;);
   }).finally(function() {
+    var phEl = document.getElementById(phId);
+    if (phEl) phEl.remove();
     var el = document.getElementById(&quot;spt-img-input&quot;);
     if (el) el.value = &quot;&quot;;
   });
