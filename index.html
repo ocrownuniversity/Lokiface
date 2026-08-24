@@ -3455,8 +3455,8 @@ function rejectWalletFunding(id) {
 function viewWalletFundingReceipt(id) {
   var w = _allWalletFundings.find(function(x){ return x.id===id; }); if (!w || !w.receiptImage) return;
   var win = window.open(&quot;&quot;);
-  win.document.write(&#x27;&lt;title&gt;Wallet Funding Receipt&lt;/title&gt;&lt;body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;&gt;&#x27;+
-    &#x27;&lt;img src=&quot;&#x27;+w.receiptImage+&#x27;&quot; style=&quot;width:100%;height:100vh;object-fit:contain&quot;/&gt;&lt;/body&gt;&#x27;);
+  win.document.write(&#x27;&lt;title&gt;Wallet Funding Receipt&lt;/title&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1, maximum-scale=5&quot;&gt;&lt;body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;&gt;&#x27;+
+    &#x27;&lt;img src=&quot;&#x27;+w.receiptImage+&#x27;&quot; style=&quot;display:block;width:100vw;height:100vh;object-fit:contain&quot;/&gt;&lt;/body&gt;&#x27;);
 }
 // This is only used to tell a super admin apart from a staff/sub-admin
 // after Firebase Authentication has already verified the password.
@@ -4518,8 +4518,8 @@ function viewHotelBookingReceipt(id) {
   var w = window.open(&quot;&quot;);
   if (!w) { T(&quot;Pop-up Blocked&quot;, &quot;Please allow pop-ups to view the receipt.&quot;); return; }
   var isImg = /^data:image/.test(url);
-  w.document.write(&#x27;&lt;title&gt;Payment Receipt&lt;/title&gt;&lt;body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;&gt;&#x27;+
-    (isImg ? &#x27;&lt;img src=&quot;&#x27;+url+&#x27;&quot; style=&quot;width:100%;height:100vh;object-fit:contain&quot;/&gt;&#x27; : &#x27;&lt;iframe src=&quot;&#x27;+url+&#x27;&quot; style=&quot;width:100vw;height:100vh;border:none&quot;&gt;&lt;/iframe&gt;&#x27;) +
+  w.document.write(&#x27;&lt;title&gt;Payment Receipt&lt;/title&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1, maximum-scale=5&quot;&gt;&lt;body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;&gt;&#x27;+
+    (isImg ? &#x27;&lt;img src=&quot;&#x27;+url+&#x27;&quot; style=&quot;display:block;width:100vw;height:100vh;object-fit:contain&quot;/&gt;&#x27; : &#x27;&lt;iframe src=&quot;&#x27;+url+&#x27;&quot; style=&quot;width:100vw;height:100vh;border:none&quot;&gt;&lt;/iframe&gt;&#x27;) +
     &#x27;&lt;/body&gt;&#x27;);
 }
 function approveHotelBooking(id) {
@@ -5639,8 +5639,8 @@ function viewHVDocument(hotelId, idx) {
   var w = window.open(&quot;&quot;);
   if (!w) { T(&quot;Pop-up Blocked&quot;, &quot;Please allow pop-ups to view the document.&quot;); return; }
   var isImg = /^data:image/.test(url);
-  w.document.write(&#x27;&lt;title&gt;Hotel Document&lt;/title&gt;&lt;body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;&gt;&#x27;+
-    (isImg ? &#x27;&lt;img src=&quot;&#x27;+url+&#x27;&quot; style=&quot;width:100%;height:100vh;object-fit:contain&quot;/&gt;&#x27; : &#x27;&lt;iframe src=&quot;&#x27;+url+&#x27;&quot; style=&quot;width:100vw;height:100vh;border:none&quot;&gt;&lt;/iframe&gt;&#x27;) +
+  w.document.write(&#x27;&lt;title&gt;Hotel Document&lt;/title&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1, maximum-scale=5&quot;&gt;&lt;body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;&gt;&#x27;+
+    (isImg ? &#x27;&lt;img src=&quot;&#x27;+url+&#x27;&quot; style=&quot;display:block;width:100vw;height:100vh;object-fit:contain&quot;/&gt;&#x27; : &#x27;&lt;iframe src=&quot;&#x27;+url+&#x27;&quot; style=&quot;width:100vw;height:100vh;border:none&quot;&gt;&lt;/iframe&gt;&#x27;) +
     &#x27;&lt;/body&gt;&#x27;);
 }
 function setHVStatus(id, status) {
@@ -5718,7 +5718,7 @@ function hrViewDoc(label) {
   var url = label === &quot;Government ID&quot; ? r.govIdURL : r.bizDocURL;
   if (!url) return;
   var w = window.open(&quot;&quot;);
-  if (w) { w.document.write(&#x27;&lt;title&gt;&#x27;+label+&#x27;&lt;/title&gt;&lt;body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;&gt;&#x27;+ (/^data:image/.test(url) ? &#x27;&lt;img src=&quot;&#x27;+url+&#x27;&quot; style=&quot;width:100%;height:100vh;object-fit:contain&quot;/&gt;&#x27; : &#x27;&lt;iframe src=&quot;&#x27;+url+&#x27;&quot; style=&quot;width:100vw;height:100vh;border:none&quot;&gt;&lt;/iframe&gt;&#x27;) +&#x27;&lt;/body&gt;&#x27;); }
+  if (w) { w.document.write(&#x27;&lt;title&gt;&#x27;+label+&#x27;&lt;/title&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1, maximum-scale=5&quot;&gt;&lt;body style=&quot;margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh&quot;&gt;&#x27;+ (/^data:image/.test(url) ? &#x27;&lt;img src=&quot;&#x27;+url+&#x27;&quot; style=&quot;display:block;width:100vw;height:100vh;object-fit:contain&quot;/&gt;&#x27; : &#x27;&lt;iframe src=&quot;&#x27;+url+&#x27;&quot; style=&quot;width:100vw;height:100vh;border:none&quot;&gt;&lt;/iframe&gt;&#x27;) +&#x27;&lt;/body&gt;&#x27;); }
 }
 function openHRDetail(id) {
   _hrCurrentId = id;
