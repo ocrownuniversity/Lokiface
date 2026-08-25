@@ -20,6 +20,8 @@
   --green:#2e7d5a;--green-bg:rgba(46,125,90,.08);--green-bd:rgba(46,125,90,.25);
   --red:#a33a2a;--red-bg:rgba(163,58,42,.08);--red-bd:rgba(163,58,42,.25);
   --blue:#0b2545;--blue-bg:rgba(11,37,69,.08);--blue-bd:rgba(11,37,69,.25);
+  --purple:#7c3aed;--purple-bg:rgba(124,58,237,.1);
+  --teal:#0ea5e9;--teal-bg:rgba(14,165,233,.1);
   --shadow:0 4px 32px rgba(16,24,40,.08);--shadow-lg:0 16px 64px rgba(16,24,40,.14);
 }
 *{margin:0;padding:0;box-sizing:border-box}
@@ -160,8 +162,78 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .hd-sb-item:hover{background:var(--gold-dim)}
 .hd-sb-item.on{background:var(--gold-dim);color:var(--gold);font-weight:700}
 .hd-sb-item .ic{width:20px;text-align:center;font-size:1.05rem}
-.hd-sb-foot{padding:.9rem;border-top:1px solid var(--border)}
-.hd-sb-logout{width:100%;padding:.7rem;background:var(--red-bg);color:var(--red);border:none;border-radius:9px;font-weight:700;font-size:.8rem;cursor:pointer}
+.hd-sb-foot{padding:.9rem;border-top:1px solid rgba(255,255,255,.1)}
+.hd-sb-logout{width:100%;padding:.7rem;background:rgba(220,38,38,.15);color:#f87171;border:none;border-radius:9px;font-weight:700;font-size:.8rem;cursor:pointer}
+
+/* ===== Customer dashboard (Hotels Continental "My Account" overview) ===== */
+.hd-sidebar{background:var(--ink)}
+.hd-sb-head{background:transparent;border-bottom:1px solid rgba(255,255,255,.1)}
+.hd-sb-name{color:#fff}
+.hd-sb-item{color:rgba(255,255,255,.75)}
+.hd-sb-item:hover{background:rgba(255,255,255,.08)}
+.hd-sb-item.on{background:var(--gold);color:#fff}
+@media (min-width:960px){
+  #acc-loggedin{display:flex !important}
+  .hd-sidebar{position:sticky;top:0;height:100vh;transform:none;box-shadow:none;flex-shrink:0}
+  .hd-overlay{display:none !important}
+  #acc-loggedin>div:not(.hd-sidebar){flex:1;min-width:0}
+  .hd-ham{display:none}
+  .bpw{max-width:1060px}
+}
+.ud-welcome h2{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--ink)}
+.ud-welcome p{color:var(--muted);font-size:.85rem;margin-top:.25rem}
+.ud-banner{background:linear-gradient(135deg,var(--ink),#132b52);border-radius:18px;padding:1.5rem;color:#fff;margin:1.2rem 0;display:flex;flex-wrap:wrap;gap:1.2rem;align-items:center;justify-content:space-between}
+.ud-banner-left{display:flex;align-items:center;gap:1rem}
+.ud-banner-name{font-family:'Playfair Display',serif;font-size:1.15rem}
+.ud-banner-badge{font-size:.66rem;color:var(--gold2);background:rgba(255,255,255,.12);display:inline-block;padding:.18rem .6rem;border-radius:100px;margin-top:.3rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.ud-banner-since{font-size:.72rem;color:rgba(255,255,255,.55);margin-top:.4rem}
+.ud-banner-right{min-width:200px}
+.ud-wallet-lbl{font-size:.66rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem}
+.ud-wallet-row{display:flex;align-items:center;gap:.55rem}
+.ud-wallet-val{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold2)}
+.ud-wallet-eye{background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;font-size:1rem;padding:0}
+.ud-topup-btn{margin-top:.7rem;background:var(--gold);color:#fff;border:none;border-radius:9px;padding:.6rem 1rem;font-weight:700;font-size:.78rem;cursor:pointer;white-space:nowrap}
+.ud-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin-bottom:1.2rem}
+@media (max-width:720px){.ud-stats{grid-template-columns:repeat(2,1fr)}}
+.ud-stat-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem;box-shadow:var(--shadow);cursor:pointer}
+.ud-stat-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:.7rem}
+.ud-stat-lbl{font-size:.78rem;color:var(--muted)}
+.ud-stat-val{font-size:1.4rem;font-weight:800;color:var(--text);margin-top:.15rem}
+.ud-stat-link{font-size:.72rem;color:var(--gold);font-weight:600;margin-top:.4rem}
+.ud-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:1.2rem;box-shadow:var(--shadow);margin-bottom:1.2rem}
+.ud-card-head{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:.98rem;color:var(--ink);margin-bottom:.9rem}
+.ud-card-head a{color:var(--gold);font-size:.78rem;font-weight:600;cursor:pointer}
+.ud-recent-row{display:flex;align-items:center;gap:.8rem;padding:.75rem 0;border-bottom:1px solid var(--border)}
+.ud-recent-row:last-child{border-bottom:none}
+.ud-recent-thumb{width:56px;height:56px;border-radius:10px;background:var(--surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.3rem;overflow:hidden}
+.ud-recent-thumb img{width:100%;height:100%;object-fit:cover}
+.ud-recent-mid{flex:1;min-width:0}
+.ud-recent-name{font-weight:600;font-size:.88rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ud-recent-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem;display:flex;gap:.6rem;flex-wrap:wrap}
+.ud-recent-right{text-align:right;flex-shrink:0}
+.ud-recent-amt{font-weight:700;font-size:.85rem;color:var(--text)}
+.ud-recent-nights{font-size:.68rem;color:var(--muted);margin-top:.2rem}
+.ud-status{display:inline-block;font-size:.68rem;font-weight:700;padding:.2rem .55rem;border-radius:100px;margin-bottom:.3rem}
+.ud-status.approved{background:var(--green-bg);color:var(--green)}
+.ud-status.pending{background:rgba(217,119,6,.1);color:#d97706}
+.ud-status.rejected,.ud-status.cancelled{background:var(--red-bg);color:var(--red)}
+.ud-two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+@media (max-width:760px){.ud-two-col{grid-template-columns:1fr}}
+.ud-mini-row{display:flex;align-items:center;gap:.75rem;padding:.65rem 0;border-bottom:1px solid var(--border)}
+.ud-mini-row:last-child{border-bottom:none}
+.ud-mini-thumb{width:48px;height:48px;border-radius:9px;background:var(--surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.1rem;overflow:hidden}
+.ud-mini-thumb img{width:100%;height:100%;object-fit:cover}
+.ud-mini-mid{flex:1;min-width:0}
+.ud-mini-name{font-weight:600;font-size:.85rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ud-mini-sub{font-size:.72rem;color:var(--muted);margin-top:.15rem}
+.ud-mini-price{font-size:.78rem;font-weight:700;color:var(--text);flex-shrink:0}
+.ud-mini-heart{color:var(--red);font-size:1rem;flex-shrink:0}
+.ud-refer-banner{background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:16px;padding:1.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;cursor:pointer}
+.ud-refer-ico{width:46px;height:46px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+.ud-refer-txt{flex:1;min-width:200px}
+.ud-refer-txt strong{display:block;font-size:.95rem;color:var(--ink)}
+.ud-refer-txt span{font-size:.8rem;color:var(--muted)}
+.ud-refer-btn{background:var(--ink);color:#fff;border:none;border-radius:9px;padding:.65rem 1.1rem;font-weight:700;font-size:.8rem;cursor:pointer;white-space:nowrap}
 .wa-float{position:fixed;bottom:1.5rem;left:1.5rem;z-index:800;width:54px;height:54px;border-radius:50%;background:#25d366;box-shadow:0 4px 20px rgba(37,211,102,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;text-decoration:none}
 .wa-float:hover{transform:scale(1.12)}
 .wa-float:active{transform:scale(.94)}
@@ -279,6 +351,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .chat-bubble audio{max-width:210px}
 .chat-icon-btn{background:var(--surface2);color:var(--muted);border:1.5px solid var(--border);border-radius:100px;width:42px;height:42px;flex-shrink:0;cursor:pointer;font-size:1rem}
 .chat-icon-btn.rec{background:var(--red-bg);color:var(--red);border-color:var(--red);animation:chatMicPulse 1.1s infinite}
+.chat-icon-btn svg{display:block;margin:0 auto}
+.chat-rec-timer{font-size:.78rem;font-weight:700;color:var(--red);flex-shrink:0;min-width:38px;text-align:center;font-variant-numeric:tabular-nums}
 @keyframes chatMicPulse{0%,100%{opacity:1}50%{opacity:.55}}
 .chat-input-row{display:flex;gap:.5rem;padding:.7rem;border-top:1px solid var(--border);background:var(--surface)}
 .chat-input-row input{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:100px;padding:.65rem 1rem;font-family:'Jost',sans-serif;font-size:.85rem;color:var(--text);outline:none}
@@ -1059,14 +1133,6 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:1.6rem 1.5rem;te
   </div>
 
   <div id="acc-loggedin" style="display:none">
-    <div class="hd-topbar">
-      <button class="hd-ham" onclick="accToggleSidebar(true)"><span></span><span></span><span></span></button>
-      <div class="hd-topbar-txt">
-        <div class="hd-topbar-tag">My Account</div>
-        <div class="hd-topbar-name" id="acc-topbar-name">Guest</div>
-      </div>
-      <div id="acc-topbar-avatar" onclick="accOpenSub('profile')" style="width:36px;height:36px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.95rem;color:var(--gold);overflow:hidden;flex-shrink:0;cursor:pointer" title="My Profile">U</div>
-    </div>
     <div class="hd-overlay" id="acc-overlay" onclick="accToggleSidebar(false)"></div>
     <div class="hd-sidebar" id="acc-sidebar">
       <div class="hd-sb-head">
@@ -1092,29 +1158,92 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:1.6rem 1.5rem;te
       </div>
       <div class="hd-sb-foot"><button class="hd-sb-logout" onclick="accLogout()">&#128682; Log Out</button></div>
     </div>
-    <div class="bpw" style="max-width:640px;padding-top:1.4rem">
+    <div style="min-width:0;width:100%">
+      <div class="hd-topbar">
+        <button class="hd-ham" onclick="accToggleSidebar(true)"><span></span><span></span><span></span></button>
+        <div class="hd-topbar-txt">
+          <div class="hd-topbar-tag">My Account</div>
+          <div class="hd-topbar-name" id="acc-topbar-name">Guest</div>
+        </div>
+        <div id="acc-topbar-notif" onclick="accOpenSub('notifications')" style="position:relative;cursor:pointer;font-size:1.15rem;color:var(--ink);flex-shrink:0" title="Notifications">&#128276;<span id="acc-topbar-notif-badge" style="display:none;position:absolute;top:-4px;right:-6px;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;border-radius:100px;min-width:15px;height:15px;align-items:center;justify-content:center;padding:0 .25rem">0</span></div>
+        <div id="acc-topbar-avatar" onclick="accOpenSub('profile')" style="width:36px;height:36px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.95rem;color:var(--gold);overflow:hidden;flex-shrink:0;cursor:pointer" title="My Profile">U</div>
+      </div>
+    <div class="bpw" style="max-width:1060px;padding-top:1.4rem">
       <div id="acc-app" style="display:none">
-        <div style="background:linear-gradient(135deg,var(--ink),#132b52);border-radius:20px;padding:1.6rem 1.4rem 1.4rem;color:#fff;margin-bottom:1rem">
-          <div style="display:flex;align-items:center;gap:1rem">
+        <div class="ud-welcome">
+          <h2 id="ud-welcome-name">Welcome back! &#128075;</h2>
+          <p>Manage your bookings, wishlist, profile and more.</p>
+        </div>
+
+        <div class="ud-banner">
+          <div class="ud-banner-left">
             <div id="acc-avatar" style="width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.4rem;color:#fff;overflow:hidden;flex-shrink:0">U</div>
             <div>
-              <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:#fff" id="acc-name">Guest</div>
-              <span style="font-size:.66rem;color:var(--gold2);background:rgba(255,255,255,.12);display:inline-block;padding:.18rem .6rem;border-radius:100px;margin-top:.3rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase" id="acc-role">Member</span>
+              <div class="ud-banner-name" id="acc-name">Guest</div>
+              <span class="ud-banner-badge" id="acc-role">Member</span>
+              <div class="ud-banner-since" id="acc-member-since"></div>
               <div id="acc-email" style="display:none"></div>
             </div>
           </div>
-          <div onclick="accOpenSub('payments')" style="margin-top:1.3rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:1rem 1.1rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
-            <div>
-              <div style="font-size:.66rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem">Wallet Balance</div>
-              <div style="display:flex;align-items:center;gap:.55rem">
-                <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold2)" id="acc-wallet-val">&#8358;0.00</div>
-                <button type="button" onclick="event.stopPropagation();accToggleWalletVisibility()" style="background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;font-size:1rem;padding:0;line-height:1" id="acc-wallet-eye">&#128065;</button>
-              </div>
+          <div class="ud-banner-right">
+            <div class="ud-wallet-lbl">Wallet Balance</div>
+            <div class="ud-wallet-row">
+              <div class="ud-wallet-val" id="acc-wallet-val">&#8358;0.00</div>
+              <button type="button" class="ud-wallet-eye" onclick="accToggleWalletVisibility()" id="acc-wallet-eye">&#128065;</button>
             </div>
-            <span style="color:rgba(255,255,255,.5);font-size:1.2rem">&#8250;</span>
+            <button type="button" class="ud-topup-btn" onclick="accOpenSub('payments')">&#128179; Top Up Wallet</button>
           </div>
         </div>
-        <p style="font-size:.78rem;color:var(--muted);text-align:center;margin-top:.5rem">Tap the menu icon above to get to your bookings, wishlist, profile and more.</p>
+
+        <div class="ud-stats">
+          <div class="ud-stat-card" onclick="accOpenSub('bookings')">
+            <div class="ud-stat-ico" style="background:var(--purple-bg);color:var(--purple)">&#128197;</div>
+            <div class="ud-stat-lbl">Total Bookings</div>
+            <div class="ud-stat-val" id="ud-stat-bookings">0</div>
+            <div class="ud-stat-link">View all</div>
+          </div>
+          <div class="ud-stat-card" onclick="accOpenSub('wishlist')">
+            <div class="ud-stat-ico" style="background:var(--green-bg);color:var(--green)">&#9825;</div>
+            <div class="ud-stat-lbl">Wishlist</div>
+            <div class="ud-stat-val" id="ud-stat-wishlist">0</div>
+            <div class="ud-stat-link">View all</div>
+          </div>
+          <div class="ud-stat-card" onclick="accOpenSub('bookings')">
+            <div class="ud-stat-ico" style="background:rgba(217,119,6,.1);color:#d97706">&#128176;</div>
+            <div class="ud-stat-lbl">Total Spent</div>
+            <div class="ud-stat-val" id="ud-stat-spent">&#8358;0</div>
+            <div class="ud-stat-link">View details</div>
+          </div>
+          <div class="ud-stat-card" onclick="accOpenSub('inbox')">
+            <div class="ud-stat-ico" style="background:var(--teal-bg);color:var(--teal)">&#128172;</div>
+            <div class="ud-stat-lbl">Messages</div>
+            <div class="ud-stat-val" id="ud-stat-messages">0</div>
+            <div class="ud-stat-link">View all</div>
+          </div>
+        </div>
+
+        <div class="ud-card">
+          <div class="ud-card-head"><span>Recent Bookings</span><a onclick="accOpenSub('bookings')">View All</a></div>
+          <div id="ud-recent-bookings"><div class="emst"><span class="ei">&#8987;</span>Loading...</div></div>
+        </div>
+
+        <div class="ud-two-col">
+          <div class="ud-card">
+            <div class="ud-card-head"><span>Wishlist</span><a onclick="accOpenSub('wishlist')">View All</a></div>
+            <div id="ud-wishlist-mini"><div class="emst"><span class="ei">&#8987;</span>Loading...</div></div>
+          </div>
+          <div class="ud-card">
+            <div class="ud-card-head"><span>Recommended For You</span><a onclick="SP('hotels')">View All</a></div>
+            <div id="ud-recommend-mini"><div class="emst"><span class="ei">&#8987;</span>Loading...</div></div>
+            <button class="sagain" style="width:100%;margin-top:.8rem" onclick="SP('hotels')">Explore More Hotels &#8250;</button>
+          </div>
+        </div>
+
+        <div class="ud-refer-banner" onclick="accOpenSub('refer')">
+          <div class="ud-refer-ico">&#127873;</div>
+          <div class="ud-refer-txt"><strong>Refer &amp; Earn</strong><span>Refer friends and family and earn exciting rewards on every booking.</span></div>
+          <button class="ud-refer-btn">Refer Now &#8250;</button>
+        </div>
       </div>
 
       <!-- Account sub-pages -->
@@ -1123,6 +1252,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:1.6rem 1.5rem;te
         <div id="acc-sub-title" class="fst" style="margin-bottom:1rem"></div>
         <div id="acc-sub-body"></div>
       </div>
+    </div>
     </div>
   </div>
 
@@ -2049,13 +2179,13 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 .spt-input-row{display:flex;align-items:center;gap:.45rem;padding:.6rem .7rem;border-top:1px solid var(--border);background:#fff}
 .spt-icon-btn{background:var(--blue-dim);color:var(--blue);border:none;border-radius:50%;width:38px;height:38px;flex-shrink:0;cursor:pointer;font-size:1.05rem;display:flex;align-items:center;justify-content:center}
 .spt-icon-btn:disabled{opacity:.4;cursor:default}
-.spt-icon-btn.rec{background:var(--red-bg);color:var(--red);animation:sptPulse 1.1s infinite}
+.spt-icon-btn.rec{background:var(--red-bg);color:var(--red);animation:sptPulse 1.1s infinite}.spt-icon-btn svg{display:block;margin:0 auto}.spt-rec-timer{font-size:.78rem;font-weight:700;color:var(--red);flex-shrink:0;min-width:34px;text-align:center;font-variant-numeric:tabular-nums}
 @keyframes sptPulse{0%,100%{opacity:1}50%{opacity:.45}}
 .spt-input-row input{flex:1;min-width:0;border:1.5px solid var(--border);border-radius:100px;padding:.65rem 1rem;font-size:.85rem;outline:none;font-family:&#x27;Inter&#x27;,sans-serif;background:var(--bg)}
 .spt-input-row input:focus{border-color:var(--blue)}
 .spt-send-btn{background:var(--blue);color:#fff;border:none;border-radius:50%;width:40px;height:40px;flex-shrink:0;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
 .spt-send-btn:active{transform:scale(.92)}
-@media (max-width:760px){.spt-layout{flex-direction:column;align-items:stretch}.spt-threads{flex:0 0 auto;width:100%;max-height:220px}.spt-chat-wrap{width:100%}.spt-box{height:480px;width:100%}}
+@media (max-width:760px){.spt-layout{flex-direction:column;align-items:stretch;position:relative}.spt-threads{flex:0 0 auto;width:100%;max-height:calc(100vh - 220px)}.spt-chat-wrap{width:100%;display:none}.spt-box{height:calc(100vh - 220px);width:100%}.spt-layout.chat-open .spt-threads{display:none}.spt-layout.chat-open .spt-chat-wrap{display:block}.spt-back-btn{display:inline-flex}}.spt-back-btn{display:none;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:30px;height:30px;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;flex-shrink:0;margin-right:.2rem}
 &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
@@ -2409,11 +2539,12 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     &lt;div class=&quot;apage&quot; id=&quot;page-support&quot;&gt;
       &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-row&quot;&gt;&lt;div&gt;&lt;div class=&quot;ph-title&quot;&gt;Messages&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Chat directly with users. Replies appear instantly in their account under &quot;Contact Admin&quot;.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;card&quot;&gt;
-        &lt;div class=&quot;spt-layout&quot;&gt;
+        &lt;div class=&quot;spt-layout&quot; id=&quot;spt-layout&quot;&gt;
           &lt;div class=&quot;spt-threads&quot; id=&quot;spt-threads&quot;&gt;&lt;div class=&quot;empty&quot;&gt;Loading conversations...&lt;/div&gt;&lt;/div&gt;
           &lt;div class=&quot;spt-chat-wrap&quot;&gt;
             &lt;div class=&quot;spt-box&quot;&gt;
               &lt;div class=&quot;spt-box-head&quot;&gt;
+                &lt;button class=&quot;spt-back-btn&quot; onclick=&quot;sptBackToThreads()&quot; title=&quot;Back to conversations&quot;&gt;&amp;#8592;&lt;/button&gt;
                 &lt;div class=&quot;spt-box-head-avatar&quot; id=&quot;spt-chat-avatar&quot;&gt;?&lt;/div&gt;
                 &lt;div&gt;
                   &lt;div class=&quot;spt-box-head-name&quot; id=&quot;spt-chat-title&quot;&gt;Select a conversation&lt;/div&gt;
@@ -2424,7 +2555,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
               &lt;div class=&quot;spt-input-row&quot;&gt;
                 &lt;input type=&quot;file&quot; id=&quot;spt-img-input&quot; accept=&quot;image/*&quot; style=&quot;display:none&quot; onchange=&quot;sptSendImage(this.files[0])&quot;/&gt;
                 &lt;button class=&quot;spt-icon-btn&quot; id=&quot;spt-attach-btn&quot; onclick=&quot;document.getElementById(&#x27;spt-img-input&#x27;).click()&quot; disabled&gt;&amp;#128247;&lt;/button&gt;
-                &lt;button class=&quot;spt-icon-btn&quot; id=&quot;spt-mic-btn&quot; onclick=&quot;sptToggleRecording()&quot; disabled&gt;&amp;#127908;&lt;/button&gt;
+                &lt;span class=&quot;spt-rec-timer&quot; id=&quot;spt-rec-timer&quot; style=&quot;display:none&quot;&gt;0:00&lt;/span&gt;&lt;button class=&quot;spt-icon-btn&quot; id=&quot;spt-mic-btn&quot; onclick=&quot;sptToggleRecording()&quot; disabled&gt;&lt;span id=&quot;spt-mic-ico&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot; width=&quot;17&quot; height=&quot;17&quot;&gt;&lt;rect x=&quot;3.5&quot; y=&quot;9&quot; width=&quot;3&quot; height=&quot;6&quot; rx=&quot;1.4&quot; fill=&quot;currentColor&quot;&gt;&lt;/rect&gt;&lt;rect x=&quot;10.5&quot; y=&quot;4&quot; width=&quot;3&quot; height=&quot;16&quot; rx=&quot;1.4&quot; fill=&quot;currentColor&quot;&gt;&lt;/rect&gt;&lt;rect x=&quot;17.5&quot; y=&quot;7&quot; width=&quot;3&quot; height=&quot;10&quot; rx=&quot;1.4&quot; fill=&quot;currentColor&quot;&gt;&lt;/rect&gt;&lt;/svg&gt;&lt;/span&gt;&lt;/button&gt;
                 &lt;input type=&quot;text&quot; id=&quot;spt-input&quot; placeholder=&quot;Type a reply...&quot; onkeypress=&quot;if(event.key===&#x27;Enter&#x27;)sptSendMessage()&quot; disabled/&gt;
                 &lt;button class=&quot;spt-send-btn&quot; onclick=&quot;sptSendMessage()&quot;&gt;&amp;#10148;&lt;/button&gt;
               &lt;/div&gt;
@@ -6547,6 +6678,7 @@ function sptOpenThread(uid, userName) {
   document.getElementById(&quot;spt-input&quot;).disabled = false;
   document.getElementById(&quot;spt-attach-btn&quot;).disabled = false;
   document.getElementById(&quot;spt-mic-btn&quot;).disabled = false;
+  var layout = document.getElementById(&quot;spt-layout&quot;); if (layout) layout.classList.add(&quot;chat-open&quot;);
   document.querySelectorAll(&quot;.spt-thread&quot;).forEach(function(el) { el.classList.remove(&quot;on&quot;); });
   var msgsEl = document.getElementById(&quot;spt-msgs&quot;);
   msgsEl.innerHTML = &#x27;&lt;div class=&quot;empty&quot;&gt;Loading...&lt;/div&gt;&#x27;;
@@ -6674,24 +6806,61 @@ function sptSendImage(file) {
   });
 }
 
+var VOICE_NOTE_ICON = '&lt;svg viewBox=&quot;0 0 24 24&quot; width=&quot;17&quot; height=&quot;17&quot;&gt;&lt;rect x=&quot;3.5&quot; y=&quot;9&quot; width=&quot;3&quot; height=&quot;6&quot; rx=&quot;1.4&quot; fill=&quot;currentColor&quot;&gt;&lt;/rect&gt;&lt;rect x=&quot;10.5&quot; y=&quot;4&quot; width=&quot;3&quot; height=&quot;16&quot; rx=&quot;1.4&quot; fill=&quot;currentColor&quot;&gt;&lt;/rect&gt;&lt;rect x=&quot;17.5&quot; y=&quot;7&quot; width=&quot;3&quot; height=&quot;10&quot; rx=&quot;1.4&quot; fill=&quot;currentColor&quot;&gt;&lt;/rect&gt;&lt;/svg&gt;';
+var STOP_REC_ICON = '&lt;svg viewBox=&quot;0 0 24 24&quot; width=&quot;15&quot; height=&quot;15&quot;&gt;&lt;rect x=&quot;5&quot; y=&quot;5&quot; width=&quot;14&quot; height=&quot;14&quot; rx=&quot;2.5&quot; fill=&quot;currentColor&quot;&gt;&lt;/rect&gt;&lt;/svg&gt;';
+function sptPickMimeType() {
+  if (typeof MediaRecorder === &quot;undefined&quot; || !MediaRecorder.isTypeSupported) return &quot;&quot;;
+  var options = [&quot;audio/webm;codecs=opus&quot;, &quot;audio/webm&quot;, &quot;audio/mp4&quot;, &quot;audio/ogg;codecs=opus&quot;];
+  for (var i = 0; i &lt; options.length; i++) { if (MediaRecorder.isTypeSupported(options[i])) return options[i]; }
+  return &quot;&quot;;
+}
+var _sptRecTimerInt = null;
+function sptStartRecTimer() {
+  var el = document.getElementById(&quot;spt-rec-timer&quot;);
+  if (!el) return;
+  var start = Date.now();
+  el.style.display = &quot;inline-block&quot;;
+  el.textContent = &quot;0:00&quot;;
+  clearInterval(_sptRecTimerInt);
+  _sptRecTimerInt = setInterval(function() {
+    var secs = Math.floor((Date.now() - start) / 1000);
+    var m = Math.floor(secs / 60), s = secs % 60;
+    el.textContent = m + &quot;:&quot; + (s &lt; 10 ? &quot;0&quot; : &quot;&quot;) + s;
+  }, 500);
+}
+function sptStopRecTimer() {
+  clearInterval(_sptRecTimerInt);
+  var el = document.getElementById(&quot;spt-rec-timer&quot;);
+  if (el) el.style.display = &quot;none&quot;;
+}
+function sptBackToThreads() {
+  var layout = document.getElementById(&quot;spt-layout&quot;); if (layout) layout.classList.remove(&quot;chat-open&quot;);
+}
 function sptToggleRecording() {
   if (!_sptCurrentUid) return;
   var btn = document.getElementById(&quot;spt-mic-btn&quot;);
+  var ico = document.getElementById(&quot;spt-mic-ico&quot;);
   if (_sptRecording) { _sptRecorder.stop(); return; }
   navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
     _sptChunks = [];
-    _sptRecorder = new MediaRecorder(stream);
+    var mimeType = sptPickMimeType();
+    _sptRecorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
     _sptRecorder.ondataavailable = function(e) { if (e.data.size &gt; 0) _sptChunks.push(e.data); };
     _sptRecorder.onstop = function() {
       stream.getTracks().forEach(function(t) { t.stop(); });
       _sptRecording = false;
       if (btn) btn.classList.remove(&quot;rec&quot;);
-      var blob = new Blob(_sptChunks, { type: &quot;audio/webm&quot; });
+      if (ico) ico.innerHTML = VOICE_NOTE_ICON;
+      sptStopRecTimer();
+      var blob = new Blob(_sptChunks, { type: _sptRecorder.mimeType || &quot;audio/webm&quot; });
+      if (blob.size &lt; 500) { T(&quot;Too Short&quot;, &quot;Hold the button a little longer to record a voice note.&quot;); return; }
       sptUploadAudio(blob);
     };
     _sptRecorder.start();
     _sptRecording = true;
     if (btn) btn.classList.add(&quot;rec&quot;);
+    if (ico) ico.innerHTML = STOP_REC_ICON;
+    sptStartRecTimer();
   }).catch(function() {
     T(&quot;Microphone&quot;, &quot;Could not access the microphone. Check browser permissions.&quot;);
   });
@@ -6700,8 +6869,11 @@ function sptToggleRecording() {
 function sptUploadAudio(blob) {
   var uid = _sptCurrentUid;
   if (!uid) return;
-  var path = &quot;supportChats/&quot; + uid + &quot;/&quot; + Date.now() + &quot;_voice.webm&quot;;
-  storage.ref().child(path).put(blob).then(function(snap) {
+  var ext = blob.type.indexOf(&quot;mp4&quot;) !== -1 ? &quot;m4a&quot; : &quot;webm&quot;;
+  var path = &quot;supportChats/&quot; + uid + &quot;/&quot; + Date.now() + &quot;_voice.&quot; + ext;
+  var timedOut = false;
+  var timer = setTimeout(function() { timedOut = true; T(&quot;Error&quot;, &quot;Sending the voice note is taking too long. Check your connection and try again.&quot;); }, 20000);
+  storage.ref().child(path).put(blob, { contentType: blob.type || &quot;audio/webm&quot; }).then(function(snap) {
     return snap.ref.getDownloadURL();
   }).then(function(url) {
     return db.collection(&quot;supportChats&quot;).doc(uid).collection(&quot;messages&quot;).add({
@@ -6714,8 +6886,8 @@ function sptUploadAudio(blob) {
   }).catch(function(err) {
     console.error(&quot;Could not send voice note:&quot;, err);
     var detail = err &amp;&amp; (err.code || err.message) ? &quot; (&quot; + (err.code || err.message) + &quot;)&quot; : &quot;&quot;;
-    T(&quot;Error&quot;, &quot;Could not send the voice note.&quot; + detail);
-  });
+    if (!timedOut) T(&quot;Error&quot;, &quot;Could not send the voice note.&quot; + detail);
+  }).finally(function() { clearTimeout(timer); });
 }
 
 
@@ -7628,6 +7800,39 @@ function hrRemoveGalleryFile(i) {
 
 function esc(s) { return (s == null ? "" : String(s)).replace(/[&<>"']/g, function(c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 
+// ── Shared voice-note recording helpers (used by the customer "Contact
+// Admin" chat). A waveform-bars icon is used instead of a microphone
+// silhouette for the idle state, and a filled square for the recording/
+// stop state, with a live mm:ss counter next to the button while
+// recording so the person can see the note is actually being captured. ──
+var VOICE_NOTE_ICON = '<svg viewBox="0 0 24 24" width="17" height="17"><rect x="3.5" y="9" width="3" height="6" rx="1.4" fill="currentColor"/><rect x="10.5" y="4" width="3" height="16" rx="1.4" fill="currentColor"/><rect x="17.5" y="7" width="3" height="10" rx="1.4" fill="currentColor"/></svg>';
+var STOP_REC_ICON = '<svg viewBox="0 0 24 24" width="15" height="15"><rect x="5" y="5" width="14" height="14" rx="2.5" fill="currentColor"/></svg>';
+function pickRecorderMimeType() {
+  if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return "";
+  var options = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+  for (var i = 0; i < options.length; i++) { if (MediaRecorder.isTypeSupported(options[i])) return options[i]; }
+  return "";
+}
+var _recTimerIntervals = {};
+function startRecTimer(elId) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  var start = Date.now();
+  el.style.display = "inline-block";
+  el.textContent = "0:00";
+  clearInterval(_recTimerIntervals[elId]);
+  _recTimerIntervals[elId] = setInterval(function() {
+    var secs = Math.floor((Date.now() - start) / 1000);
+    var m = Math.floor(secs / 60), s = secs % 60;
+    el.textContent = m + ":" + (s < 10 ? "0" : "") + s;
+  }, 500);
+}
+function stopRecTimer(elId) {
+  clearInterval(_recTimerIntervals[elId]);
+  var el = document.getElementById(elId);
+  if (el) el.style.display = "none";
+}
+
 function submitHotelRegistration() {
   var hotelName = document.getElementById("hr-hotelname").value.trim();
   var ownerName = document.getElementById("hr-ownername").value.trim();
@@ -8300,6 +8505,15 @@ function accRenderHeader() {
   var firstName = (p.name || "Account").trim().split(" ")[0];
   var navA = document.getElementById("ni-account"); if (navA) navA.textContent = firstName;
   var navAm = document.getElementById("ni-account-m"); if (navAm) navAm.textContent = firstName;
+  var welcome = document.getElementById("ud-welcome-name"); if (welcome) welcome.textContent = "Welcome back, " + firstName + "! \uD83D\uDC4B";
+  var since = document.getElementById("acc-member-since");
+  if (since) {
+    if (p.createdAt && p.createdAt.toDate) {
+      var d = p.createdAt.toDate();
+      var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      since.innerHTML = "&#128197; Member since " + months[d.getMonth()] + " " + d.getFullYear();
+    } else { since.textContent = ""; }
+  }
   accShowMenu();
   accRenderWalletSummary();
 }
@@ -8343,12 +8557,84 @@ function accShowMenu() {
   accRenderWalletSummary();
   document.querySelectorAll("#acc-sidebar .hd-sb-item").forEach(function(b) { b.classList.toggle("on", b.dataset.k === "overview"); });
   accLoadMenuBadges();
+  accRenderDashboard();
+}
+
+// Populates the "Welcome back" overview screen: stat cards, recent
+// bookings, wishlist preview and recommended-hotels preview.
+function accRenderDashboard() {
+  accFetchAllBookings().then(function(docs) {
+    var bkEl = document.getElementById("ud-stat-bookings"); if (bkEl) bkEl.textContent = docs.length;
+    var spent = docs.reduce(function(s, b) { return s + (b._src === "hotel" ? (b.amount || 0) : (b.amountPaid || 0)); }, 0);
+    var spEl = document.getElementById("ud-stat-spent"); if (spEl) spEl.textContent = "\u20a6" + Math.round(spent).toLocaleString();
+    var recentWrap = document.getElementById("ud-recent-bookings");
+    if (recentWrap) {
+      if (!docs.length) { recentWrap.innerHTML = '<div class="emst"><span class="ei">&#128197;</span>No bookings yet.</div>'; }
+      else {
+        recentWrap.innerHTML = docs.slice(0, 3).map(function(b) {
+          var isHotel = b._src === "hotel";
+          var name = isHotel ? (b.hotelName || "Hotel Booking") : (b.roomType || "Hotels Continental");
+          var status = b.status || "Pending";
+          var statusCls = status === "Approved" ? "approved" : status === "Rejected" ? "rejected" : status === "CheckedOut" ? "approved" : "pending";
+          var amount = isHotel ? (b.amount || 0) : (b.amountPaid || 0);
+          var nights = 1;
+          if (b.checkIn && b.checkOut) { nights = Math.max(1, Math.round((new Date(b.checkOut) - new Date(b.checkIn)) / 86400000)); }
+          return '<div class="ud-recent-row">' +
+            '<div class="ud-recent-thumb">&#127974;</div>' +
+            '<div class="ud-recent-mid"><div class="ud-recent-name">' + esc(name) + '</div>' +
+            '<div class="ud-recent-sub"><span>&#128198; ' + esc(b.checkIn || "") + (b.checkOut ? " &ndash; " + esc(b.checkOut) : "") + '</span></div></div>' +
+            '<div class="ud-recent-right"><div class="ud-status ' + statusCls + '">' + esc(status === "CheckedOut" ? "Checked Out" : status) + '</div>' +
+            '<div class="ud-recent-amt">\u20a6' + Math.round(amount).toLocaleString() + '</div>' +
+            '<div class="ud-recent-nights">' + nights + ' Night' + (nights > 1 ? "s" : "") + '</div></div></div>';
+        }).join("");
+      }
+    }
+  }).catch(function() {
+    var recentWrap = document.getElementById("ud-recent-bookings");
+    if (recentWrap) recentWrap.innerHTML = '<div class="emst"><span class="ei">&#9888;</span>Could not load bookings.</div>';
+  });
+
+  var wlEl = document.getElementById("ud-stat-wishlist"); if (wlEl) wlEl.textContent = (_accWishlist || []).length;
+  var wlWrap = document.getElementById("ud-wishlist-mini");
+  if (wlWrap) {
+    if (!_accWishlist || !_accWishlist.length) { wlWrap.innerHTML = '<div class="emst"><span class="ei">&#9825;</span>No saved rooms yet.</div>'; }
+    else {
+      wlWrap.innerHTML = _accWishlist.slice(0, 2).map(function(w) {
+        var price = PRICES[w.roomType] || 0;
+        return '<div class="ud-mini-row"><div class="ud-mini-thumb">&#127974;</div>' +
+          '<div class="ud-mini-mid"><div class="ud-mini-name">' + esc(w.roomType) + '</div><div class="ud-mini-sub">Hotels Continental</div></div>' +
+          '<div class="ud-mini-price">\u20a6' + price.toLocaleString() + '<br/><span style="font-weight:400;color:var(--muted);font-size:.68rem">/ night</span></div>' +
+          '<span class="ud-mini-heart">&#9829;</span></div>';
+      }).join("");
+    }
+  }
+
+  var recWrap = document.getElementById("ud-recommend-mini");
+  if (recWrap) {
+    var showRecommended = function() {
+      var wishedNames = (_accWishlist || []).map(function(w) { return w.roomType; });
+      var list = (_mpHotels || []).filter(function(h) { return wishedNames.indexOf(h.name) === -1; }).slice(0, 2);
+      if (!list.length) list = (_mpHotels || []).slice(0, 2);
+      if (!list.length) { recWrap.innerHTML = '<div class="emst"><span class="ei">&#127974;</span>No hotels to show yet.</div>'; return; }
+      recWrap.innerHTML = list.map(function(h) {
+        var ratingRow = h.rating ? '<div class="ud-mini-sub">&#11088; ' + Number(h.rating).toFixed(1) + '</div>' : '';
+        return '<div class="ud-mini-row" style="cursor:pointer" onclick="openHotelDetail(\'' + h.id + '\')">' +
+          '<div class="ud-mini-thumb">' + (h.coverImage ? '<img src="' + h.coverImage + '"/>' : '&#127974;') + '</div>' +
+          '<div class="ud-mini-mid"><div class="ud-mini-name">' + esc(h.name) + '</div><div class="ud-mini-sub">' + esc(h.location || "") + '</div>' + ratingRow + '</div>' +
+          (h.minPrice ? '<div class="ud-mini-price">\u20a6' + h.minPrice.toLocaleString() + '<br/><span style="font-weight:400;color:var(--muted);font-size:.68rem">/ night</span></div>' : '') +
+          '</div>';
+      }).join("");
+    };
+    if (_mpHotels && _mpHotels.length) showRecommended();
+    else loadMarketplaceHotels().then(showRecommended).catch(function() { recWrap.innerHTML = '<div class="emst"><span class="ei">&#9888;</span>Could not load hotels.</div>'; });
+  }
 }
 
 function accLoadMenuBadges() {
   var uid = _accUser ? _accUser.uid : "";
   if (!uid) return;
   db.collection("messages").where("uid", "==", uid).get().then(function(snap) {
+    var msgEl = document.getElementById("ud-stat-messages"); if (msgEl) msgEl.textContent = snap.docs.length;
     var el = document.getElementById("acc-sb-inbox-badge");
     if (!el) return;
     // Only count messages not yet marked read=true; a message is treated as
@@ -8358,8 +8644,10 @@ function accLoadMenuBadges() {
   }).catch(function() {});
   db.collection("notifications").where("uid", "==", uid).get().then(function(snap) {
     var el = document.getElementById("acc-sb-notif-badge");
-    if (!el) return;
     var unread = snap.docs.filter(function(d) { return d.data().read !== true; }).length;
+    var topEl = document.getElementById("acc-topbar-notif-badge");
+    if (topEl) { if (unread) { topEl.textContent = unread; topEl.style.display = "flex"; } else { topEl.style.display = "none"; } }
+    if (!el) return;
     if (unread) { el.textContent = unread; el.style.display = "inline-flex"; } else { el.style.display = "none"; }
   }).catch(function() {});
   db.collection("hotelChats").where("uid", "==", uid).get().then(function(snap) {
@@ -8419,10 +8707,13 @@ function accRenderStatic(body, title, text) {
 // marketplace booking (like the ones from the room listing pages) never
 // appeared, even though it had already been written to Firestore and shown
 // up correctly in the inbox message that gets sent alongside it.
-function accRenderBookings(body) {
+// Shared fetch used by both the "My Bookings" sub-page and the dashboard
+// overview cards/stats, so both stay in sync with the same merged +
+// deduplicated + sorted list of legacy and marketplace bookings.
+function accFetchAllBookings() {
   var uid = _accUser ? _accUser.uid : "";
   var email = (_accProfile && _accProfile.email || (_accUser && _accUser.email) || "").toLowerCase();
-  Promise.all([
+  return Promise.all([
     email ? db.collection("bookings").where("email", "==", email).get() : Promise.resolve({ docs: [] }),
     email ? db.collection("hotelBookings").where("email", "==", email).get() : Promise.resolve({ docs: [] }),
     uid ? db.collection("hotelBookings").where("uid", "==", uid).get() : Promise.resolve({ docs: [] })
@@ -8434,8 +8725,13 @@ function accRenderBookings(body) {
     var market = [];
     marketByEmail.concat(marketByUid).forEach(function(b) { if (!seen[b.id]) { seen[b.id] = true; market.push(b); } });
     var docs = legacy.concat(market);
-    if (!docs.length) { body.innerHTML = '<div class="emst"><span class="ei">&#128197;</span>No bookings yet.</div>'; return; }
     docs.sort(function(a, b) { return (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0); });
+    return docs;
+  });
+}
+function accRenderBookings(body) {
+  accFetchAllBookings().then(function(docs) {
+    if (!docs.length) { body.innerHTML = '<div class="emst"><span class="ei">&#128197;</span>No bookings yet.</div>'; return; }
     body.innerHTML = docs.map(function(b) { return b._src === "hotel" ? renderHotelBkCard(b, b.id) : renderBkCard(b, b.id); }).join("");
   }).catch(function(e) {
     console.error("load bookings failed:", e);
@@ -8882,7 +9178,8 @@ function accRenderSupportChat(body) {
     '<input type="file" accept="image/*" id="acc-support-img-input" style="display:none" onchange="accSendSupportImage(this.files[0])"/>' +
     '<button class="chat-icon-btn" onclick="document.getElementById(\'acc-support-img-input\').click()" title="Attach image">&#128206;</button>' +
     '<input type="text" id="acc-support-input" placeholder="Type a message to the admin..." onkeypress="if(event.key===\'Enter\')accSendSupportMessage()"/>' +
-    '<button class="chat-icon-btn" id="acc-support-mic-btn" onclick="accToggleSupportRecording()" title="Record voice note">&#127908;</button>' +
+    '<span class="chat-rec-timer" id="acc-support-rec-timer" style="display:none">0:00</span>' +
+    '<button class="chat-icon-btn" id="acc-support-mic-btn" onclick="accToggleSupportRecording()" title="Record voice note">' + VOICE_NOTE_ICON + '</button>' +
     '<button class="chat-send-btn" onclick="accSendSupportMessage()">&#10148;</button></div></div>';
   ensureSupportThread().then(function(uid) {
     db.collection("supportChats").doc(uid).set({ unreadUser: false }, { merge: true }).catch(function() {});
@@ -8956,24 +9253,29 @@ function accSendSupportImage(file) {
 var _accSupportRecorder = null;
 var _accSupportChunks = [];
 var _accSupportRecording = false;
+var _accSupportRecTimerInt = null;
 function accToggleSupportRecording() {
   if (!_accUser) return;
   var btn = document.getElementById("acc-support-mic-btn");
   if (_accSupportRecording) { _accSupportRecorder.stop(); return; }
   navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
     _accSupportChunks = [];
-    _accSupportRecorder = new MediaRecorder(stream);
+    var mimeType = pickRecorderMimeType();
+    _accSupportRecorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
     _accSupportRecorder.ondataavailable = function(e) { if (e.data.size > 0) _accSupportChunks.push(e.data); };
     _accSupportRecorder.onstop = function() {
       stream.getTracks().forEach(function(t) { t.stop(); });
       _accSupportRecording = false;
-      if (btn) btn.classList.remove("rec");
-      var blob = new Blob(_accSupportChunks, { type: "audio/webm" });
+      if (btn) { btn.classList.remove("rec"); btn.innerHTML = VOICE_NOTE_ICON; }
+      stopRecTimer("acc-support-rec-timer");
+      var blob = new Blob(_accSupportChunks, { type: _accSupportRecorder.mimeType || "audio/webm" });
+      if (blob.size < 500) { T("Too Short", "Hold the button a little longer to record a voice note."); return; }
       accUploadSupportAudio(blob);
     };
     _accSupportRecorder.start();
     _accSupportRecording = true;
-    if (btn) btn.classList.add("rec");
+    if (btn) { btn.classList.add("rec"); btn.innerHTML = STOP_REC_ICON; }
+    startRecTimer("acc-support-rec-timer");
   }).catch(function() {
     T("Microphone", "Could not access the microphone. Check browser permissions.");
   });
@@ -8981,8 +9283,11 @@ function accToggleSupportRecording() {
 function accUploadSupportAudio(blob) {
   var uid = _accUser && _accUser.uid;
   if (!uid) return;
-  var path = "supportChats/" + uid + "/" + Date.now() + "_voice.webm";
-  storage.ref().child(path).put(blob).then(function(snap) {
+  var ext = blob.type.indexOf("mp4") !== -1 ? "m4a" : "webm";
+  var path = "supportChats/" + uid + "/" + Date.now() + "_voice." + ext;
+  var timedOut = false;
+  var timer = setTimeout(function() { timedOut = true; T("Error", "Sending the voice note is taking too long. Check your connection and try again."); }, 20000);
+  storage.ref().child(path).put(blob, { contentType: blob.type || "audio/webm" }).then(function(snap) {
     return snap.ref.getDownloadURL();
   }).then(function(url) {
     return db.collection("supportChats").doc(uid).collection("messages").add({
@@ -8995,8 +9300,8 @@ function accUploadSupportAudio(blob) {
   }).catch(function(err) {
     console.error("Could not send voice note:", err);
     var detail = err && (err.code || err.message) ? " (" + (err.code || err.message) + ")" : "";
-    T("Error", "Could not send the voice note." + detail);
-  });
+    if (!timedOut) T("Error", "Could not send the voice note." + detail);
+  }).finally(function() { clearTimeout(timer); });
 }
 
 // Booking messages (type === "booking") carry structured fields sent
@@ -9095,6 +9400,7 @@ function loadWishlist() {
   db.collection("wishlist").where("uid", "==", _accUser.uid).get().then(function(snap) {
     _accWishlist = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
     applyWishlistUI();
+    var wlEl = document.getElementById("ud-stat-wishlist"); if (wlEl) accRenderDashboard();
   }).catch(function() { _accWishlist = []; });
 }
 function applyWishlistUI() {
@@ -9112,12 +9418,14 @@ function toggleWishlist(room) {
     db.collection("wishlist").doc(existing.id).delete().then(function() {
       _accWishlist = _accWishlist.filter(function(w) { return w.id !== existing.id; });
       applyWishlistUI();
+      if (typeof accRenderDashboard === "function") accRenderDashboard();
       T("Removed", room + " removed from your wishlist.");
     });
   } else {
     db.collection("wishlist").add({ uid: _accUser.uid, roomType: room, createdAt: firebase.firestore.FieldValue.serverTimestamp() }).then(function(ref) {
       _accWishlist.push({ id: ref.id, roomType: room });
       applyWishlistUI();
+      if (typeof accRenderDashboard === "function") accRenderDashboard();
       T("Saved", room + " added to your wishlist.");
     });
   }
