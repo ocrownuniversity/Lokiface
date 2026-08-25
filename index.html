@@ -165,6 +165,73 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .hd-sb-foot{padding:.9rem;border-top:1px solid rgba(255,255,255,.1)}
 .hd-sb-logout{width:100%;padding:.7rem;background:rgba(220,38,38,.15);color:#f87171;border:none;border-radius:9px;font-weight:700;font-size:.8rem;cursor:pointer}
 
+/* ===== Hotel Owner Dashboard — Overview (rich dashboard, matches partner mock-up) ===== */
+.hd-topbar-bell{position:relative;background:none;border:none;cursor:pointer;font-size:1.15rem;color:var(--ink);padding:.4rem;flex-shrink:0}
+.hd-topbar-bell .bdg{position:absolute;top:0;right:0;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;border-radius:100px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 .25rem}
+.hdo-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1.1rem}
+.hdo-head h2{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--ink)}
+.hdo-head p{color:var(--muted);font-size:.82rem;margin-top:.25rem}
+.hdo-range{background:#fff;border:1px solid var(--border);border-radius:10px;padding:.5rem .8rem;font-size:.76rem;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:.4rem;white-space:nowrap}
+.hdo-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.1rem}
+@media(max-width:760px){.hdo-stats{grid-template-columns:repeat(2,1fr)}}
+.hdo-stat-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;box-shadow:var(--shadow)}
+.hdo-stat-top{display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem}
+.hdo-stat-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.hdo-stat-lbl{font-size:.72rem;color:var(--muted);font-weight:600}
+.hdo-stat-sub{font-size:.65rem;color:var(--muted2)}
+.hdo-stat-val{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--ink);margin-bottom:.3rem}
+.hdo-stat-delta{font-size:.68rem;font-weight:700;display:inline-flex;align-items:center;gap:.2rem}
+.hdo-stat-delta.up{color:var(--green)}
+.hdo-stat-delta.down{color:var(--red)}
+.hdo-charts{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+@media(max-width:860px){.hdo-charts{grid-template-columns:1fr}}
+.hdo-chart-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.1rem;box-shadow:var(--shadow)}
+.hdo-chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.hdo-chart-title{font-weight:700;font-size:.88rem;color:var(--ink)}
+.hdo-chart-big{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--ink)}
+.hdo-chart-sub{font-size:.7rem;color:var(--muted)}
+.hdo-chart-wrap{height:180px;margin-top:.6rem}
+.hdo-lists{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+@media(max-width:860px){.hdo-lists{grid-template-columns:1fr}}
+.hdo-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.1rem;box-shadow:var(--shadow)}
+.hdo-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
+.hdo-card-title{font-weight:700;font-size:.9rem;color:var(--ink)}
+.hdo-card-link{font-size:.74rem;color:var(--gold);font-weight:600;cursor:pointer;background:none;border:none}
+.hdo-row{display:flex;align-items:center;gap:.65rem;padding:.6rem 0;border-bottom:1px solid var(--border)}
+.hdo-row:last-child{border-bottom:none}
+.hdo-avatar{width:36px;height:36px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.74rem;flex-shrink:0}
+.hdo-row-img{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;background:var(--surface2)}
+.hdo-row-main{flex:1;min-width:0}
+.hdo-row-name{font-weight:600;font-size:.83rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdo-row-sub{font-size:.7rem;color:var(--muted);margin-top:.1rem}
+.hdo-row-right{text-align:right;flex-shrink:0}
+.hdo-row-amt{font-weight:700;font-size:.82rem;color:var(--ink)}
+.hdo-pill{display:inline-block;font-size:.62rem;font-weight:700;padding:.15rem .5rem;border-radius:100px;margin-bottom:.15rem}
+.hdo-pill.confirmed,.hdo-pill.approved{background:var(--green-bg);color:var(--green)}
+.hdo-pill.pending{background:rgba(240,168,60,.15);color:#b8791f}
+.hdo-pill.cancelled{background:var(--red-bg);color:var(--red)}
+.hdo-occ-wrap{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap}
+.hdo-occ-donut{width:130px;height:130px;flex-shrink:0;position:relative}
+.hdo-occ-pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.hdo-occ-pct b{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--ink)}
+.hdo-occ-pct span{font-size:.6rem;color:var(--muted)}
+.hdo-occ-legend{flex:1;min-width:150px}
+.hdo-occ-leg-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem}
+.hdo-occ-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.hdo-occ-leg-txt b{display:block;font-size:.8rem;color:var(--ink)}
+.hdo-occ-leg-txt span{font-size:.7rem;color:var(--muted)}
+.hdo-qa{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:1rem}
+@media(max-width:620px){.hdo-qa{grid-template-columns:repeat(2,1fr)}}
+.hdo-qa-item{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.4rem;padding:1rem .6rem;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.hdo-qa-item:hover{background:var(--gold-dim)}
+.hdo-qa-ico{width:34px;height:34px;border-radius:9px;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.95rem}
+.hdo-qa-tt{font-size:.72rem;font-weight:700;color:var(--ink)}
+.hdo-qa-dd{font-size:.62rem;color:var(--muted)}
+.hdo-banner{background:linear-gradient(135deg,var(--ink),#132b52);border-radius:14px;padding:1.1rem 1.3rem;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.hdo-banner-txt b{font-size:.92rem;display:flex;align-items:center;gap:.4rem}
+.hdo-banner-txt p{font-size:.76rem;color:rgba(255,255,255,.65);margin-top:.25rem;max-width:420px}
+.hdo-banner-btn{background:#fff;color:var(--ink);border:none;border-radius:9px;padding:.6rem 1.1rem;font-weight:700;font-size:.78rem;cursor:pointer;white-space:nowrap}
+
 /* ===== Customer dashboard (Hotels Continental "My Account" overview) ===== */
 .hd-sidebar{background:var(--ink)}
 .hd-sb-head{background:transparent;border-bottom:1px solid rgba(255,255,255,.1)}
@@ -765,24 +832,76 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:1.6rem 1.5rem;te
 
   <script>
   var HZ_LOCATIONS = {
-    "Nigeria": { "Lagos State":["Lagos","Ikeja","Lekki"], "Abuja (FCT)":["Abuja"], "Rivers State":["Port Harcourt"], "Oyo State":["Ibadan"], "Kano State":["Kano"] },
-    "Kenya": { "Nairobi County":["Nairobi"], "Mombasa County":["Mombasa"], "Kisumu County":["Kisumu"], "Nakuru County":["Nakuru"] },
-    "South Africa": { "Gauteng":["Johannesburg","Pretoria"], "Western Cape":["Cape Town","Stellenbosch"], "KwaZulu-Natal":["Durban"] },
-    "Ghana": { "Greater Accra":["Accra","Tema"], "Ashanti":["Kumasi"] },
-    "Egypt": { "Cairo Governorate":["Cairo"], "Alexandria Governorate":["Alexandria"], "Red Sea Governorate":["Hurghada"] },
-    "Morocco": { "Casablanca-Settat":["Casablanca"], "Rabat-Salé-Kénitra":["Rabat"], "Marrakesh-Safi":["Marrakesh"] },
-    "Rwanda": { "Kigali City":["Kigali"], "Northern Province":["Musanze"] },
-    "Tanzania": { "Dar es Salaam":["Dar es Salaam"], "Arusha":["Arusha"], "Zanzibar":["Zanzibar City"] },
-    "Uganda": { "Central Region":["Kampala"], "Western Region":["Mbarara"] },
-    "Ethiopia": { "Addis Ababa":["Addis Ababa"], "Oromia":["Adama"] },
-    "Senegal": { "Dakar":["Dakar"], "Thiès":["Thiès"] },
-    "Ivory Coast": { "Abidjan":["Abidjan"], "Yamoussoukro":["Yamoussoukro"] },
-    "Zambia": { "Lusaka Province":["Lusaka"], "Copperbelt":["Ndola","Kitwe"] },
-    "Zimbabwe": { "Harare Province":["Harare"], "Bulawayo Province":["Bulawayo"] },
-    "United Arab Emirates": { "Dubai":["Dubai"], "Abu Dhabi":["Abu Dhabi"], "Sharjah":["Sharjah"] },
-    "United States": { "New York":["New York City"], "California":["Los Angeles","San Francisco"], "Florida":["Miami"] },
-    "United Kingdom": { "England":["London","Manchester"], "Scotland":["Edinburgh","Glasgow"] },
-    "Canada": { "Ontario":["Toronto","Ottawa"], "British Columbia":["Vancouver"] }
+    "Nigeria": { "Lagos State":["Lagos","Ikeja","Lekki","Victoria Island","Ajah","Surulere"], "Abuja (FCT)":["Abuja","Gwarinpa","Wuse","Maitama"], "Rivers State":["Port Harcourt","Obio-Akpor"], "Oyo State":["Ibadan","Ogbomosho"], "Kano State":["Kano"], "Kaduna State":["Kaduna","Zaria"], "Enugu State":["Enugu"], "Delta State":["Warri","Asaba"], "Edo State":["Benin City"], "Anambra State":["Awka","Onitsha"], "Ogun State":["Abeokuta","Sagamu"], "Cross River State":["Calabar"], "Plateau State":["Jos"], "Akwa Ibom State":["Uyo"], "Imo State":["Owerri"], "Osun State":["Osogbo","Ile-Ife"] },
+    "Kenya": { "Nairobi County":["Nairobi"], "Mombasa County":["Mombasa"], "Kisumu County":["Kisumu"], "Nakuru County":["Nakuru"], "Kiambu County":["Thika","Kiambu"], "Uasin Gishu County":["Eldoret"], "Machakos County":["Machakos"], "Kilifi County":["Malindi","Watamu"] },
+    "South Africa": { "Gauteng":["Johannesburg","Pretoria","Sandton"], "Western Cape":["Cape Town","Stellenbosch","George"], "KwaZulu-Natal":["Durban","Pietermaritzburg"], "Eastern Cape":["Port Elizabeth","East London"], "Free State":["Bloemfontein"], "Mpumalanga":["Nelspruit"], "North West":["Rustenburg"], "Limpopo":["Polokwane"] },
+    "Ghana": { "Greater Accra":["Accra","Tema"], "Ashanti":["Kumasi"], "Western":["Takoradi"], "Central":["Cape Coast"], "Eastern":["Koforidua"], "Northern":["Tamale"] },
+    "Egypt": { "Cairo Governorate":["Cairo"], "Alexandria Governorate":["Alexandria"], "Red Sea Governorate":["Hurghada"], "South Sinai Governorate":["Sharm El-Sheikh"], "Luxor Governorate":["Luxor"], "Aswan Governorate":["Aswan"], "Giza Governorate":["Giza"] },
+    "Morocco": { "Casablanca-Settat":["Casablanca"], "Rabat-Salé-Kénitra":["Rabat","Salé"], "Marrakesh-Safi":["Marrakesh"], "Fès-Meknès":["Fès","Meknès"], "Tanger-Tétouan-Al Hoceïma":["Tangier"], "Souss-Massa":["Agadir"] },
+    "Rwanda": { "Kigali City":["Kigali"], "Northern Province":["Musanze"], "Southern Province":["Huye"], "Western Province":["Rubavu"] },
+    "Tanzania": { "Dar es Salaam":["Dar es Salaam"], "Arusha":["Arusha"], "Zanzibar":["Zanzibar City","Stone Town"], "Mwanza":["Mwanza"], "Dodoma":["Dodoma"] },
+    "Uganda": { "Central Region":["Kampala","Entebbe"], "Western Region":["Mbarara"], "Eastern Region":["Jinja"], "Northern Region":["Gulu"] },
+    "Ethiopia": { "Addis Ababa":["Addis Ababa"], "Oromia":["Adama","Bishoftu"], "Amhara":["Bahir Dar","Gondar"], "Tigray":["Mekelle"] },
+    "Senegal": { "Dakar":["Dakar"], "Thiès":["Thiès"], "Saint-Louis":["Saint-Louis"] },
+    "Ivory Coast": { "Abidjan":["Abidjan"], "Yamoussoukro":["Yamoussoukro"], "Bouaké":["Bouaké"] },
+    "Zambia": { "Lusaka Province":["Lusaka"], "Copperbelt":["Ndola","Kitwe"], "Southern Province":["Livingstone"] },
+    "Zimbabwe": { "Harare Province":["Harare"], "Bulawayo Province":["Bulawayo"], "Manicaland":["Mutare"] },
+    "United Arab Emirates": { "Dubai":["Dubai"], "Abu Dhabi":["Abu Dhabi"], "Sharjah":["Sharjah"], "Ajman":["Ajman"], "Ras Al Khaimah":["Ras Al Khaimah"], "Fujairah":["Fujairah"] },
+    "United Kingdom": { "England":["London","Manchester","Birmingham","Liverpool","Leeds","Bristol","Newcastle"], "Scotland":["Edinburgh","Glasgow","Aberdeen"], "Wales":["Cardiff","Swansea"], "Northern Ireland":["Belfast"] },
+    "Canada": { "Ontario":["Toronto","Ottawa","Mississauga","Hamilton"], "British Columbia":["Vancouver","Victoria"], "Quebec":["Montreal","Quebec City"], "Alberta":["Calgary","Edmonton"], "Manitoba":["Winnipeg"], "Nova Scotia":["Halifax"] },
+    "United States": {
+      "Alabama":["Birmingham","Montgomery","Huntsville","Mobile"],
+      "Alaska":["Anchorage","Fairbanks","Juneau"],
+      "Arizona":["Phoenix","Tucson","Scottsdale","Mesa"],
+      "Arkansas":["Little Rock","Fayetteville"],
+      "California":["Los Angeles","San Francisco","San Diego","Sacramento","San Jose","Oakland","Long Beach"],
+      "Colorado":["Denver","Colorado Springs","Boulder"],
+      "Connecticut":["Hartford","New Haven","Stamford"],
+      "Delaware":["Wilmington","Dover"],
+      "Florida":["Miami","Orlando","Tampa","Jacksonville","Fort Lauderdale","Key West"],
+      "Georgia":["Atlanta","Savannah","Augusta"],
+      "Hawaii":["Honolulu","Maui","Kailua-Kona"],
+      "Idaho":["Boise","Coeur d'Alene"],
+      "Illinois":["Chicago","Springfield","Naperville"],
+      "Indiana":["Indianapolis","Fort Wayne"],
+      "Iowa":["Des Moines","Cedar Rapids"],
+      "Kansas":["Wichita","Topeka"],
+      "Kentucky":["Louisville","Lexington"],
+      "Louisiana":["New Orleans","Baton Rouge","Shreveport"],
+      "Maine":["Portland","Bangor"],
+      "Maryland":["Baltimore","Annapolis"],
+      "Massachusetts":["Boston","Cambridge","Worcester"],
+      "Michigan":["Detroit","Grand Rapids","Ann Arbor"],
+      "Minnesota":["Minneapolis","Saint Paul"],
+      "Mississippi":["Jackson","Gulfport"],
+      "Missouri":["Kansas City","St. Louis","Springfield"],
+      "Montana":["Billings","Missoula"],
+      "Nebraska":["Omaha","Lincoln"],
+      "Nevada":["Las Vegas","Reno","Henderson"],
+      "New Hampshire":["Manchester","Nashua"],
+      "New Jersey":["Newark","Jersey City","Atlantic City"],
+      "New Mexico":["Albuquerque","Santa Fe"],
+      "New York":["New York City","Buffalo","Albany","Rochester","Brooklyn"],
+      "North Carolina":["Charlotte","Raleigh","Durham"],
+      "North Dakota":["Fargo","Bismarck"],
+      "Ohio":["Columbus","Cleveland","Cincinnati"],
+      "Oklahoma":["Oklahoma City","Tulsa"],
+      "Oregon":["Portland","Eugene","Salem"],
+      "Pennsylvania":["Philadelphia","Pittsburgh","Harrisburg"],
+      "Rhode Island":["Providence","Newport"],
+      "South Carolina":["Charleston","Columbia","Myrtle Beach"],
+      "South Dakota":["Sioux Falls","Rapid City"],
+      "Tennessee":["Nashville","Memphis","Knoxville"],
+      "Texas":["Houston","Austin","Dallas","San Antonio","Fort Worth","El Paso"],
+      "Utah":["Salt Lake City","Park City"],
+      "Vermont":["Burlington","Montpelier"],
+      "Virginia":["Virginia Beach","Richmond","Arlington"],
+      "Washington":["Seattle","Spokane","Tacoma"],
+      "Washington D.C.":["Washington"],
+      "West Virginia":["Charleston","Huntington"],
+      "Wisconsin":["Milwaukee","Madison"],
+      "Wyoming":["Cheyenne","Jackson"]
+    }
   };
   function hzPopulateStates(){
     var country = document.getElementById("hz-country").value;
@@ -1590,6 +1709,7 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:1.6rem 1.5rem;te
       <div class="hd-topbar-tag" id="hd-status-tag">Hotel Dashboard</div>
       <div class="hd-topbar-name" id="hd-hotel-name">Your Hotel</div>
     </div>
+    <button class="hd-topbar-bell" onclick="hdSetTab('notifications')" title="Notifications">&#128276;<span class="bdg" id="hd-topbar-notif-badge" style="display:none">0</span></button>
     <div id="hd-topbar-avatar" onclick="hdSetTab('settings')" style="width:36px;height:36px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.95rem;color:var(--gold);overflow:hidden;flex-shrink:0;cursor:pointer" title="Hotel Profile">&#127974;</div>
   </div>
   <div class="hd-overlay" id="hd-overlay" onclick="hdToggleSidebar(false)"></div>
@@ -1617,8 +1737,61 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:1.6rem 1.5rem;te
     </div>
     <div id="hd-app" style="display:none">
       <div id="hd-tab-overview" class="hd-tab">
-        <div class="stat-grid" id="hd-stats"></div>
-        <div class="card"><div class="card-title">Recent Bookings</div><div id="hd-recent"></div></div>
+        <div class="hdo-head">
+          <div><h2 id="hdo-welcome">Welcome back! &#128075;</h2><p>Here's what's happening with your hotel today.</p></div>
+          <div class="hdo-range" id="hdo-range-label">&#128197; <span id="hdo-range-text">Last 7 Days</span></div>
+        </div>
+        <div class="hdo-stats" id="hdo-stats"></div>
+        <div class="hdo-charts">
+          <div class="hdo-chart-card">
+            <div class="hdo-chart-top"><div class="hdo-chart-title">Booking Overview</div></div>
+            <div class="hdo-chart-big" id="hdo-bk-total">0</div>
+            <div class="hdo-chart-sub">Total Bookings</div>
+            <div class="hdo-chart-wrap"><canvas id="hdo-chart-bookings"></canvas></div>
+          </div>
+          <div class="hdo-chart-card">
+            <div class="hdo-chart-top"><div class="hdo-chart-title">Revenue Overview</div></div>
+            <div class="hdo-chart-big" id="hdo-rev-total">&#8358;0</div>
+            <div class="hdo-chart-sub">Total Revenue</div>
+            <div class="hdo-chart-wrap"><canvas id="hdo-chart-revenue"></canvas></div>
+          </div>
+        </div>
+        <div class="hdo-lists">
+          <div class="hdo-card">
+            <div class="hdo-card-top"><div class="hdo-card-title">Recent Bookings</div><button class="hdo-card-link" onclick="hdSetTab('bookings')">View All &#8250;</button></div>
+            <div id="hdo-recent"></div>
+          </div>
+          <div class="hdo-card">
+            <div class="hdo-card-top"><div class="hdo-card-title">Top Performing Rooms</div><button class="hdo-card-link" onclick="hdSetTab('rooms')">View All &#8250;</button></div>
+            <div id="hdo-top-rooms"></div>
+          </div>
+        </div>
+        <div class="hdo-lists">
+          <div class="hdo-card">
+            <div class="hdo-card-top"><div class="hdo-card-title">Occupancy Overview</div></div>
+            <div class="hdo-occ-wrap">
+              <div class="hdo-occ-donut"><canvas id="hdo-chart-occ"></canvas><div class="hdo-occ-pct"><b id="hdo-occ-pct">0%</b><span>This Period</span></div></div>
+              <div class="hdo-occ-legend" id="hdo-occ-legend"></div>
+            </div>
+          </div>
+          <div class="hdo-card">
+            <div class="hdo-card-top"><div class="hdo-card-title">Upcoming Check-ins</div><button class="hdo-card-link" onclick="hdSetTab('bookings')">View All &#8250;</button></div>
+            <div id="hdo-checkins"></div>
+          </div>
+        </div>
+        <div class="hdo-card" style="padding:0;background:transparent;border:none;box-shadow:none">
+          <div class="hdo-card-title" style="margin-bottom:.6rem">Quick Actions</div>
+          <div class="hdo-qa">
+            <div class="hdo-qa-item" onclick="hdSetTab('rooms')"><div class="hdo-qa-ico">&#128716;</div><div class="hdo-qa-tt">Add Room</div><div class="hdo-qa-dd">List a new room</div></div>
+            <div class="hdo-qa-item" onclick="hdSetTab('bookings')"><div class="hdo-qa-ico">&#128197;</div><div class="hdo-qa-tt">View Bookings</div><div class="hdo-qa-dd">Manage bookings</div></div>
+            <div class="hdo-qa-item" onclick="hdSetTab('settings')"><div class="hdo-qa-ico">&#127968;</div><div class="hdo-qa-tt">Edit Hotel Info</div><div class="hdo-qa-dd">Update details</div></div>
+            <div class="hdo-qa-item" onclick="hdSetTab('messages')"><div class="hdo-qa-ico">&#128172;</div><div class="hdo-qa-tt">Send Message</div><div class="hdo-qa-dd">Message guests</div></div>
+          </div>
+        </div>
+        <div class="hdo-banner">
+          <div class="hdo-banner-txt"><b>&#9989; Keep Your Profile Updated</b><p>Ensure your hotel information and photos are up to date to attract more guests.</p></div>
+          <button class="hdo-banner-btn" onclick="hdSetTab('settings')">Update Now</button>
+        </div>
       </div>
       <div id="hd-tab-rooms" class="hd-tab" style="display:none">
         <div class="fc" style="margin-bottom:1.1rem">
@@ -1733,10 +1906,10 @@ footer{background:var(--ink);color:rgba(250,247,242,.5);padding:1.6rem 1.5rem;te
 &lt;title&gt;Hotels Continental - Admin&lt;/title&gt;
 &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;/&gt;
 &lt;script src=&quot;https://cdn.jsdelivr.net/npm/chart.js&quot;&gt;&lt;/script&gt;
-&lt;script src=&quot;https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js&quot;&gt;&lt;/script&gt;
-&lt;script src=&quot;https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js&quot;&gt;&lt;/script&gt;
-&lt;script src=&quot;https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js&quot;&gt;&lt;/script&gt;
-&lt;script src=&quot;https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js&quot;&gt;&lt;/script&gt;
 &lt;style&gt;
 :root{
@@ -2197,21 +2370,31 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 .spt-thread-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0}
 .spt-thread-name{font-size:.85rem;font-weight:600;color:var(--text)}
 .spt-thread-last{font-size:.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
-.spt-chat-wrap{flex:1;min-width:0}
-.spt-box{display:flex;flex-direction:column;height:520px;border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
-.spt-box-head{display:flex;align-items:center;gap:.6rem;padding:.8rem 1rem;background:var(--navy);color:#fff}
-.spt-box-head-avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;flex-shrink:0}
+.spt-chat-wrap{flex:1;min-width:0;width:100%}
+.spt-box{display:flex;flex-direction:column;height:640px;border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+.spt-box-head{display:flex;align-items:center;gap:.6rem;padding:.75rem 1rem;background:#fff;color:var(--text);border-bottom:1.5px solid var(--border)}
+.spt-box-head-avatar{width:38px;height:38px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0}
 .spt-box-head{min-width:0}
-.spt-box-head&gt;div{min-width:0;overflow:hidden}
-.spt-box-head-name{font-size:.85rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.spt-box-head-sub{font-size:.68rem;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spt-box-head-info{min-width:0;overflow:hidden;flex:1}
+.spt-box-head-name{font-size:.9rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.spt-box-head-sub{font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:.3rem}
+.spt-online-dot{width:7px;height:7px;border-radius:50%;background:#2e7d5a;flex-shrink:0;display:inline-block}
+.spt-user-select{max-width:170px;font-size:.76rem;border:1.5px solid var(--border);border-radius:100px;padding:.4rem .7rem;background:var(--bg);color:var(--text);outline:none;flex-shrink:1}
+.spt-head-icon{background:transparent;color:var(--muted);width:32px;height:32px;font-size:.9rem}
+.spt-head-icon:hover{background:var(--blue-dim);color:var(--blue)}
+.spt-date-divider{align-self:center;background:var(--surface2);color:var(--muted);font-size:.68rem;font-weight:600;padding:.3rem .8rem;border-radius:100px;margin:.4rem 0}
 .spt-msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.6rem;background:var(--bg)}
-.spt-bubble{max-width:75%;padding:.6rem .85rem;border-radius:14px;font-size:.85rem;line-height:1.5;word-wrap:break-word}
-.spt-bubble.mine{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:3px}
-.spt-bubble.theirs{align-self:flex-start;background:#fff;color:var(--text);border:1px solid var(--border);border-bottom-left-radius:3px}
+.spt-bubble{max-width:75%;padding:.6rem .85rem;border-radius:16px;font-size:.85rem;line-height:1.5;word-wrap:break-word}
+.spt-bubble.mine{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+.spt-bubble.theirs{align-self:flex-start;background:#fff;color:var(--text);border:1px solid var(--border);border-bottom-left-radius:4px}
 .spt-bubble img{max-width:100%;border-radius:10px;display:block;margin-top:.2rem;cursor:pointer}
-.spt-bubble audio{margin-top:.2rem;max-width:220px}
-.spt-bubble-time{font-size:.62rem;opacity:.7;margin-top:.25rem}
+.spt-bubble .spt-audio-wrap{display:flex;align-items:center;gap:.5rem;margin-top:.2rem;background:rgba(0,0,0,.04);border-radius:100px;padding:.3rem .5rem}
+.spt-bubble.mine .spt-audio-wrap{background:rgba(255,255,255,.18)}
+.spt-bubble .spt-audio-wrap svg{flex-shrink:0}
+.spt-bubble audio{margin-top:.2rem;max-width:220px;height:34px}
+.spt-bubble-time{font-size:.62rem;opacity:.7;margin-top:.25rem;display:flex;align-items:center;gap:.25rem;justify-content:flex-end}
+.spt-bubble.theirs .spt-bubble-time{justify-content:flex-start}
+.spt-tick{opacity:.85}
 .spt-input-row{display:flex;align-items:center;gap:.45rem;padding:.6rem .7rem;border-top:1px solid var(--border);background:#fff}
 .spt-icon-btn{background:var(--blue-dim);color:var(--blue);border:none;border-radius:50%;width:38px;height:38px;flex-shrink:0;cursor:pointer;font-size:1.05rem;display:flex;align-items:center;justify-content:center}
 .spt-icon-btn:disabled{opacity:.4;cursor:default}
@@ -2221,7 +2404,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 .spt-input-row input:focus{border-color:var(--blue)}
 .spt-send-btn{background:var(--blue);color:#fff;border:none;border-radius:50%;width:40px;height:40px;flex-shrink:0;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
 .spt-send-btn:active{transform:scale(.92)}
-@media (max-width:760px){.spt-layout{flex-direction:column;align-items:stretch;position:relative}.spt-threads{flex:0 0 auto;width:100%;max-height:calc(100vh - 220px)}.spt-chat-wrap{width:100%;display:none}.spt-box{height:calc(100vh - 220px);width:100%}.spt-layout.chat-open .spt-threads{display:none}.spt-layout.chat-open .spt-chat-wrap{display:block}.spt-back-btn{display:inline-flex}}.spt-back-btn{display:none;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:30px;height:30px;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;flex-shrink:0;margin-right:.2rem}
+@media (max-width:760px){.spt-layout{flex-direction:column;align-items:stretch;position:relative}.spt-chat-wrap{width:100%}.spt-box{height:calc(100vh - 220px);width:100%}.spt-user-select{max-width:120px}.spt-head-icon{display:none}}
 &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
@@ -2574,20 +2757,24 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
     &lt;!-- ============ SUPPORT MESSAGES (admin &lt;-&gt; user chat) ============ --&gt;
     &lt;div class=&quot;apage&quot; id=&quot;page-support&quot;&gt;
       &lt;div class=&quot;ph&quot;&gt;&lt;div class=&quot;ph-row&quot;&gt;&lt;div&gt;&lt;div class=&quot;ph-title&quot;&gt;Messages&lt;/div&gt;&lt;div class=&quot;ph-sub&quot;&gt;Chat directly with users. Replies appear instantly in their account under &quot;Contact Admin&quot;.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
-      &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;card&quot; style=&quot;padding:0&quot;&gt;
         &lt;div class=&quot;spt-layout&quot; id=&quot;spt-layout&quot;&gt;
-          &lt;div class=&quot;spt-threads&quot; id=&quot;spt-threads&quot;&gt;&lt;div class=&quot;empty&quot;&gt;Loading conversations...&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;spt-threads&quot; id=&quot;spt-threads&quot; style=&quot;display:none&quot;&gt;&lt;div class=&quot;empty&quot;&gt;Loading conversations...&lt;/div&gt;&lt;/div&gt;
           &lt;div class=&quot;spt-chat-wrap&quot;&gt;
             &lt;div class=&quot;spt-box&quot;&gt;
               &lt;div class=&quot;spt-box-head&quot;&gt;
-                &lt;button class=&quot;spt-back-btn&quot; onclick=&quot;sptBackToThreads()&quot; title=&quot;Back to conversations&quot;&gt;&amp;#8592;&lt;/button&gt;
                 &lt;div class=&quot;spt-box-head-avatar&quot; id=&quot;spt-chat-avatar&quot;&gt;?&lt;/div&gt;
-                &lt;div&gt;
+                &lt;div class=&quot;spt-box-head-info&quot;&gt;
                   &lt;div class=&quot;spt-box-head-name&quot; id=&quot;spt-chat-title&quot;&gt;Select a conversation&lt;/div&gt;
-                  &lt;div class=&quot;spt-box-head-sub&quot;&gt;Support chat&lt;/div&gt;
+                  &lt;div class=&quot;spt-box-head-sub&quot;&gt;&lt;span class=&quot;spt-online-dot&quot; id=&quot;spt-online-dot&quot;&gt;&lt;/span&gt;&lt;span id=&quot;spt-chat-status&quot;&gt;Support chat&lt;/span&gt;&lt;/div&gt;
                 &lt;/div&gt;
+                &lt;select class=&quot;spt-user-select&quot; id=&quot;spt-user-select&quot; onchange=&quot;sptSelectFromDropdown(this.value)&quot;&gt;
+                  &lt;option value=&quot;&quot;&gt;Choose a conversation&amp;hellip;&lt;/option&gt;
+                &lt;/select&gt;
+                &lt;button class=&quot;spt-icon-btn spt-head-icon&quot; title=&quot;Search&quot; type=&quot;button&quot;&gt;&amp;#128269;&lt;/button&gt;
+                &lt;button class=&quot;spt-icon-btn spt-head-icon&quot; title=&quot;More&quot; type=&quot;button&quot;&gt;&amp;#8942;&lt;/button&gt;
               &lt;/div&gt;
-              &lt;div class=&quot;spt-msgs&quot; id=&quot;spt-msgs&quot;&gt;&lt;div class=&quot;empty&quot;&gt;Pick a user on the left to see the conversation.&lt;/div&gt;&lt;/div&gt;
+              &lt;div class=&quot;spt-msgs&quot; id=&quot;spt-msgs&quot;&gt;&lt;div class=&quot;empty&quot;&gt;Choose a conversation above to see the messages.&lt;/div&gt;&lt;/div&gt;
               &lt;div class=&quot;spt-input-row&quot;&gt;
                 &lt;input type=&quot;file&quot; id=&quot;spt-img-input&quot; accept=&quot;image/*&quot; style=&quot;display:none&quot; onchange=&quot;sptSendImage(this.files[0])&quot;/&gt;
                 &lt;button class=&quot;spt-icon-btn&quot; id=&quot;spt-attach-btn&quot; onclick=&quot;document.getElementById(&#x27;spt-img-input&#x27;).click()&quot; disabled&gt;&amp;#128247;&lt;/button&gt;
@@ -6675,6 +6862,7 @@ function saveSettings(section) {
 // &quot;supportChats&quot; with a &quot;messages&quot; subcollection ordered by createdAt.
 var _sptUnsub = null;
 var _sptCurrentUid = null;
+var _sptThreadsCache = [];
 
 function sptLoadSidebarBadge() {
   db.collection(&quot;supportChats&quot;).get().then(function(snap) {
@@ -6686,36 +6874,57 @@ function sptLoadSidebarBadge() {
 }
 
 function sptLoadThreads() {
-  var wrap = document.getElementById(&quot;spt-threads&quot;);
-  wrap.innerHTML = &#x27;&lt;div class=&quot;empty&quot;&gt;Loading conversations...&lt;/div&gt;&#x27;;
+  var sel = document.getElementById(&quot;spt-user-select&quot;);
   db.collection(&quot;supportChats&quot;).get().then(function(snap) {
-    if (snap.empty) { wrap.innerHTML = &#x27;&lt;div class=&quot;empty&quot;&gt;No messages yet. Users can reach you from their account under &quot;Contact Admin&quot;.&lt;/div&gt;&#x27;; return; }
     var threads = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
     threads.sort(function(a, b) { return (b.lastAt ? b.lastAt.toMillis() : 0) - (a.lastAt ? a.lastAt.toMillis() : 0); });
-    wrap.innerHTML = threads.map(function(t) {
-      var displayName = t.userName || (t.userEmail ? t.userEmail.split(&quot;@&quot;)[0] : &quot;User&quot;);
-      return &#x27;&lt;div class=&quot;spt-thread&#x27; + (t.id === _sptCurrentUid ? &#x27; on&#x27; : &#x27;&#x27;) + &#x27;&quot; onclick=&quot;sptOpenThread(\&#x27;&#x27; + t.id + &#x27;\&#x27;, \&#x27;&#x27; + esc(displayName).replace(/&#x27;/g, &quot;\\&#x27;&quot;) + &#x27;\&#x27;)&quot;&gt;&#x27; +
-        (t.unreadAdmin ? &#x27;&lt;span class=&quot;spt-thread-dot&quot;&gt;&lt;/span&gt;&#x27; : &#x27;&lt;span style=&quot;width:8px&quot;&gt;&lt;/span&gt;&#x27;) +
-        &#x27;&lt;div style=&quot;min-width:0;overflow:hidden&quot;&gt;&lt;div class=&quot;spt-thread-name&quot; style=&quot;white-space:nowrap;overflow:hidden;text-overflow:ellipsis&quot;&gt;&#x27; + esc(displayName) + &#x27;&lt;/div&gt;&#x27; +
-        &#x27;&lt;div class=&quot;spt-thread-last&quot;&gt;&#x27; + esc(t.lastMessage || &quot;No messages yet&quot;) + &#x27;&lt;/div&gt;&lt;/div&gt;&#x27; +
-      &#x27;&lt;/div&gt;&#x27;;
-    }).join(&quot;&quot;);
+    _sptThreadsCache = threads;
+    if (sel) {
+      sel.innerHTML = &#x27;&lt;option value=&quot;&quot;&gt;Choose a conversation&amp;hellip;&lt;/option&gt;&#x27; + threads.map(function(t) {
+        var displayName = t.userName || (t.userEmail ? t.userEmail.split(&quot;@&quot;)[0] : &quot;User&quot;);
+        var label = (t.unreadAdmin ? &quot;\u25CF &quot; : &quot;&quot;) + displayName;
+        return &#x27;&lt;option value=&quot;&#x27; + esc(t.id) + &#x27;&quot;&#x27; + (t.id === _sptCurrentUid ? &quot; selected&quot; : &quot;&quot;) + &#x27;&gt;&#x27; + esc(label) + &#x27;&lt;/option&gt;&#x27;;
+      }).join(&quot;&quot;);
+    }
+    if (!_sptCurrentUid &amp;&amp; threads.length) {
+      var first = threads[0];
+      var displayName = first.userName || (first.userEmail ? first.userEmail.split(&quot;@&quot;)[0] : &quot;User&quot;);
+      sptOpenThread(first.id, displayName);
+    } else if (!threads.length) {
+      var msgsEl = document.getElementById(&quot;spt-msgs&quot;);
+      if (msgsEl) msgsEl.innerHTML = &#x27;&lt;div class=&quot;empty&quot;&gt;No messages yet. Users can reach you from their account under &quot;Contact Admin&quot;.&lt;/div&gt;&#x27;;
+    }
   }).catch(function(err) {
     console.error(&quot;Could not load support threads:&quot;, err);
-    wrap.innerHTML = &#x27;&lt;div class=&quot;empty&quot;&gt;Could not load conversations. Check Firestore rules.&lt;/div&gt;&#x27;;
+    if (sel) sel.innerHTML = &#x27;&lt;option value=&quot;&quot;&gt;Could not load conversations&lt;/option&gt;&#x27;;
   });
   sptLoadSidebarBadge();
+}
+
+function sptSelectFromDropdown(uid) {
+  if (!uid) return;
+  var t = _sptThreadsCache.find(function(x) { return x.id === uid; });
+  var displayName = t ? (t.userName || (t.userEmail ? t.userEmail.split(&quot;@&quot;)[0] : &quot;User&quot;)) : &quot;User&quot;;
+  sptOpenThread(uid, displayName);
+}
+
+function sptFormatDateDivider(d) {
+  var today = new Date(); var y = new Date(); y.setDate(y.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return &quot;Today&quot;;
+  if (d.toDateString() === y.toDateString()) return &quot;Yesterday&quot;;
+  return d.toLocaleDateString([], { month: &quot;long&quot;, day: &quot;numeric&quot;, year: &quot;numeric&quot; });
 }
 
 function sptOpenThread(uid, userName) {
   _sptCurrentUid = uid;
   document.getElementById(&quot;spt-chat-title&quot;).textContent = userName || &quot;User&quot;;
   document.getElementById(&quot;spt-chat-avatar&quot;).textContent = (userName || &quot;U&quot;).trim().charAt(0).toUpperCase();
+  var statusEl = document.getElementById(&quot;spt-chat-status&quot;); if (statusEl) statusEl.textContent = &quot;Support chat&quot;;
+  var dotEl = document.getElementById(&quot;spt-online-dot&quot;); if (dotEl) dotEl.style.display = &quot;inline-block&quot;;
+  var selEl = document.getElementById(&quot;spt-user-select&quot;); if (selEl) selEl.value = uid;
   document.getElementById(&quot;spt-input&quot;).disabled = false;
   document.getElementById(&quot;spt-attach-btn&quot;).disabled = false;
   document.getElementById(&quot;spt-mic-btn&quot;).disabled = false;
-  var layout = document.getElementById(&quot;spt-layout&quot;); if (layout) layout.classList.add(&quot;chat-open&quot;);
-  document.querySelectorAll(&quot;.spt-thread&quot;).forEach(function(el) { el.classList.remove(&quot;on&quot;); });
   var msgsEl = document.getElementById(&quot;spt-msgs&quot;);
   msgsEl.innerHTML = &#x27;&lt;div class=&quot;empty&quot;&gt;Loading...&lt;/div&gt;&#x27;;
 
@@ -6727,16 +6936,28 @@ function sptOpenThread(uid, userName) {
     var el = document.getElementById(&quot;spt-msgs&quot;);
     if (!el) return;
     if (snap.empty) { el.innerHTML = &#x27;&lt;div class=&quot;empty&quot;&gt;No messages yet.&lt;/div&gt;&#x27;; return; }
-    el.innerHTML = snap.docs.map(function(d) {
+    var lastDateStr = &quot;&quot;;
+    var html = &quot;&quot;;
+    snap.docs.forEach(function(d) {
       var m = d.data();
       var mine = m.sender === &quot;admin&quot;;
-      var time = m.createdAt ? m.createdAt.toDate().toLocaleString([], { month: &quot;short&quot;, day: &quot;numeric&quot;, hour: &quot;2-digit&quot;, minute: &quot;2-digit&quot; }) : &quot;&quot;;
+      var dateObj = m.createdAt ? m.createdAt.toDate() : null;
+      if (dateObj) {
+        var dStr = dateObj.toDateString();
+        if (dStr !== lastDateStr) {
+          html += &#x27;&lt;div class=&quot;spt-date-divider&quot;&gt;&#x27; + sptFormatDateDivider(dateObj) + &#x27;&lt;/div&gt;&#x27;;
+          lastDateStr = dStr;
+        }
+      }
+      var time = dateObj ? dateObj.toLocaleTimeString([], { hour: &quot;2-digit&quot;, minute: &quot;2-digit&quot; }) : &quot;&quot;;
       var body;
       if (m.type === &quot;image&quot;) { body = &#x27;&lt;img src=&quot;&#x27; + m.url + &#x27;&quot; onclick=&quot;window.open(this.src)&quot;/&gt;&#x27;; }
-      else if (m.type === &quot;audio&quot;) { body = &#x27;&lt;audio controls src=&quot;&#x27; + m.url + &#x27;&quot;&gt;&lt;/audio&gt;&#x27;; }
+      else if (m.type === &quot;audio&quot;) { body = &#x27;&lt;div class=&quot;spt-audio-wrap&quot;&gt;&#x27; + VOICE_NOTE_ICON + &#x27;&lt;audio controls preload=&quot;metadata&quot; src=&quot;&#x27; + m.url + &#x27;&quot;&gt;&lt;/audio&gt;&lt;/div&gt;&#x27;; }
       else { body = esc(m.text); }
-      return &#x27;&lt;div class=&quot;spt-bubble &#x27; + (mine ? &quot;mine&quot; : &quot;theirs&quot;) + &#x27;&quot;&gt;&#x27; + body + &#x27;&lt;div class=&quot;spt-bubble-time&quot;&gt;&#x27; + time + &#x27;&lt;/div&gt;&lt;/div&gt;&#x27;;
-    }).join(&quot;&quot;);
+      var tick = mine ? &#x27; &lt;span class=&quot;spt-tick&quot;&gt;&amp;#10003;&amp;#10003;&lt;/span&gt;&#x27; : &quot;&quot;;
+      html += &#x27;&lt;div class=&quot;spt-bubble &#x27; + (mine ? &quot;mine&quot; : &quot;theirs&quot;) + &#x27;&quot;&gt;&#x27; + body + &#x27;&lt;div class=&quot;spt-bubble-time&quot;&gt;&#x27; + time + tick + &#x27;&lt;/div&gt;&lt;/div&gt;&#x27;;
+    });
+    el.innerHTML = html;
     el.scrollTop = el.scrollHeight;
   }, function(err) {
     console.error(&quot;Support chat listener error:&quot;, err);
@@ -10191,6 +10412,7 @@ function hdLoadRooms() {
   db.collection("hotels").doc(_hotelSession).collection("rooms").get().then(function(snap) {
     _hdRooms = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
     hdRenderRooms();
+    hdRenderOverview();
   });
 }
 function hdRenderRooms() {
@@ -10271,16 +10493,134 @@ function hdLoadBookings() {
     hdRenderWallet();
   });
 }
+// ── Small date/format helpers used only by the Overview dashboard ──
+function hdoParseYMD(s) {
+  if (!s) return null;
+  var p = String(s).split("-");
+  if (p.length !== 3) { var d2 = new Date(s); return isNaN(d2) ? null : d2; }
+  return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+}
+function hdoDaysBetween(a, b) { return Math.max(1, Math.round((b - a) / 86400000)); }
+function hdoBkDate(b) { return b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(0); }
+function hdoIsSameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+function hdoInRange(d, start, end) { return d >= start && (!end || d < end); }
+function hdoDaysAgo(n) { var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - n); return d; }
+function hdoPct(cur, prev) {
+  if (!prev) return cur ? { txt: "New this period", dir: "up" } : { txt: "No change", dir: "up" };
+  var pct = ((cur - prev) / prev) * 100;
+  return { txt: Math.abs(pct).toFixed(1) + "% from last period", dir: pct >= 0 ? "up" : "down" };
+}
+function hdoStatCard(icon, color, bg, label, val, delta) {
+  return '<div class="hdo-stat-card"><div class="hdo-stat-top"><div class="hdo-stat-ico" style="background:' + bg + ';color:' + color + '">' + icon + '</div><div class="hdo-stat-lbl">' + label + '</div></div>' +
+    '<div class="hdo-stat-val">' + val + '</div>' +
+    (delta ? '<div class="hdo-stat-delta ' + delta.dir + '">' + (delta.dir === "up" ? "&#8593;" : "&#8595;") + ' ' + delta.txt + '</div>' : '') +
+    '</div>';
+}
+var _hdoChartBk = null, _hdoChartRev = null, _hdoChartOcc = null;
 function hdRenderOverview() {
-  var totalRevenue = _hdBookings.reduce(function(s, b) { return s + (b.hotelShare || 0); }, 0);
   var h = _hotelProfile || {};
-  document.getElementById("hd-stats").innerHTML =
-    statCardMain("&#128176;", "var(--gold)", "var(--gold-dim)", "Wallet Balance", "\u20a6" + (h.walletBalance || 0).toLocaleString()) +
-    statCardMain("&#128202;", "var(--blue)", "var(--blue-bg)", "Total Bookings", _hdBookings.length) +
-    statCardMain("&#128181;", "var(--green)", "var(--green-bg)", "Total Earned", "\u20a6" + (h.totalEarned || 0).toLocaleString()) +
-    statCardMain("&#127968;", "var(--red)", "var(--red-bg)", "Rooms Listed", _hdRooms.length);
+  document.getElementById("hdo-welcome").textContent = "Welcome back" + (h.name ? ", " + h.name : "") + "! \uD83D\uDC4B";
+
+  // ---- 7-day window (this period) vs the 7 days before it (last period) ----
+  var todayStart = hdoDaysAgo(0);
+  var periodStart = hdoDaysAgo(6);
+  var prevPeriodStart = hdoDaysAgo(13);
+  var rangeLabel = periodStart.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) + " \u2013 " + new Date(todayStart.getTime() + 86400000 - 1).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  var rangeTextEl = document.getElementById("hdo-range-text");
+  if (rangeTextEl) rangeTextEl.textContent = rangeLabel;
+
+  var thisBk = _hdBookings.filter(function(b) { return hdoInRange(hdoBkDate(b), periodStart); });
+  var lastBk = _hdBookings.filter(function(b) { return hdoInRange(hdoBkDate(b), prevPeriodStart, periodStart); });
+  var thisRev = thisBk.reduce(function(s, b) { return s + (b.hotelShare || 0); }, 0);
+  var lastRev = lastBk.reduce(function(s, b) { return s + (b.hotelShare || 0); }, 0);
+  var totalRooms = _hdRooms.reduce(function(s, r) { return s + ((r.roomNumbers || []).length || 1); }, 0) || 0;
+
+  // occupied room-nights in this period vs total available room-nights
+  function occupiedNights(bookings, start, end) {
+    var nights = 0;
+    bookings.forEach(function(b) {
+      var ci = hdoParseYMD(b.checkIn), co = hdoParseYMD(b.checkOut);
+      if (!ci || !co) return;
+      var s = ci > start ? ci : start, e = co < end ? co : end;
+      if (e > s) nights += hdoDaysBetween(s, e);
+    });
+    return nights;
+  }
+  var periodEnd = new Date(todayStart.getTime() + 86400000);
+  var occThis = totalRooms ? (occupiedNights(_hdBookings, periodStart, periodEnd) / (totalRooms * 7)) * 100 : 0;
+  var occLast = totalRooms ? (occupiedNights(_hdBookings, prevPeriodStart, periodStart) / (totalRooms * 7)) * 100 : 0;
+
+  document.getElementById("hdo-stats").innerHTML =
+    hdoStatCard("&#128197;", "var(--blue)", "var(--blue-bg)", "Total Bookings", thisBk.length, hdoPct(thisBk.length, lastBk.length)) +
+    hdoStatCard("&#128176;", "var(--green)", "var(--green-bg)", "Total Revenue", "\u20a6" + thisRev.toLocaleString(), hdoPct(thisRev, lastRev)) +
+    hdoStatCard("&#127968;", "var(--purple)", "var(--purple-bg)", "Rooms Listed", totalRooms, { txt: _hdRooms.length + " room type" + (_hdRooms.length === 1 ? "" : "s"), dir: "up" }) +
+    hdoStatCard("&#128337;", "var(--gold)", "var(--gold-dim)", "Occupancy Rate", occThis.toFixed(0) + "%", hdoPct(occThis, occLast));
+
+  // ---- booking + revenue trend charts (daily buckets over the 7-day window) ----
+  var labels = [], bkCounts = [], revSums = [];
+  for (var i = 6; i >= 0; i--) {
+    var d = hdoDaysAgo(i);
+    labels.push(d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }));
+    var dayBk = _hdBookings.filter(function(b) { return hdoIsSameDay(hdoBkDate(b), d); });
+    bkCounts.push(dayBk.length);
+    revSums.push(dayBk.reduce(function(s, b) { return s + (b.hotelShare || 0); }, 0));
+  }
+  document.getElementById("hdo-bk-total").textContent = thisBk.length;
+  document.getElementById("hdo-rev-total").textContent = "\u20a6" + thisRev.toLocaleString();
+  if (_hdoChartBk) _hdoChartBk.destroy();
+  _hdoChartBk = new Chart(document.getElementById("hdo-chart-bookings"), { type: "line", data: { labels: labels, datasets: [{ data: bkCounts, borderColor: "#1a56db", backgroundColor: "rgba(26,86,219,.1)", fill: true, tension: .4, pointRadius: 2 }] }, options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+  if (_hdoChartRev) _hdoChartRev.destroy();
+  _hdoChartRev = new Chart(document.getElementById("hdo-chart-revenue"), { type: "bar", data: { labels: labels, datasets: [{ data: revSums, backgroundColor: "#2e7d5a", borderRadius: 4 }] }, options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return "\u20a6" + (v >= 1000 ? (v / 1000) + "K" : v); } } } } } });
+
+  // ---- recent bookings ----
   var recent = _hdBookings.slice(0, 5);
-  document.getElementById("hd-recent").innerHTML = recent.length ? recent.map(hdBookingRow).join("") : '<div class="empty">No bookings yet.</div>';
+  document.getElementById("hdo-recent").innerHTML = recent.length ? recent.map(hdoRecentRow).join("") : '<div class="empty">No bookings yet.</div>';
+
+  // ---- top performing rooms ----
+  var byType = {};
+  _hdBookings.forEach(function(b) {
+    var key = b.roomType || "Room";
+    if (!byType[key]) byType[key] = { name: key, bookings: 0, revenue: 0 };
+    byType[key].bookings++;
+    byType[key].revenue += (b.hotelShare || 0);
+  });
+  var topRooms = Object.keys(byType).map(function(k) { return byType[k]; }).sort(function(a, b) { return b.revenue - a.revenue; }).slice(0, 4);
+  document.getElementById("hdo-top-rooms").innerHTML = topRooms.length ? topRooms.map(function(r) {
+    var roomDef = _hdRooms.find(function(rm) { return rm.name === r.name; });
+    var img = roomDef && roomDef.imageURL ? '<img class="hdo-row-img" src="' + roomDef.imageURL + '"/>' : '<div class="hdo-row-img" style="display:flex;align-items:center;justify-content:center;font-size:1.2rem">&#128716;</div>';
+    return '<div class="hdo-row">' + img + '<div class="hdo-row-main"><div class="hdo-row-name">' + esc(r.name) + '</div><div class="hdo-row-sub">' + r.bookings + ' booking' + (r.bookings === 1 ? "" : "s") + '</div></div>' +
+      '<div class="hdo-row-right"><div class="hdo-row-amt">\u20a6' + r.revenue.toLocaleString() + '</div><div class="hdo-row-sub">Revenue</div></div></div>';
+  }).join("") : '<div class="empty">No bookings yet.</div>';
+
+  // ---- occupancy donut ----
+  var occNightsThis = occupiedNights(_hdBookings, periodStart, periodEnd);
+  var availNights = totalRooms * 7;
+  var freeNights = Math.max(0, availNights - occNightsThis);
+  document.getElementById("hdo-occ-pct").textContent = occThis.toFixed(0) + "%";
+  document.getElementById("hdo-occ-legend").innerHTML =
+    '<div class="hdo-occ-leg-row"><span class="hdo-occ-dot" style="background:#1a56db"></span><div class="hdo-occ-leg-txt"><b>Occupied Rooms</b><span>' + occThis.toFixed(0) + '% (' + occNightsThis + ' nights)</span></div></div>' +
+    '<div class="hdo-occ-leg-row"><span class="hdo-occ-dot" style="background:var(--border)"></span><div class="hdo-occ-leg-txt"><b>Available Rooms</b><span>' + (100 - occThis).toFixed(0) + '% (' + freeNights + ' nights)</span></div></div>';
+  if (_hdoChartOcc) _hdoChartOcc.destroy();
+  _hdoChartOcc = new Chart(document.getElementById("hdo-chart-occ"), { type: "doughnut", data: { labels: ["Occupied", "Available"], datasets: [{ data: [occNightsThis || 0, freeNights || (totalRooms ? 0 : 1)], backgroundColor: ["#1a56db", "#dde6f0"], borderWidth: 0 }] }, options: { cutout: "72%", plugins: { legend: { display: false } } } });
+
+  // ---- upcoming check-ins ----
+  var upcoming = _hdBookings.filter(function(b) {
+    var ci = hdoParseYMD(b.checkIn);
+    return ci && ci >= todayStart && b.status !== "Cancelled";
+  }).sort(function(a, b) { return hdoParseYMD(a.checkIn) - hdoParseYMD(b.checkIn); }).slice(0, 5);
+  document.getElementById("hdo-checkins").innerHTML = upcoming.length ? upcoming.map(function(b) {
+    var initials = (b.name || "?").trim().split(/\s+/).map(function(w) { return w[0]; }).slice(0, 2).join("").toUpperCase();
+    return '<div class="hdo-row"><div class="hdo-avatar">' + esc(initials) + '</div><div class="hdo-row-main"><div class="hdo-row-name">' + esc(b.name) + '</div><div class="hdo-row-sub">' + esc(b.roomType || "") + '</div></div><div class="hdo-row-right"><div class="hdo-row-amt" style="font-size:.74rem">' + esc(b.checkIn) + '</div></div></div>';
+  }).join("") : '<div class="empty">No upcoming check-ins.</div>';
+}
+function hdoRecentRow(b) {
+  var initials = (b.name || "?").trim().split(/\s+/).map(function(w) { return w[0]; }).slice(0, 2).join("").toUpperCase();
+  var ci = hdoParseYMD(b.checkIn), co = hdoParseYMD(b.checkOut);
+  var nights = (ci && co) ? hdoDaysBetween(ci, co) : null;
+  var statusClass = (b.status || "pending").toLowerCase();
+  return '<div class="hdo-row"><div class="hdo-avatar">' + esc(initials) + '</div>' +
+    '<div class="hdo-row-main"><div class="hdo-row-name">' + esc(b.name) + '</div><div class="hdo-row-sub">' + esc(b.checkIn || "") + (nights ? ' &middot; ' + nights + ' Night' + (nights === 1 ? "" : "s") : "") + '</div></div>' +
+    '<div class="hdo-row-right"><span class="hdo-pill ' + statusClass + '">' + esc(b.status || "Pending") + '</span><div class="hdo-row-amt">\u20a6' + (b.hotelShare || 0).toLocaleString() + '</div></div></div>';
 }
 function hdRenderBookings() {
   document.getElementById("hd-bookings-list").innerHTML = _hdBookings.length ? _hdBookings.map(hdBookingRow).join("") : '<div class="empty">No bookings yet.</div>';
@@ -10313,6 +10653,10 @@ function hdRenderNotifications() {
   var unread = _hdNotifications.filter(function(n) { return !n.read; }).length;
   if (badge) {
     if (unread) { badge.textContent = unread; badge.style.display = "inline-flex"; } else { badge.style.display = "none"; }
+  }
+  var topBadge = document.getElementById("hd-topbar-notif-badge");
+  if (topBadge) {
+    if (unread) { topBadge.textContent = unread; topBadge.style.display = "flex"; } else { topBadge.style.display = "none"; }
   }
   var list = document.getElementById("hd-notif-list");
   if (!list) return;
