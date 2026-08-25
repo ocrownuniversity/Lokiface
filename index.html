@@ -96,8 +96,8 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text);min
 .hz-banner-tag{display:inline-block;background:var(--ha-gold);color:var(--ink);font-size:.58rem;font-weight:700;letter-spacing:.08em;padding:.2rem .5rem;border-radius:5px;margin-bottom:.3rem}
 .hz-banner-h{font-family:'Playfair Display',serif;color:#fff;font-size:1.02rem;font-weight:700}
 .hz-banner-p{color:rgba(255,255,255,.65);font-size:.72rem;margin-top:.15rem}
-.hz-banner-row{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.55rem}
-.hz-banner-price{color:var(--ha-gold);font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;text-align:right;flex-shrink:0}
+.hz-banner-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem .8rem;margin-top:.55rem;flex-wrap:wrap}
+.hz-banner-price{color:var(--ha-gold);font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;text-align:right;flex-shrink:0;white-space:nowrap}
 .hz-banner-price small{display:block;font-family:'Jost',sans-serif;font-size:.56rem;color:rgba(255,255,255,.55);font-weight:400;letter-spacing:.04em}
 .hz-banner-btn{background:#fff;color:var(--ink);border:none;border-radius:8px;padding:.5rem 1.05rem;font-weight:700;font-size:.72rem;cursor:pointer;flex-shrink:0}
 @media(max-width:860px){
@@ -115,6 +115,8 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text);min
   .hz-trust{margin:1.1rem auto 0;padding:0 1.5rem 1.4rem;gap:.7rem 1.3rem}
   .hz-banner{margin-left:-1.5rem;margin-right:-1.5rem;max-width:none;width:calc(100% + 3rem)}
   .hz-banner-in{border-radius:0}
+  .hz-banner-btn{padding:.5rem .8rem;font-size:.68rem}
+  .hz-banner-price{font-size:1rem}
   .hz-quick-item{border-right:none}
   .hz-hero{padding-bottom:.2rem}
   .hz-hero + .sec{padding-top:1.1rem!important}
@@ -2053,7 +2055,7 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
 .spt-input-row input:focus{border-color:var(--blue)}
 .spt-send-btn{background:var(--blue);color:#fff;border:none;border-radius:50%;width:40px;height:40px;flex-shrink:0;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
 .spt-send-btn:active{transform:scale(.92)}
-@media (max-width:760px){.spt-layout{flex-direction:column}.spt-threads{flex:0 0 auto;width:100%;max-height:220px}.spt-box{height:480px}}
+@media (max-width:760px){.spt-layout{flex-direction:column;align-items:stretch}.spt-threads{flex:0 0 auto;width:100%;max-height:220px}.spt-chat-wrap{width:100%}.spt-box{height:480px;width:100%}}
 &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
@@ -4852,24 +4854,43 @@ var _chartUsersRole, _chartUsersStatus;
 var ROLE_LABEL = { customer:&quot;Customer&quot;, hotelPartner:&quot;Hotel Partner&quot;, admin:&quot;Admin&quot; };
 var ROLE_PILL = { customer:&quot;pill-green&quot;, hotelPartner:&quot;pill-blue&quot;, admin:&quot;pill-purple&quot; };
 
+// Hotel Partner accounts live in the &quot;hotels&quot; collection (one doc per hotel,
+// with an ownerName/ownerEmail) and Admins live in the &quot;subadmins&quot; collection
+// &#x2014; neither is a doc in &quot;users&quot;. This merges both into the Users page&#x27;s
+// view (stats/tabs/list/export/charts) so the counts reflect everyone on the
+// platform, not just customers. Their role/status still lives in their own
+// collection, so it&#x27;s shown here read-only; manage them from My Hotels /
+// Sub Admins as usual, and any status change made from this page for them
+// updates that same source record.
+function getAllPeople() {
+  var fromHotels = (_allHotels||[]).map(function(h){
+    return { id:&quot;hotel:&quot;+h.id, _src:&quot;hotels&quot;, _srcId:h.id, name:h.ownerName||h.name||&quot;(Hotel Owner)&quot;, email:h.ownerEmail||&quot;&quot;, role:&quot;hotelPartner&quot;, status:(h.status||&quot;Active&quot;), createdAt:h.createdAt };
+  });
+  var fromSubAdmins = (_allSubAdmins||[]).map(function(sa){
+    return { id:&quot;subadmin:&quot;+sa.id, _src:&quot;subadmins&quot;, _srcId:sa.id, name:sa.name||sa.username||&quot;(Sub Admin)&quot;, email:sa.username||&quot;&quot;, role:&quot;admin&quot;, status:saStatus(sa), createdAt:sa.createdAt };
+  });
+  return _allUsers.concat(fromHotels, fromSubAdmins);
+}
 function renderUsersStats() {
-  var customers = _allUsers.filter(function(u){ return u.role===&quot;customer&quot;; }).length;
-  var partners = _allUsers.filter(function(u){ return u.role===&quot;hotelPartner&quot;; }).length;
-  var admins = _allUsers.filter(function(u){ return u.role===&quot;admin&quot;; }).length;
-  var blocked = _allUsers.filter(function(u){ return u.status===&quot;blocked&quot;; }).length;
+  var people = getAllPeople();
+  var customers = people.filter(function(u){ return u.role===&quot;customer&quot;; }).length;
+  var partners = people.filter(function(u){ return u.role===&quot;hotelPartner&quot;; }).length;
+  var admins = people.filter(function(u){ return u.role===&quot;admin&quot;; }).length;
+  var blocked = people.filter(function(u){ return String(u.status).toLowerCase()===&quot;blocked&quot;; }).length;
   document.getElementById(&quot;users-stats&quot;).innerHTML =
-    statCard(&quot;&amp;#128101;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Users&quot;, _allUsers.length) +
+    statCard(&quot;&amp;#128101;&quot;, &quot;var(--blue)&quot;, &quot;var(--blue-dim)&quot;, &quot;Total Users&quot;, people.length) +
     statCard(&quot;&amp;#128100;&quot;, &quot;var(--green)&quot;, &quot;var(--green-bg)&quot;, &quot;Customers&quot;, customers) +
     statCard(&quot;&amp;#127974;&quot;, &quot;var(--purple)&quot;, &quot;var(--purple-bg)&quot;, &quot;Hotel Partners&quot;, partners) +
     statCard(&quot;&amp;#128273;&quot;, &quot;var(--amber)&quot;, &quot;var(--amber-bg)&quot;, &quot;Admins&quot;, admins) +
     statCard(&quot;&amp;#128683;&quot;, &quot;var(--red)&quot;, &quot;var(--red-bg)&quot;, &quot;Blocked Users&quot;, blocked);
 }
 function renderUsersTabs() {
-  var customers = _allUsers.filter(function(u){ return u.role===&quot;customer&quot;; }).length;
-  var partners = _allUsers.filter(function(u){ return u.role===&quot;hotelPartner&quot;; }).length;
-  var admins = _allUsers.filter(function(u){ return u.role===&quot;admin&quot;; }).length;
+  var people = getAllPeople();
+  var customers = people.filter(function(u){ return u.role===&quot;customer&quot;; }).length;
+  var partners = people.filter(function(u){ return u.role===&quot;hotelPartner&quot;; }).length;
+  var admins = people.filter(function(u){ return u.role===&quot;admin&quot;; }).length;
   var tabs = [
-    {key:&quot;&quot;, label:&quot;All (&quot;+_allUsers.length+&quot;)&quot;},
+    {key:&quot;&quot;, label:&quot;All (&quot;+people.length+&quot;)&quot;},
     {key:&quot;customer&quot;, label:&quot;Customers (&quot;+customers+&quot;)&quot;},
     {key:&quot;hotelPartner&quot;, label:&quot;Hotel Partners (&quot;+partners+&quot;)&quot;},
     {key:&quot;admin&quot;, label:&quot;Admins (&quot;+admins+&quot;)&quot;}
@@ -4883,11 +4904,11 @@ function filteredUsers() {
   var q = (document.getElementById(&quot;users-search&quot;).value||&quot;&quot;).toLowerCase();
   var typeF = document.getElementById(&quot;users-type-filter&quot;).value;
   var statusF = document.getElementById(&quot;users-status-filter&quot;).value;
-  return _allUsers.filter(function(u){
+  return getAllPeople().filter(function(u){
     var match = !q || (u.name||&quot;&quot;).toLowerCase().indexOf(q)&gt;-1 || (u.email||&quot;&quot;).toLowerCase().indexOf(q)&gt;-1;
     var roleT = !_usersRoleTab || u.role===_usersRoleTab;
     var typeT = !typeF || u.role===typeF;
-    var stT = !statusF || u.status===statusF;
+    var stT = !statusF || String(u.status).toLowerCase()===statusF;
     return match &amp;&amp; roleT &amp;&amp; typeT &amp;&amp; stT;
   });
 }
@@ -4901,13 +4922,16 @@ function renderUsersList() {
     var initial = (u.name||&quot;?&quot;).trim().charAt(0).toUpperCase();
     var roleKey = u.role || &quot;&quot;;
     var roleCls = roleKey ? (&quot;r-&quot;+roleKey) : &quot;r-unassigned&quot;;
-    var roleSelect = &#x27;&lt;select class=&quot;role-select &#x27;+roleCls+&#x27;&quot; onchange=&quot;setUserRole(\&#x27;&#x27;+u.id+&#x27;\&#x27;,this.value)&quot;&gt;&#x27; +
-      &#x27;&lt;option value=&quot;&quot;&#x27;+(roleKey?&quot;&quot;:&quot; selected&quot;)+&#x27;&gt;Unassigned&lt;/option&gt;&#x27; +
-      &#x27;&lt;option value=&quot;customer&quot;&#x27;+(roleKey===&quot;customer&quot;?&quot; selected&quot;:&quot;&quot;)+&#x27;&gt;Customer&lt;/option&gt;&#x27; +
-      &#x27;&lt;option value=&quot;hotelPartner&quot;&#x27;+(roleKey===&quot;hotelPartner&quot;?&quot; selected&quot;:&quot;&quot;)+&#x27;&gt;Hotel Partner&lt;/option&gt;&#x27; +
-      &#x27;&lt;option value=&quot;admin&quot;&#x27;+(roleKey===&quot;admin&quot;?&quot; selected&quot;:&quot;&quot;)+&#x27;&gt;Admin&lt;/option&gt;&#x27; +
-    &#x27;&lt;/select&gt;&#x27;;
-    html += &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&#x27;+initial+&#x27;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(u.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(u.email)+&#x27; &amp;middot; &#x27;+fmtDate(u.createdAt)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+roleSelect+&#x27;&amp;nbsp;&#x27;+pill(u.status||&quot;active&quot;)+&#x27;&lt;button class=&quot;kebab&quot; onclick=&quot;cycleUserStatus(\&#x27;&#x27;+u.id+&#x27;\&#x27;)&quot;&gt;&amp;#8942;&lt;/button&gt;&lt;/div&gt;&#x27;;
+    var roleField = u._src ?
+      &#x27;&lt;span class=&quot;pill role-select &#x27;+roleCls+&#x27;&quot; title=&quot;Managed from &#x27;+(u._src===&quot;hotels&quot;?&quot;My Hotels&quot;:&quot;Sub Admins&quot;)+&#x27;&quot;&gt;&#x27;+(ROLE_LABEL[roleKey]||roleKey)+&#x27;&lt;/span&gt;&#x27; :
+      &#x27;&lt;select class=&quot;role-select &#x27;+roleCls+&#x27;&quot; onchange=&quot;setUserRole(\&#x27;&#x27;+u.id+&#x27;\&#x27;,this.value)&quot;&gt;&#x27; +
+        &#x27;&lt;option value=&quot;&quot;&#x27;+(roleKey?&quot;&quot;:&quot; selected&quot;)+&#x27;&gt;Unassigned&lt;/option&gt;&#x27; +
+        &#x27;&lt;option value=&quot;customer&quot;&#x27;+(roleKey===&quot;customer&quot;?&quot; selected&quot;:&quot;&quot;)+&#x27;&gt;Customer&lt;/option&gt;&#x27; +
+        &#x27;&lt;option value=&quot;hotelPartner&quot;&#x27;+(roleKey===&quot;hotelPartner&quot;?&quot; selected&quot;:&quot;&quot;)+&#x27;&gt;Hotel Partner&lt;/option&gt;&#x27; +
+        &#x27;&lt;option value=&quot;admin&quot;&#x27;+(roleKey===&quot;admin&quot;?&quot; selected&quot;:&quot;&quot;)+&#x27;&gt;Admin&lt;/option&gt;&#x27; +
+      &#x27;&lt;/select&gt;&#x27;;
+    var kebabAction = u._src===&quot;hotels&quot; ? &quot;cycleHotelStatus(&#x27;&quot;+u._srcId+&quot;&#x27;)&quot; : u._src===&quot;subadmins&quot; ? &quot;cycleSubAdminStatus(&#x27;&quot;+u._srcId+&quot;&#x27;)&quot; : &quot;cycleUserStatus(&#x27;&quot;+u.id+&quot;&#x27;)&quot;;
+    html += &#x27;&lt;div class=&quot;list-row&quot;&gt;&lt;div class=&quot;avatar-sm&quot;&gt;&#x27;+initial+&#x27;&lt;/div&gt;&lt;div style=&quot;flex:1&quot;&gt;&lt;div class=&quot;lr-name&quot;&gt;&#x27;+esc(u.name)+&#x27;&lt;/div&gt;&lt;div class=&quot;lr-sub&quot;&gt;&#x27;+esc(u.email)+&#x27; &amp;middot; &#x27;+fmtDate(u.createdAt)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;+roleField+&#x27;&amp;nbsp;&#x27;+pill(u.status||&quot;active&quot;)+&#x27;&lt;button class=&quot;kebab&quot; onclick=&quot;&#x27;+kebabAction+&#x27;&quot;&gt;&amp;#8942;&lt;/button&gt;&lt;/div&gt;&#x27;;
   });
   document.getElementById(&quot;users-list&quot;).innerHTML = slice.length ? html : &#x27;&lt;div class=&quot;empty&quot;&gt;No users found.&lt;/div&gt;&#x27;;
   var pager = &quot;&quot;;
@@ -4921,7 +4945,7 @@ function renderUsersList() {
 }
 function exportUsersCSV() {
   var rows = [[&quot;Name&quot;,&quot;Email&quot;,&quot;Role&quot;,&quot;Status&quot;,&quot;Signed Up&quot;]];
-  _allUsers.forEach(function(u){
+  getAllPeople().forEach(function(u){
     rows.push([u.name, u.email, ROLE_LABEL[u.role]||u.role||&quot;Unassigned&quot;, u.status||&quot;active&quot;, fmtDate(u.createdAt)]);
   });
   var csv = rows.map(function(r){ return r.map(function(c){ return &#x27;&quot;&#x27;+String(c==null?&quot;&quot;:c).replace(/&quot;/g,&#x27;&quot;&quot;&#x27;)+&#x27;&quot;&#x27;; }).join(&quot;,&quot;); }).join(&quot;\n&quot;);
@@ -4955,17 +4979,18 @@ function cycleUserStatus(id) {
   }).catch(function(){ T(&quot;Error&quot;, &quot;Could not update user.&quot;); });
 }
 function renderUsersCharts() {
-  var customers = _allUsers.filter(function(u){ return u.role===&quot;customer&quot;; }).length;
-  var partners = _allUsers.filter(function(u){ return u.role===&quot;hotelPartner&quot;; }).length;
-  var admins = _allUsers.filter(function(u){ return u.role===&quot;admin&quot;; }).length;
+  var people = getAllPeople();
+  var customers = people.filter(function(u){ return u.role===&quot;customer&quot;; }).length;
+  var partners = people.filter(function(u){ return u.role===&quot;hotelPartner&quot;; }).length;
+  var admins = people.filter(function(u){ return u.role===&quot;admin&quot;; }).length;
   if (_chartUsersRole) _chartUsersRole.destroy();
-  _chartUsersRole = new Chart(document.getElementById(&quot;users-chart-role&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Customers&quot;,&quot;Hotel Partners&quot;,&quot;Admins&quot;], datasets:[{data:[customers,partners,admins], backgroundColor:[&quot;#16a34a&quot;,&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}, centerText:{title:&quot;Total&quot;, value:_allUsers.length}}, cutout:&quot;60%&quot;}});
+  _chartUsersRole = new Chart(document.getElementById(&quot;users-chart-role&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Customers&quot;,&quot;Hotel Partners&quot;,&quot;Admins&quot;], datasets:[{data:[customers,partners,admins], backgroundColor:[&quot;#16a34a&quot;,&quot;#2f5fdb&quot;,&quot;#7c3aed&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}, centerText:{title:&quot;Total&quot;, value:people.length}}, cutout:&quot;60%&quot;}});
 
-  var active = _allUsers.filter(function(u){ return (u.status||&quot;active&quot;)===&quot;active&quot;; }).length;
-  var inactive = _allUsers.filter(function(u){ return u.status===&quot;inactive&quot;; }).length;
-  var blocked = _allUsers.filter(function(u){ return u.status===&quot;blocked&quot;; }).length;
+  var active = people.filter(function(u){ return String(u.status||&quot;active&quot;).toLowerCase()===&quot;active&quot;; }).length;
+  var inactive = people.filter(function(u){ return String(u.status).toLowerCase()===&quot;inactive&quot;; }).length;
+  var blocked = people.filter(function(u){ return [&quot;blocked&quot;,&quot;suspended&quot;].indexOf(String(u.status).toLowerCase())&gt;-1; }).length;
   if (_chartUsersStatus) _chartUsersStatus.destroy();
-  _chartUsersStatus = new Chart(document.getElementById(&quot;users-chart-status&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Active&quot;,&quot;Inactive&quot;,&quot;Blocked&quot;], datasets:[{data:[active,inactive,blocked], backgroundColor:[&quot;#16a34a&quot;,&quot;#9aa3b2&quot;,&quot;#dc2626&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}, centerText:{title:&quot;Total&quot;, value:_allUsers.length}}, cutout:&quot;60%&quot;}});
+  _chartUsersStatus = new Chart(document.getElementById(&quot;users-chart-status&quot;), {type:&quot;doughnut&quot;, data:{labels:[&quot;Active&quot;,&quot;Inactive&quot;,&quot;Blocked&quot;], datasets:[{data:[active,inactive,blocked], backgroundColor:[&quot;#16a34a&quot;,&quot;#9aa3b2&quot;,&quot;#dc2626&quot;], borderWidth:0}]}, options:{plugins:{legend:{position:&quot;bottom&quot;}, centerText:{title:&quot;Total&quot;, value:people.length}}, cutout:&quot;60%&quot;}});
 }
 function openUserModal() { openModalEl(&quot;user-modal&quot;); }
 function saveUser() {
