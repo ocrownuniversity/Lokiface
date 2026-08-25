@@ -7894,8 +7894,14 @@ function chatBubbleHtml(m, mine, initials, idPrefix, idx) {
   var time = m.createdAt ? m.createdAt.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
   var inner;
   if (m.type === "image") {
-    inner = '<div class="chat-img-wrap"><img src="' + esc(m.url) + '" alt="Photo" onclick="window.open(this.src)" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"/>' +
-      '<div class="chat-img-fallback">&#128247;<span>Photo could not load</span></div></div>';
+    var imgUrl = m.url || "";
+    if (!imgUrl) {
+      inner = '<div class="chat-img-fallback" style="display:flex">&#9888;&#65039;<span>Photo failed to upload (no URL saved)</span></div>';
+    } else {
+      inner = '<div class="chat-img-wrap"><img src="' + esc(imgUrl) + '" alt="Photo" onclick="window.open(this.src)" ' +
+        'onerror="console.warn(\'Image failed to load:\', this.src);this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"/>' +
+        '<div class="chat-img-fallback">&#128247;<span>Photo could not load</span><a href="' + esc(imgUrl) + '" target="_blank" rel="noopener" style="color:var(--gold);font-weight:600" onclick="event.stopPropagation()">Open link directly &#8599;</a></div></div>';
+    }
   } else if (m.type === "audio") {
     var aid = idPrefix + "-a" + idx;
     inner = '<div class="chat-audio" id="' + aid + '" data-url="' + esc(m.url) + '">' +
@@ -9360,13 +9366,25 @@ function accSendSupportMessage() {
   }).catch(function() { T("Error", "Could not send your message. Please try again."); });
 }
 
+function accInsertLocalError(text) {
+  var msgsEl = document.getElementById("acc-support-msgs");
+  if (!msgsEl) return;
+  var div = document.createElement("div");
+  div.className = "emst";
+  div.style.cssText = "background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red);border-radius:8px;margin-top:.4rem";
+  div.innerHTML = '<span class="ei">&#9888;&#65039;</span>' + esc(text);
+  msgsEl.appendChild(div);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
 function accSendSupportImage(file) {
   if (!file || !_accUser) return;
   var uid = _accUser.uid;
   var path = "supportChats/" + uid + "/" + Date.now() + "_" + file.name;
+  console.log("Uploading image to Storage path:", path, "bucket:", storage.app.options.storageBucket);
   storage.ref().child(path).put(file).then(function(snap) {
     return snap.ref.getDownloadURL();
   }).then(function(url) {
+    console.log("Image uploaded, download URL:", url);
     return db.collection("supportChats").doc(uid).collection("messages").add({
       sender: "user", type: "image", url: url, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -9377,7 +9395,8 @@ function accSendSupportImage(file) {
   }).catch(function(err) {
     console.error("Could not send image:", err);
     var detail = err && (err.code || err.message) ? " (" + (err.code || err.message) + ")" : "";
-    T("Error", "Could not send the image." + detail);
+    T("Error", "Could not send the image." + detail, 8000);
+    accInsertLocalError("Photo upload failed: " + (err && (err.code || err.message) || "unknown error"));
   }).finally(function() {
     var el = document.getElementById("acc-support-img-input");
     if (el) el.value = "";
@@ -9434,11 +9453,17 @@ function accUploadSupportAudio(blob) {
   if (!uid) return;
   var ext = blob.type.indexOf("mp4") !== -1 ? "m4a" : "webm";
   var path = "supportChats/" + uid + "/" + Date.now() + "_voice." + ext;
+  console.log("Uploading voice note to Storage path:", path, "bucket:", storage.app.options.storageBucket, "size:", blob.size, "type:", blob.type);
   var timedOut = false;
-  var timer = setTimeout(function() { timedOut = true; T("Error", "Sending the voice note is taking too long. Check your connection and try again."); }, 20000);
+  var timer = setTimeout(function() {
+    timedOut = true;
+    T("Error", "Sending the voice note is taking too long. Check your connection and try again.", 8000);
+    accInsertLocalError("Voice note upload timed out after 20s (path: " + path + "). This usually means the request never reached Firebase Storage — check your network connection.");
+  }, 20000);
   storage.ref().child(path).put(blob, { contentType: blob.type || "audio/webm" }).then(function(snap) {
     return snap.ref.getDownloadURL();
   }).then(function(url) {
+    console.log("Voice note uploaded, download URL:", url);
     return db.collection("supportChats").doc(uid).collection("messages").add({
       sender: "user", type: "audio", url: url, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -9449,7 +9474,10 @@ function accUploadSupportAudio(blob) {
   }).catch(function(err) {
     console.error("Could not send voice note:", err);
     var detail = err && (err.code || err.message) ? " (" + (err.code || err.message) + ")" : "";
-    if (!timedOut) T("Error", "Could not send the voice note." + detail);
+    if (!timedOut) {
+      T("Error", "Could not send the voice note." + detail, 8000);
+      accInsertLocalError("Voice note upload failed: " + (err && (err.code || err.message) || "unknown error"));
+    }
   }).finally(function() { clearTimeout(timer); });
 }
 
