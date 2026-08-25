@@ -9473,7 +9473,13 @@ function accRenderChats(body) {
         '<div class="chat-thread-last">' + esc(t.lastMessage || "No messages yet") + '</div></div>' +
       '</div>';
     }).join("");
-  }).catch(function() { body.innerHTML = '<div class="emst"><span class="ei">&#128172;</span>Could not load your messages.</div>'; });
+  }).catch(function(e) {
+    console.error("accRenderChats failed:", e);
+    var reason = (e && e.code === "permission-denied")
+      ? "You don't have permission to view messages yet (Firestore security rules for \"hotelChats\" need to allow a signed-in user to read documents where uid == request.auth.uid)."
+      : "Could not load your messages (" + (e && e.message ? e.message : "unknown error") + ").";
+    body.innerHTML = '<div class="emst"><span class="ei">&#128172;</span>' + esc(reason) + '</div>';
+  });
 }
 
 function accOpenChatThread(hotelId, hotelName) {
@@ -10711,6 +10717,7 @@ function hdLoadMessageThreads() {
   document.getElementById("hd-msg-thread-wrap").style.display = "none";
   var wrap = document.getElementById("hd-msg-threads");
   wrap.innerHTML = '<div class="empty">Loading messages...</div>';
+  if (!_hotelSession) { wrap.innerHTML = '<div class="empty">You need to be signed in to view messages.</div>'; return; }
   db.collection("hotelChats").where("hotelId", "==", _hotelSession).get().then(function(snap) {
     if (snap.empty) { wrap.innerHTML = '<div class="empty">No guest messages yet. Guests can start a chat from your hotel\'s page.</div>'; return; }
     var threads = snap.docs.map(function(d) { var o = d.data(); o.id = d.id; return o; });
@@ -10722,7 +10729,13 @@ function hdLoadMessageThreads() {
         '<div class="chat-thread-last">' + esc(t.lastMessage || "No messages yet") + '</div></div>' +
       '</div>';
     }).join("");
-  }).catch(function() { wrap.innerHTML = '<div class="empty">Could not load messages.</div>'; });
+  }).catch(function(e) {
+    console.error("hdLoadMessageThreads failed:", e);
+    var reason = (e && e.code === "permission-denied")
+      ? "Your account doesn't have permission to view messages yet. This is a Firestore security-rules setting, not a bug in the page \u2014 the \"hotelChats\" collection needs a rule allowing a hotel partner to read/list documents where hotelId == request.auth.uid."
+      : "Could not load messages (" + (e && e.message ? e.message : "unknown error") + ").";
+    wrap.innerHTML = '<div class="empty">' + esc(reason) + '</div>';
+  });
 }
 
 function hdOpenChatThread(tid, userName) {
