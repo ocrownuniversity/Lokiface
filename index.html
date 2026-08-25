@@ -342,21 +342,57 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(250,247,242,
 .chat-thread-last{font-size:.76rem;color:var(--muted);margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
 .chat-thread-dot{width:9px;height:9px;border-radius:50%;background:var(--gold);flex-shrink:0}
 .chat-box{display:flex;flex-direction:column;height:60vh;min-height:340px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;overflow:hidden}
-.chat-msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.55rem}
-.chat-bubble{max-width:75%;padding:.6rem .85rem;border-radius:12px;font-size:.82rem;line-height:1.5}
-.chat-bubble.mine{align-self:flex-end;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;border-bottom-right-radius:3px}
-.chat-bubble.theirs{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:3px}
-.chat-bubble-time{font-size:.6rem;opacity:.7;margin-top:.25rem}
-.chat-bubble img{max-width:100%;border-radius:8px;display:block;cursor:pointer}
-.chat-bubble audio{max-width:210px}
+.chat-head{display:flex;align-items:center;gap:.65rem;padding:.7rem .9rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.chat-head-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0}
+.chat-head-name{font-weight:700;font-size:.86rem;line-height:1.25}
+.chat-head-status{font-size:.68rem;color:var(--green);display:flex;align-items:center;gap:.3rem}
+.chat-head-status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green)}
+.chat-msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.35rem}
+.chat-date-div{align-self:center;background:rgba(16,24,40,.06);color:var(--muted);font-size:.66rem;font-weight:600;padding:.28rem .75rem;border-radius:100px;margin:.5rem 0}
+.chat-row{display:flex;align-items:flex-end;gap:.45rem;max-width:82%;margin-bottom:.2rem}
+.chat-row.mine{align-self:flex-end;flex-direction:row-reverse}
+.chat-row.theirs{align-self:flex-start}
+.chat-row-av{width:24px;height:24px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.62rem;flex-shrink:0}
+.chat-bubble{padding:.55rem .8rem;border-radius:14px;font-size:.82rem;line-height:1.5;min-width:56px}
+.chat-bubble.mine{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;border-bottom-right-radius:4px}
+.chat-bubble.theirs{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px}
+.chat-bubble-time{font-size:.6rem;opacity:.65;margin-top:.25rem;display:flex;align-items:center;gap:.25rem;justify-content:flex-end}
+.chat-bubble.theirs .chat-bubble-time{justify-content:flex-start}
+.chat-check{display:inline-flex}
+.chat-bubble img{max-width:100%;border-radius:8px;display:block;cursor:pointer;background:var(--surface2);min-height:80px}
+.chat-img-wrap{position:relative}
+.chat-img-wrap .chat-img-fallback{display:none;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;padding:1.2rem;background:var(--surface2);border-radius:8px;color:var(--muted);font-size:.68rem;text-align:center}
+/* Custom waveform audio player (replaces the bare native <audio> control) */
+.chat-audio{display:flex;align-items:center;gap:.55rem;min-width:190px}
+.chat-audio-play{width:30px;height:30px;border-radius:50%;border:none;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.chat-bubble.mine .chat-audio-play{background:rgba(255,255,255,.25);color:#fff}
+.chat-bubble.theirs .chat-audio-play{background:var(--gold-dim);color:var(--gold)}
+.chat-audio-mid{flex:1;display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.chat-audio-wave{position:relative;height:22px;display:flex;align-items:flex-end;gap:2px;overflow:hidden}
+.chat-audio-wave span{width:2.5px;border-radius:2px;background:currentColor;opacity:.35;flex-shrink:0}
+.chat-bubble.mine .chat-audio-wave{color:#fff}
+.chat-bubble.theirs .chat-audio-wave{color:var(--gold)}
+.chat-audio-fill{position:absolute;inset:0;display:flex;align-items:flex-end;gap:2px;overflow:hidden;width:0;transition:width .1s linear}
+.chat-audio-fill span{width:2.5px;border-radius:2px;background:currentColor;opacity:1;flex-shrink:0}
+.chat-audio-time{font-size:.63rem;opacity:.75;font-variant-numeric:tabular-nums}
 .chat-icon-btn{background:var(--surface2);color:var(--muted);border:1.5px solid var(--border);border-radius:100px;width:42px;height:42px;flex-shrink:0;cursor:pointer;font-size:1rem}
 .chat-icon-btn.rec{background:var(--red-bg);color:var(--red);border-color:var(--red);animation:chatMicPulse 1.1s infinite}
 .chat-icon-btn svg{display:block;margin:0 auto}
 .chat-rec-timer{font-size:.78rem;font-weight:700;color:var(--red);flex-shrink:0;min-width:38px;text-align:center;font-variant-numeric:tabular-nums}
 @keyframes chatMicPulse{0%,100%{opacity:1}50%{opacity:.55}}
-.chat-input-row{display:flex;gap:.5rem;padding:.7rem;border-top:1px solid var(--border);background:var(--surface)}
+.chat-input-row{display:flex;gap:.5rem;padding:.7rem;border-top:1px solid var(--border);background:var(--surface);align-items:center}
 .chat-input-row input{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:100px;padding:.65rem 1rem;font-family:'Jost',sans-serif;font-size:.85rem;color:var(--text);outline:none}
 .chat-send-btn{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;border:none;border-radius:100px;width:42px;height:42px;flex-shrink:0;cursor:pointer;font-size:1rem}
+/* Active voice-note recording bar: replaces the input row while recording */
+.chat-rec-bar{display:none;align-items:center;gap:.6rem;padding:.6rem .9rem;border-top:1px solid var(--border);background:var(--surface)}
+.chat-rec-bar.active{display:flex}
+.chat-rec-dot{width:10px;height:10px;border-radius:50%;background:var(--red);flex-shrink:0;animation:chatMicPulse 1s infinite}
+.chat-rec-bar .chat-rec-timer{display:inline-block !important;min-width:34px;text-align:left}
+.chat-rec-wave{flex:1;display:flex;align-items:center;gap:3px;height:20px;overflow:hidden}
+.chat-rec-wave span{width:3px;border-radius:2px;background:var(--red);opacity:.55;flex-shrink:0;animation:chatRecBar .8s ease-in-out infinite}
+@keyframes chatRecBar{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+.chat-rec-cancel-lbl{font-size:.68rem;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:.25rem}
+.chat-rec-trash{background:none;border:none;color:var(--red);cursor:pointer;font-size:1.05rem;flex-shrink:0;display:flex}
 .fg textarea{resize:vertical;min-height:80px}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)}
 .pw-wrap{position:relative}
@@ -6913,6 +6949,7 @@ setTimeout(revealLoginScreen, 4000);
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 // FIREBASE
@@ -6926,6 +6963,7 @@ firebase.initializeApp({
 });
 var db = firebase.firestore();
 var auth = firebase.auth();
+var storage = firebase.storage();
 emailjs.init("r7qlEfPQs7hyHnOHR");
 var EJS_SVC = "service_munqxoi";
 var EJS_TPL = "template_nm4cjm9";
@@ -7831,6 +7869,105 @@ function stopRecTimer(elId) {
   clearInterval(_recTimerIntervals[elId]);
   var el = document.getElementById(elId);
   if (el) el.style.display = "none";
+}
+
+// ── Chat bubble rendering helpers (avatars, date dividers, read-receipt
+// ticks, and a WhatsApp-style waveform audio player) shared by every chat
+// surface in the app (customer↔hotel chat, customer↔admin support chat). ──
+var TICK_ICON = '<svg class="chat-check" viewBox="0 0 16 11" width="14" height="10" fill="none"><path d="M1 5.5L5 9.5L10 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 5.5L10 9.5L15 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+var PLAY_ICON = '<svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 4l14 8-14 8V4z" fill="currentColor"/></svg>';
+var PAUSE_ICON = '<svg viewBox="0 0 24 24" width="13" height="13"><rect x="5" y="4" width="5" height="16" rx="1.3" fill="currentColor"/><rect x="14" y="4" width="5" height="16" rx="1.3" fill="currentColor"/></svg>';
+var _CHAT_WAVE_PATTERN = [7,13,9,17,11,20,8,15,10,18,7,14,9,16,12,19,8,13,10,17,9,15,7,12];
+function chatWaveBarsHtml() {
+  return _CHAT_WAVE_PATTERN.map(function(h) { return '<span style="height:' + h + 'px"></span>'; }).join("");
+}
+function chatDayLabel(d) {
+  var today = new Date(), yest = new Date(); yest.setDate(today.getDate() - 1);
+  var sameDay = function(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); };
+  if (sameDay(d, today)) return "Today";
+  if (sameDay(d, yest)) return "Yesterday";
+  return d.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" });
+}
+// Renders one message into a chat-row (avatar + bubble). `initials` is
+// shown in the avatar circle for messages that aren't "mine".
+function chatBubbleHtml(m, mine, initials, idPrefix, idx) {
+  var time = m.createdAt ? m.createdAt.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+  var inner;
+  if (m.type === "image") {
+    inner = '<div class="chat-img-wrap"><img src="' + esc(m.url) + '" alt="Photo" onclick="window.open(this.src)" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"/>' +
+      '<div class="chat-img-fallback">&#128247;<span>Photo could not load</span></div></div>';
+  } else if (m.type === "audio") {
+    var aid = idPrefix + "-a" + idx;
+    inner = '<div class="chat-audio" id="' + aid + '" data-url="' + esc(m.url) + '">' +
+      '<button class="chat-audio-play" onclick="toggleChatAudio(\'' + aid + '\')">' + PLAY_ICON + '</button>' +
+      '<div class="chat-audio-mid"><div class="chat-audio-wave">' + chatWaveBarsHtml() + '<div class="chat-audio-fill">' + chatWaveBarsHtml() + '</div></div>' +
+      '<span class="chat-audio-time">0:00</span></div></div>';
+  } else {
+    inner = esc(m.text);
+  }
+  var tick = mine ? '<span class="chat-check">' + TICK_ICON + '</span>' : "";
+  var avatar = mine ? "" : '<div class="chat-row-av">' + esc(initials || "?") + '</div>';
+  return '<div class="chat-row ' + (mine ? "mine" : "theirs") + '">' + avatar +
+    '<div class="chat-bubble ' + (mine ? "mine" : "theirs") + '">' + inner +
+    '<div class="chat-bubble-time">' + time + tick + '</div></div></div>';
+}
+// Groups a snapshot's messages into day-divider + bubble HTML.
+function chatMessagesHtml(docs, mineSender, initials, idPrefix) {
+  var out = [], lastDay = null;
+  docs.forEach(function(d, i) {
+    var m = d.data();
+    var mine = m.sender === mineSender;
+    var dt = m.createdAt ? m.createdAt.toDate() : null;
+    if (dt) {
+      var key = dt.toDateString();
+      if (key !== lastDay) { out.push('<div class="chat-date-div">' + chatDayLabel(dt) + '</div>'); lastDay = key; }
+    }
+    out.push(chatBubbleHtml(m, mine, initials, idPrefix, i));
+  });
+  return out.join("");
+}
+var _chatAudioPlaying = null;
+function toggleChatAudio(id) {
+  var wrap = document.getElementById(id);
+  if (!wrap) return;
+  var url = wrap.getAttribute("data-url");
+  var btn = wrap.querySelector(".chat-audio-play");
+  var fill = wrap.querySelector(".chat-audio-fill");
+  var timeEl = wrap.querySelector(".chat-audio-time");
+  var audioEl = wrap._audioEl;
+  if (!audioEl) {
+    audioEl = new Audio(url);
+    wrap._audioEl = audioEl;
+    audioEl.addEventListener("loadedmetadata", function() {
+      if (isFinite(audioEl.duration)) timeEl.textContent = fmtChatTime(audioEl.duration);
+    });
+    audioEl.addEventListener("timeupdate", function() {
+      if (audioEl.duration) fill.style.width = (audioEl.currentTime / audioEl.duration * 100) + "%";
+      timeEl.textContent = fmtChatTime(audioEl.duration - audioEl.currentTime || audioEl.duration || 0);
+    });
+    audioEl.addEventListener("ended", function() {
+      btn.innerHTML = PLAY_ICON; fill.style.width = "0%";
+      timeEl.textContent = isFinite(audioEl.duration) ? fmtChatTime(audioEl.duration) : "0:00";
+      if (_chatAudioPlaying === audioEl) _chatAudioPlaying = null;
+    });
+    audioEl.addEventListener("error", function() {
+      timeEl.textContent = "Error"; btn.disabled = true;
+    });
+  }
+  if (_chatAudioPlaying && _chatAudioPlaying !== audioEl) { _chatAudioPlaying.pause(); }
+  if (audioEl.paused) {
+    audioEl.play().catch(function() { timeEl.textContent = "Error"; });
+    btn.innerHTML = PAUSE_ICON;
+    _chatAudioPlaying = audioEl;
+  } else {
+    audioEl.pause();
+    btn.innerHTML = PLAY_ICON;
+  }
+}
+function fmtChatTime(secs) {
+  secs = Math.max(0, Math.round(secs || 0));
+  var m = Math.floor(secs / 60), s = secs % 60;
+  return m + ":" + (s < 10 ? "0" : "") + s;
 }
 
 function submitHotelRegistration() {
@@ -9118,9 +9255,12 @@ function accOpenChatThread(hotelId, hotelName) {
   _accChatCurrent = { hotelId: hotelId, hotelName: hotelName, tid: tid };
   document.getElementById("acc-sub-title").textContent = hotelName || "Chat";
   var body = document.getElementById("acc-sub-body");
+  var hInitial = (hotelName || "H").trim().charAt(0).toUpperCase();
   body.innerHTML =
     '<button class="sagain" style="margin-bottom:.8rem" onclick="accOpenSub(\'chats\')">&#8592; Back to Messages</button>' +
-    '<div class="chat-box"><div class="chat-msgs" id="acc-chat-msgs"><div class="emst"><span class="ei">&#8987;</span>Loading...</div></div>' +
+    '<div class="chat-box">' +
+    '<div class="chat-head"><div class="chat-head-av">' + esc(hInitial) + '</div><div><div class="chat-head-name">' + esc(hotelName || "Hotel") + '</div><div class="chat-head-status">Online</div></div></div>' +
+    '<div class="chat-msgs" id="acc-chat-msgs"><div class="emst"><span class="ei">&#8987;</span>Loading...</div></div>' +
     '<div class="chat-input-row"><input type="text" id="acc-chat-input" placeholder="Type a message..." onkeypress="if(event.key===\'Enter\')accSendChatMessage()"/>' +
     '<button class="chat-send-btn" onclick="accSendChatMessage()">&#10148;</button></div></div>';
 
@@ -9132,12 +9272,7 @@ function accOpenChatThread(hotelId, hotelName) {
     var msgsEl = document.getElementById("acc-chat-msgs");
     if (!msgsEl) return;
     if (snap.empty) { msgsEl.innerHTML = '<div class="emst"><span class="ei">&#128172;</span>Say hello! Ask about rooms, prices or availability.</div>'; return; }
-    msgsEl.innerHTML = snap.docs.map(function(d) {
-      var m = d.data();
-      var mine = m.sender === "user";
-      var time = m.createdAt ? m.createdAt.toDate().toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
-      return '<div class="chat-bubble ' + (mine ? "mine" : "theirs") + '">' + esc(m.text) + '<div class="chat-bubble-time">' + time + '</div></div>';
-    }).join("");
+    msgsEl.innerHTML = chatMessagesHtml(snap.docs, "user", hInitial, "acc-chat");
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }, function() {});
 }
@@ -9173,14 +9308,22 @@ function ensureSupportThread() {
 }
 function accRenderSupportChat(body) {
   body.innerHTML =
-    '<div class="chat-box"><div class="chat-msgs" id="acc-support-msgs"><div class="emst"><span class="ei">&#8987;</span>Loading...</div></div>' +
-    '<div class="chat-input-row">' +
+    '<div class="chat-box">' +
+    '<div class="chat-head"><div class="chat-head-av">A</div><div><div class="chat-head-name">Admin Support</div><div class="chat-head-status">Online</div></div></div>' +
+    '<div class="chat-msgs" id="acc-support-msgs"><div class="emst"><span class="ei">&#8987;</span>Loading...</div></div>' +
+    '<div class="chat-input-row" id="acc-support-input-row">' +
     '<input type="file" accept="image/*" id="acc-support-img-input" style="display:none" onchange="accSendSupportImage(this.files[0])"/>' +
     '<button class="chat-icon-btn" onclick="document.getElementById(\'acc-support-img-input\').click()" title="Attach image">&#128206;</button>' +
     '<input type="text" id="acc-support-input" placeholder="Type a message to the admin..." onkeypress="if(event.key===\'Enter\')accSendSupportMessage()"/>' +
-    '<span class="chat-rec-timer" id="acc-support-rec-timer" style="display:none">0:00</span>' +
     '<button class="chat-icon-btn" id="acc-support-mic-btn" onclick="accToggleSupportRecording()" title="Record voice note">' + VOICE_NOTE_ICON + '</button>' +
-    '<button class="chat-send-btn" onclick="accSendSupportMessage()">&#10148;</button></div></div>';
+    '<button class="chat-send-btn" onclick="accSendSupportMessage()">&#10148;</button></div>' +
+    '<div class="chat-rec-bar" id="acc-support-recbar">' +
+    '<span class="chat-rec-dot"></span><span class="chat-rec-timer" id="acc-support-rec-timer" style="display:inline-block">0:00</span>' +
+    '<div class="chat-rec-wave">' + chatWaveBarsHtml() + '</div>' +
+    '<span class="chat-rec-cancel-lbl">&#8592; Slide to cancel</span>' +
+    '<button class="chat-rec-trash" onclick="accCancelSupportRecording()" title="Discard">&#128465;&#65039;</button>' +
+    '<button class="chat-icon-btn rec" onclick="accToggleSupportRecording()" title="Stop and send">' + STOP_REC_ICON + '</button>' +
+    '</div></div>';
   ensureSupportThread().then(function(uid) {
     db.collection("supportChats").doc(uid).set({ unreadUser: false }, { merge: true }).catch(function() {});
     accLoadMenuBadges();
@@ -9189,16 +9332,7 @@ function accRenderSupportChat(body) {
       var msgsEl = document.getElementById("acc-support-msgs");
       if (!msgsEl) return;
       if (snap.empty) { msgsEl.innerHTML = '<div class="emst"><span class="ei">&#128172;</span>Say hello! Questions about your account, a booking, or the platform — the admin team will reply here.</div>'; return; }
-      msgsEl.innerHTML = snap.docs.map(function(d) {
-        var m = d.data();
-        var mine = m.sender === "user";
-        var time = m.createdAt ? m.createdAt.toDate().toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
-        var body2;
-        if (m.type === "image") { body2 = '<img src="' + m.url + '" onclick="window.open(this.src)"/>'; }
-        else if (m.type === "audio") { body2 = '<audio controls src="' + m.url + '"></audio>'; }
-        else { body2 = esc(m.text); }
-        return '<div class="chat-bubble ' + (mine ? "mine" : "theirs") + '">' + body2 + '<div class="chat-bubble-time">' + time + '</div></div>';
-      }).join("");
+      msgsEl.innerHTML = chatMessagesHtml(snap.docs, "user", "A", "acc-support");
       msgsEl.scrollTop = msgsEl.scrollHeight;
     }, function(err) {
       console.error("Support chat listener error:", err);
@@ -9253,11 +9387,17 @@ function accSendSupportImage(file) {
 var _accSupportRecorder = null;
 var _accSupportChunks = [];
 var _accSupportRecording = false;
-var _accSupportRecTimerInt = null;
+var _accSupportRecCancelled = false;
+function accShowSupportRecBar(show) {
+  var row = document.getElementById("acc-support-input-row");
+  var bar = document.getElementById("acc-support-recbar");
+  if (row) row.style.display = show ? "none" : "flex";
+  if (bar) bar.classList.toggle("active", show);
+}
 function accToggleSupportRecording() {
   if (!_accUser) return;
   var btn = document.getElementById("acc-support-mic-btn");
-  if (_accSupportRecording) { _accSupportRecorder.stop(); return; }
+  if (_accSupportRecording) { _accSupportRecCancelled = false; _accSupportRecorder.stop(); return; }
   navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
     _accSupportChunks = [];
     var mimeType = pickRecorderMimeType();
@@ -9268,17 +9408,26 @@ function accToggleSupportRecording() {
       _accSupportRecording = false;
       if (btn) { btn.classList.remove("rec"); btn.innerHTML = VOICE_NOTE_ICON; }
       stopRecTimer("acc-support-rec-timer");
+      accShowSupportRecBar(false);
+      if (_accSupportRecCancelled) return;
       var blob = new Blob(_accSupportChunks, { type: _accSupportRecorder.mimeType || "audio/webm" });
       if (blob.size < 500) { T("Too Short", "Hold the button a little longer to record a voice note."); return; }
       accUploadSupportAudio(blob);
     };
     _accSupportRecorder.start();
     _accSupportRecording = true;
+    _accSupportRecCancelled = false;
     if (btn) { btn.classList.add("rec"); btn.innerHTML = STOP_REC_ICON; }
+    accShowSupportRecBar(true);
     startRecTimer("acc-support-rec-timer");
   }).catch(function() {
     T("Microphone", "Could not access the microphone. Check browser permissions.");
   });
+}
+function accCancelSupportRecording() {
+  if (!_accSupportRecording) return;
+  _accSupportRecCancelled = true;
+  _accSupportRecorder.stop();
 }
 function accUploadSupportAudio(blob) {
   var uid = _accUser && _accUser.uid;
