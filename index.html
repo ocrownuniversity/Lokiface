@@ -2425,7 +2425,6 @@ td{padding:.6rem .5rem;border-bottom:1px solid var(--border);white-space:nowrap}
                 &lt;input type=&quot;file&quot; id=&quot;spt-img-input&quot; accept=&quot;image/*&quot; style=&quot;display:none&quot; onchange=&quot;sptSendImage(this.files[0])&quot;/&gt;
                 &lt;button class=&quot;spt-icon-btn&quot; id=&quot;spt-attach-btn&quot; onclick=&quot;document.getElementById(&#x27;spt-img-input&#x27;).click()&quot; disabled&gt;&amp;#128247;&lt;/button&gt;
                 &lt;button class=&quot;spt-icon-btn&quot; id=&quot;spt-mic-btn&quot; onclick=&quot;sptToggleRecording()&quot; disabled&gt;&amp;#127908;&lt;/button&gt;
-                &lt;span id=&quot;spt-rec-timer&quot; style=&quot;display:none;color:var(--red);font-weight:700;font-size:.78rem;flex-shrink:0;align-items:center;gap:.3rem&quot;&gt;&lt;span style=&quot;width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;animation:sptPulse 1.1s infinite&quot;&gt;&lt;/span&gt;&lt;span id=&quot;spt-rec-time&quot;&gt;0:00&lt;/span&gt;&lt;/span&gt;
                 &lt;input type=&quot;text&quot; id=&quot;spt-input&quot; placeholder=&quot;Type a reply...&quot; onkeypress=&quot;if(event.key===&#x27;Enter&#x27;)sptSendMessage()&quot; disabled/&gt;
                 &lt;button class=&quot;spt-send-btn&quot; onclick=&quot;sptSendMessage()&quot;&gt;&amp;#10148;&lt;/button&gt;
               &lt;/div&gt;
@@ -6675,24 +6674,6 @@ function sptSendImage(file) {
   });
 }
 
-var _sptRecTimerInterval = null;
-function _sptStartRecTimer() {
-  var timerEl = document.getElementById(&quot;spt-rec-timer&quot;);
-  var timeEl = document.getElementById(&quot;spt-rec-time&quot;);
-  var startedAt = Date.now();
-  if (timerEl) timerEl.style.display = &quot;inline-flex&quot;;
-  if (timeEl) timeEl.textContent = &quot;0:00&quot;;
-  _sptRecTimerInterval = setInterval(function() {
-    var secs = Math.floor((Date.now() - startedAt) / 1000);
-    var m = Math.floor(secs / 60), s = secs % 60;
-    if (timeEl) timeEl.textContent = m + &quot;:&quot; + (s &lt; 10 ? &quot;0&quot; : &quot;&quot;) + s;
-  }, 250);
-}
-function _sptStopRecTimer() {
-  if (_sptRecTimerInterval) { clearInterval(_sptRecTimerInterval); _sptRecTimerInterval = null; }
-  var timerEl = document.getElementById(&quot;spt-rec-timer&quot;);
-  if (timerEl) timerEl.style.display = &quot;none&quot;;
-}
 function sptToggleRecording() {
   if (!_sptCurrentUid) return;
   var btn = document.getElementById(&quot;spt-mic-btn&quot;);
@@ -6705,14 +6686,12 @@ function sptToggleRecording() {
       stream.getTracks().forEach(function(t) { t.stop(); });
       _sptRecording = false;
       if (btn) btn.classList.remove(&quot;rec&quot;);
-      _sptStopRecTimer();
       var blob = new Blob(_sptChunks, { type: &quot;audio/webm&quot; });
       sptUploadAudio(blob);
     };
     _sptRecorder.start();
     _sptRecording = true;
     if (btn) btn.classList.add(&quot;rec&quot;);
-    _sptStartRecTimer();
   }).catch(function() {
     T(&quot;Microphone&quot;, &quot;Could not access the microphone. Check browser permissions.&quot;);
   });
@@ -8034,26 +8013,10 @@ function hideAccLoading() {
   var el = document.getElementById("acc-loading");
   if (el) el.style.display = "none";
 }
-var SUPER_EMAIL_ACC = "oladejiridwanopeyemi@gmail.com";
-function _accBlockStaffLogin(title, msg) {
-  hideAccLoading();
-  auth.signOut();
-  T(title, msg, 7000);
-}
 auth.onAuthStateChanged(function(user) {
   _accUser = user;
   if (user) {
-    var loginEmail = (user.email || "").toLowerCase();
-    if (loginEmail === SUPER_EMAIL_ACC) {
-      _accBlockStaffLogin("Admin Account", "This email is the Super Admin account. Please sign in from the Admin panel (Menu \u2192 Admin) instead of the customer sign-in.");
-      return;
-    }
-    Promise.all([
-      db.collection("hotels").doc(user.uid).get(),
-      db.collection("subadmins").doc(loginEmail).get(),
-      db.collection("hotels").where("ownerEmail","==",loginEmail).limit(1).get().catch(function(){ return { empty:true }; })
-    ]).then(function(results) {
-      var hdoc = results[0], saDoc = results[1], hotelByEmail = results[2];
+    db.collection("hotels").doc(user.uid).get().then(function(hdoc) {
       if (hdoc.exists) {
         _hotelSession = user.uid;
         _hotelProfile = hdoc.data();
@@ -8066,14 +8029,6 @@ auth.onAuthStateChanged(function(user) {
         var navAH = document.getElementById("ni-account"); if (navAH) navAH.textContent = "Dashboard";
         var navAmH = document.getElementById("ni-account-m"); if (navAmH) navAmH.textContent = "Dashboard";
         openHotelDash();
-        return;
-      }
-      if (saDoc.exists) {
-        _accBlockStaffLogin("Sub Admin Account", "This email is a Sub-Admin account. Please sign in from the Admin panel (Menu \u2192 Admin) instead of the customer sign-in.");
-        return;
-      }
-      if (!hotelByEmail.empty) {
-        _accBlockStaffLogin("Hotel Partner Account", "This email is registered as a Hotel Partner. Please contact us to set up your Hotel Dashboard login rather than signing in as a customer.");
         return;
       }
       _hotelSession = null; _hotelProfile = null;
