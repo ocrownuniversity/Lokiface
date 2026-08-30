@@ -926,6 +926,7 @@ function DiscoverScreen({ onOpenChat, onViewProfile }) {
 function ChatWindow({ chatId, other, onBack, onViewProfile }) {
   const { profile } = useAuth();
   const toast = useToast();
+  const call = useCall();
   const [messages, setMessages] = useState([]);
   const [chat, setChat] = useState(null);
   const [otherLive, setOtherLive] = useState(other);
@@ -1084,6 +1085,8 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
           h('p', { className: 'text-[11px] text-slate-400' }, typingNow ? h('span', { className: 'text-brand-600' }, 'typing…') : (otherLive.online ? 'Online' : otherLive.lastSeen ? 'last seen ' + timeAgo(otherLive.lastSeen) : ''))
         )
       ),
+      h('button', { className: 'text-slate-400 px-2', onClick: () => call.startCall(otherLive, 'audio') }, h('i', { className: 'fa-solid fa-phone' })),
+      h('button', { className: 'text-slate-400 px-2', onClick: () => call.startCall(otherLive, 'video') }, h('i', { className: 'fa-solid fa-video' })),
       h('button', { className: 'text-slate-400 px-1', onClick: () => setSearch(search === null ? '' : null) }, h('i', { className: 'fa-solid fa-magnifying-glass' }))
     ),
     search !== null && h('div', { className: 'px-3 py-2 bg-white dark:bg-ink-800 border-b border-slate-100 dark:border-ink-700' },
@@ -1703,6 +1706,217 @@ function StatCard({ label, value }) {
   );
 }
 
+/* ============================== CALLING (WebRTC) ==============================
+   Voice/video calls, signaled through Firestore (smiletak_calls + per-call
+   candidate subcollections) — no Cloud Functions, same pattern as the rest
+   of the app. STUN + a free public TURN relay (openrelay.metered.ca) are
+   included so calls still connect when both people are on different
+   networks (mobile data <-> wifi), not just on the same LAN. */
+const RTC_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+  ]
+};
+const CallCtx = createContext(null);
+function useCall() { return useContext(CallCtx); }
+
+function CallProvider({ children }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [call, setCall] = useState(null);
+  const [callStatus, setCallStatus] = useState('idle'); // idle | outgoing | incoming | connected
+  const [remoteUser, setRemoteUser] = useState(null);
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
+  const pcRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const unsubCallDoc = useRef(null);
+  const unsubCandidates = useRef([]);
+  const ringTimeout = useRef(null);
+  const seenCalls = useRef(new Set());
+
+  useEffect(() => {
+    if (!profile) return;
+    const unsub = db.collection('smiletak_calls')
+      .where('calleeId', '==', profile.id)
+      .where('status', '==', 'ringing')
+      .onSnapshot(snap => {
+        snap.docChanges().forEach(async change => {
+          if (change.type !== 'added') return;
+          if (seenCalls.current.has(change.doc.id)) return;
+          seenCalls.current.add(change.doc.id);
+          const data = change.doc.data();
+          if (data.createdAt && Date.now() - data.createdAt.toMillis() > 45000) return;
+          const uSnap = await db.collection('smiletak_users').doc(data.callerId).get();
+          setRemoteUser(uSnap.exists ? Object.assign({ id: uSnap.id }, uSnap.data()) : { id: data.callerId, fullName: 'Unknown' });
+          setCall(Object.assign({ id: change.doc.id }, data));
+          setCallStatus('incoming');
+        });
+      });
+    return unsub;
+  }, [profile]);
+
+  const cleanup = useCallback(() => {
+    if (pcRef.current) { try { pcRef.current.close(); } catch (e) {} pcRef.current = null; }
+    if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null; }
+    if (unsubCallDoc.current) { unsubCallDoc.current(); unsubCallDoc.current = null; }
+    unsubCandidates.current.forEach(u => u()); unsubCandidates.current = [];
+    if (ringTimeout.current) { clearTimeout(ringTimeout.current); ringTimeout.current = null; }
+    setLocalStream(null); setRemoteStream(null); setCall(null); setRemoteUser(null); setCallStatus('idle');
+  }, []);
+
+  const setupPeer = (callId, isCaller) => {
+    const pc = new RTCPeerConnection(RTC_CONFIG);
+    pcRef.current = pc;
+    const remote = new MediaStream();
+    setRemoteStream(remote);
+    pc.ontrack = e => { e.streams[0].getTracks().forEach(t => remote.addTrack(t)); };
+    pc.onicecandidate = e => {
+      if (e.candidate) {
+        db.collection('smiletak_calls').doc(callId)
+          .collection(isCaller ? 'callerCandidates' : 'calleeCandidates')
+          .add(e.candidate.toJSON()).catch(() => {});
+      }
+    };
+    return pc;
+  };
+
+  const startCall = async (other, type) => {
+    if (!other || callStatus !== 'idle') return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+      localStreamRef.current = stream; setLocalStream(stream);
+      const callRef = db.collection('smiletak_calls').doc();
+      const pc = setupPeer(callRef.id, true);
+      stream.getTracks().forEach(t => pc.addTrack(t, stream));
+      setRemoteUser(other); setCall({ id: callRef.id, callerId: profile.id, calleeId: other.id, type }); setCallStatus('outgoing');
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await callRef.set({
+        callerId: profile.id, calleeId: other.id, type,
+        callerName: profile.fullName, callerPhoto: profile.photoURL || null,
+        status: 'ringing', offer: { type: offer.type, sdp: offer.sdp },
+        createdAt: FieldValue.serverTimestamp()
+      });
+
+      unsubCallDoc.current = db.collection('smiletak_calls').doc(callRef.id).onSnapshot(async snap => {
+        if (!snap.exists) return;
+        const data = snap.data();
+        if (data.answer && !pc.currentRemoteDescription) {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+        if (data.status === 'accepted') { clearTimeout(ringTimeout.current); setCallStatus('connected'); }
+        if (data.status === 'declined') { toast('Call declined', 'info'); cleanup(); }
+        if (data.status === 'ended' || data.status === 'missed') cleanup();
+      });
+      const candUnsub = db.collection('smiletak_calls').doc(callRef.id).collection('calleeCandidates').onSnapshot(snap => {
+        snap.docChanges().forEach(c => { if (c.type === 'added') pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {}); });
+      });
+      unsubCandidates.current.push(candUnsub);
+
+      ringTimeout.current = setTimeout(() => {
+        db.collection('smiletak_calls').doc(callRef.id).update({ status: 'missed' }).catch(() => {});
+        toast('No answer', 'info'); cleanup();
+      }, 45000);
+    } catch (e) { toast('Could not start call: ' + e.message, 'error'); cleanup(); }
+  };
+
+  const acceptCall = async () => {
+    if (!call) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: call.type === 'video' });
+      localStreamRef.current = stream; setLocalStream(stream);
+      const pc = setupPeer(call.id, false);
+      stream.getTracks().forEach(t => pc.addTrack(t, stream));
+      await pc.setRemoteDescription(new RTCSessionDescription(call.offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await db.collection('smiletak_calls').doc(call.id).update({ status: 'accepted', answer: { type: answer.type, sdp: answer.sdp } });
+      setCallStatus('connected');
+
+      unsubCallDoc.current = db.collection('smiletak_calls').doc(call.id).onSnapshot(snap => {
+        if (!snap.exists || snap.data().status === 'ended') cleanup();
+      });
+      const candUnsub = db.collection('smiletak_calls').doc(call.id).collection('callerCandidates').onSnapshot(snap => {
+        snap.docChanges().forEach(c => { if (c.type === 'added') pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {}); });
+      });
+      unsubCandidates.current.push(candUnsub);
+    } catch (e) { toast('Could not join call: ' + e.message, 'error'); declineCall(); }
+  };
+
+  const declineCall = () => {
+    if (call) db.collection('smiletak_calls').doc(call.id).update({ status: 'declined' }).catch(() => {});
+    cleanup();
+  };
+
+  const endCall = () => {
+    if (call) db.collection('smiletak_calls').doc(call.id).update({ status: 'ended' }).catch(() => {});
+    cleanup();
+  };
+
+  return h(CallCtx.Provider, { value: { callStatus, call, startCall } },
+    children,
+    callStatus === 'incoming' && h(IncomingCallScreen, { call, remoteUser, onAccept: acceptCall, onDecline: declineCall }),
+    (callStatus === 'outgoing' || callStatus === 'connected') && h(ActiveCallScreen, { call, remoteUser, status: callStatus, localStream, remoteStream, onEnd: endCall })
+  );
+}
+
+function IncomingCallScreen({ remoteUser, call, onAccept, onDecline }) {
+  useEffect(() => { try { navigator.vibrate && navigator.vibrate([400, 200, 400, 200, 400]); } catch (e) {} }, []);
+  return h('div', { className: 'fixed inset-0 z-[999] bg-ink-900 text-white flex flex-col items-center justify-between py-16 px-6' },
+    h('div', { className: 'flex flex-col items-center gap-3 mt-10' },
+      h('p', { className: 'text-sm opacity-70' }, (call && call.type === 'video') ? 'Incoming video call' : 'Incoming voice call'),
+      h(Avatar, { url: remoteUser && remoteUser.photoURL, name: remoteUser && remoteUser.fullName, size: 96 }),
+      h('p', { className: 'text-xl font-bold mt-2' }, (remoteUser && remoteUser.fullName) || 'Unknown')
+    ),
+    h('div', { className: 'flex items-center gap-16' },
+      h('button', { onClick: onDecline, className: 'w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-2xl' }, h('i', { className: 'fa-solid fa-phone-slash' })),
+      h('button', { onClick: onAccept, className: 'w-16 h-16 rounded-full bg-green-500 flex items-center justify-center text-2xl' }, h('i', { className: 'fa-solid fa-phone' }))
+    )
+  );
+}
+
+function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream, onEnd }) {
+  const [muted, setMuted] = useState(false);
+  const [camOff, setCamOff] = useState(false);
+  const [secs, setSecs] = useState(0);
+  const remoteVidRef = useRef(null);
+  const localVidRef = useRef(null);
+  const isVideo = call && call.type === 'video';
+
+  useEffect(() => {
+    if (status !== 'connected') return;
+    const t = setInterval(() => setSecs(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [status]);
+
+  useEffect(() => { if (remoteVidRef.current && remoteStream) remoteVidRef.current.srcObject = remoteStream; }, [remoteStream]);
+  useEffect(() => { if (localVidRef.current && localStream) localVidRef.current.srcObject = localStream; }, [localStream]);
+
+  const toggleMute = () => { if (localStream) { localStream.getAudioTracks().forEach(t => t.enabled = muted); setMuted(m => !m); } };
+  const toggleCam = () => { if (localStream) { localStream.getVideoTracks().forEach(t => t.enabled = camOff); setCamOff(c => !c); } };
+  const fmt = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+
+  return h('div', { className: 'fixed inset-0 z-[999] bg-ink-900 text-white flex flex-col items-center justify-between py-10 px-6 overflow-hidden' },
+    isVideo && remoteStream && h('video', { ref: remoteVidRef, autoPlay: true, playsInline: true, className: 'absolute inset-0 w-full h-full object-cover' }),
+    isVideo && h('video', { ref: localVidRef, autoPlay: true, playsInline: true, muted: true, className: 'absolute top-4 right-4 w-24 h-32 rounded-xl object-cover border border-white/30' }),
+    h('div', { className: 'relative z-10 flex flex-col items-center gap-3 mt-6' },
+      (!isVideo || !remoteStream) && h(Avatar, { url: remoteUser && remoteUser.photoURL, name: remoteUser && remoteUser.fullName, size: 96 }),
+      h('p', { className: 'text-xl font-bold mt-2' }, (remoteUser && remoteUser.fullName) || 'Unknown'),
+      h('p', { className: 'text-sm opacity-70' }, status === 'connected' ? fmt(secs) : 'Calling…')
+    ),
+    h('div', { className: 'relative z-10 flex items-center gap-8' },
+      h('button', { onClick: toggleMute, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (muted ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (muted ? 'fa-microphone-slash' : 'fa-microphone') })),
+      h('button', { onClick: onEnd, className: 'w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-2xl' }, h('i', { className: 'fa-solid fa-phone-slash' })),
+      isVideo && h('button', { onClick: toggleCam, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (camOff ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (camOff ? 'fa-video-slash' : 'fa-video') }))
+    )
+  );
+}
+
 /* ============================== ROOT ============================== */
 function Root() {
   const themeState = useTheme();
@@ -1711,7 +1925,7 @@ function Root() {
     return h('div', { className: 'h-full flex items-center justify-center' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' }));
   }
   return h(ThemeCtx.Provider, { value: themeState },
-    !user || !profile ? h(AuthScreen, null) : h(AppShell, null)
+    !user || !profile ? h(AuthScreen, null) : h(CallProvider, null, h(AppShell, null))
   );
 }
 function App() {
