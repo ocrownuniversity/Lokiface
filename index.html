@@ -1542,6 +1542,7 @@ function MyProfileScreen() {
   const [fullName, setFullName] = useState(profile.fullName);
   const [bio, setBio] = useState(profile.bio || '');
   const fileRef = useRef(null);
+  const [diag, setDiag] = useState(null); // null | 'running' | array of results
 
   const save = async () => {
     await db.collection('smiletak_users').doc(profile.id).update({ fullName: fullName.trim(), bio: bio.trim() });
@@ -1553,6 +1554,37 @@ function MyProfileScreen() {
     const url = await uploadFile('smiletak/avatars/' + profile.id + '/' + Date.now() + '_' + f.name, f);
     await db.collection('smiletak_users').doc(profile.id).update({ photoURL: url });
     toast('Photo updated', 'success');
+  };
+
+  const runDiagnostics = async () => {
+    setDiag('running');
+    const results = [];
+    const test = async (name, fn) => {
+      try { await fn(); results.push({ name, ok: true }); }
+      catch (e) { results.push({ name, ok: false, code: e.code || '?', message: e.message || String(e) }); }
+    };
+    await test('Read my own profile (smiletak_users)', () => db.collection('smiletak_users').doc(profile.id).get({ source: 'server' }).then(s => { if (!s.exists) throw new Error('doc missing'); }));
+    await test('List my chats (smiletak_chats)', () => db.collection('smiletak_chats').where('members', 'array-contains', profile.id).limit(1).get({ source: 'server' }));
+    await test('List my chatMembers (smiletak_chatMembers)', () => db.collection('smiletak_chatMembers').where('uid', '==', profile.id).limit(1).get({ source: 'server' }));
+    await test('List statuses (smiletak_statuses)', () => db.collection('smiletak_statuses').limit(1).get({ source: 'server' }));
+    await test('Write test call doc (smiletak_calls)', async () => {
+      const ref = db.collection('smiletak_calls').doc('__diag_' + profile.id);
+      await ref.set({ callerId: profile.id, calleeId: profile.id, type: 'audio', status: 'ended', createdAt: FieldValue.serverTimestamp() });
+    });
+    await test('Write ICE candidate (smiletak_calls/{id}/callerCandidates)', () =>
+      db.collection('smiletak_calls').doc('__diag_' + profile.id).collection('callerCandidates').doc('t').set({ test: true }));
+    await test('Delete test call doc', async () => {
+      const ref = db.collection('smiletak_calls').doc('__diag_' + profile.id);
+      await ref.collection('callerCandidates').doc('t').delete();
+      await ref.delete();
+    });
+    await test('Upload test file (Storage smiletak/)', async () => {
+      const blob = new Blob(['diag'], { type: 'text/plain' });
+      const ref = storage.ref('smiletak/diag/' + profile.id + '.txt');
+      await ref.put(blob);
+      await ref.delete();
+    });
+    setDiag(results);
   };
 
   return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
@@ -1581,6 +1613,18 @@ function MyProfileScreen() {
       h('div', { className: 'flex items-center justify-between py-3 border-t border-slate-100 dark:border-ink-800' },
         h('span', { className: 'font-medium text-sm' }, 'Notifications'),
         h('button', { className: 'text-brand-600 text-sm font-semibold', onClick: requestNotifyPermission }, 'Enable')
+      ),
+      h('div', { className: 'py-3 border-t border-slate-100 dark:border-ink-800' },
+        h('div', { className: 'flex items-center justify-between' },
+          h('span', { className: 'font-medium text-sm' }, 'Check permissions'),
+          h('button', { className: 'text-brand-600 text-sm font-semibold', onClick: runDiagnostics, disabled: diag === 'running' }, diag === 'running' ? 'Testing…' : 'Run test')
+        ),
+        Array.isArray(diag) && h('div', { className: 'mt-3 space-y-2' },
+          diag.map((r, i) => h('div', { key: i, className: 'text-xs rounded-lg px-3 py-2 ' + (r.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700') },
+            h('p', { className: 'font-semibold' }, (r.ok ? '✓ ' : '✗ ') + r.name),
+            !r.ok && h('p', { className: 'mt-0.5 opacity-80' }, '[' + r.code + '] ' + r.message)
+          ))
+        )
       ),
       h('button', { onClick: () => auth.signOut(), className: 'w-full mt-6 mb-8 text-red-500 border border-red-200 rounded-xl py-2.5 font-semibold text-sm' }, 'Log out')
     )
