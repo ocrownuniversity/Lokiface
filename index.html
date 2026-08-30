@@ -255,6 +255,10 @@ function initials(name) {
   return (name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 function chatIdFor(a, b) { return [a, b].sort().join('_'); }
+function fmtDuration(secs) {
+  const s = Math.max(0, Math.round(secs || 0));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
 function bytesToSize(b) {
   if (!b) return '';
   const u = ['B', 'KB', 'MB', 'GB']; let i = 0; let n = b;
@@ -1129,11 +1133,13 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
         const mine = m.senderId === profile.id;
         return h(React.Fragment, { key: m.id },
           showDay && h('div', { className: 'text-center my-2' }, h('span', { className: 'text-[11px] bg-white dark:bg-ink-800 text-slate-400 px-2 py-0.5 rounded-full shadow-sm' }, fmtDay(m.createdAt))),
-          h(MessageBubble, {
-            m, mine,
-            onMenu: () => setMenuMsg(m),
-            onReply: () => setReplyTo(m)
-          })
+          m.type === 'call'
+            ? h(CallLogRow, { m })
+            : h(MessageBubble, {
+                m, mine,
+                onMenu: () => setMenuMsg(m),
+                onReply: () => setReplyTo(m)
+              })
         );
       }),
       h('div', { ref: bottomRef })
@@ -1166,6 +1172,24 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
       onDeleteEveryone: () => { deleteForEveryone(menuMsg); setMenuMsg(null); }
     }),
     forwardMsg && h(ForwardPicker, { onClose: () => setForwardMsg(null), onPick: doForward })
+  );
+}
+
+function CallLogRow({ m }) {
+  const isVideo = m.callType === 'video';
+  const icon = isVideo ? 'fa-video' : 'fa-phone';
+  const missedOrDeclined = m.callStatus === 'missed' || m.callStatus === 'declined' || m.callStatus === 'cancelled';
+  let label;
+  if (m.callStatus === 'completed') label = (isVideo ? 'Video call' : 'Voice call') + ' · ' + fmtDuration(m.durationSecs);
+  else if (m.callStatus === 'missed') label = 'Missed ' + (isVideo ? 'video call' : 'voice call');
+  else if (m.callStatus === 'declined') label = (isVideo ? 'Video call' : 'Voice call') + ' declined';
+  else label = (isVideo ? 'Video call' : 'Voice call') + ' · Cancelled';
+  return h('div', { className: 'flex justify-center my-1.5' },
+    h('div', { className: 'flex items-center gap-2 text-[12px] px-3 py-1.5 rounded-full bg-white dark:bg-ink-800 shadow-sm ' + (missedOrDeclined ? 'text-red-500' : 'text-slate-500 dark:text-slate-300') },
+      h('i', { className: 'fa-solid ' + icon }),
+      h('span', null, label),
+      h('span', { className: 'text-slate-400 text-[10px]' }, fmtClock(m.createdAt))
+    )
   );
 }
 
@@ -1797,6 +1821,31 @@ const RTC_CONFIG = {
 const CallCtx = createContext(null);
 function useCall() { return useContext(CallCtx); }
 
+/* Simple phone-style ring cadence (beep ~1s, silent ~2s, repeat) built with
+   the Web Audio API so no audio file is needed. */
+function useRingTone(active) {
+  useEffect(() => {
+    if (!active) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    let stopped = false;
+    const beep = () => {
+      if (stopped) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 440;
+      gain.gain.value = 0.12;
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start();
+      setTimeout(() => { try { osc.stop(); } catch (e) {} }, 900);
+    };
+    beep();
+    const timer = setInterval(beep, 3000);
+    return () => { stopped = true; clearInterval(timer); ctx.close().catch(() => {}); };
+  }, [active]);
+}
+
 function CallProvider({ children }) {
   const { profile } = useAuth();
   const toast = useToast();
@@ -1811,6 +1860,25 @@ function CallProvider({ children }) {
   const unsubCandidates = useRef([]);
   const ringTimeout = useRef(null);
   const seenCalls = useRef(new Set());
+  const connectedAt = useRef(null);
+
+  const logCallMessage = useCallback(async (theCall, status, durationSecs) => {
+    if (!theCall) return;
+    try {
+      const chatId = chatIdFor(theCall.callerId, theCall.calleeId);
+      const preview = (theCall.type === 'video' ? '📹 Video call' : '📞 Voice call') +
+        (status === 'completed' ? ' · ' + fmtDuration(durationSecs)
+          : status === 'missed' ? ' · Missed'
+          : status === 'declined' ? ' · Declined' : ' · Cancelled');
+      await db.collection('smiletak_chats').doc(chatId).collection('messages').add({
+        type: 'call', callType: theCall.type, callStatus: status, durationSecs: durationSecs || null,
+        callerId: theCall.callerId, calleeId: theCall.calleeId,
+        senderId: profile.id, createdAt: FieldValue.serverTimestamp(),
+        readBy: [], deliveredTo: [], deletedFor: [], deletedForEveryone: false
+      });
+      await db.collection('smiletak_chats').doc(chatId).set({ lastMessage: preview, lastMessageAt: FieldValue.serverTimestamp(), lastSenderId: profile.id }, { merge: true });
+    } catch (e) { /* non-fatal: rules mismatch or offline shouldn't block hanging up */ }
+  }, [profile]);
 
   useEffect(() => {
     if (!profile) return;
@@ -1828,6 +1896,15 @@ function CallProvider({ children }) {
           setRemoteUser(uSnap.exists ? Object.assign({ id: uSnap.id }, uSnap.data()) : { id: data.callerId, fullName: 'Unknown' });
           setCall(Object.assign({ id: change.doc.id }, data));
           setCallStatus('incoming');
+          // While it's still just ringing on my screen, watch for the caller
+          // cancelling or the ring timing out so this screen dismisses itself
+          // instead of ringing forever with a dead call behind it.
+          const watchUnsub = db.collection('smiletak_calls').doc(change.doc.id).onSnapshot(s => {
+            if (!s.exists) return;
+            const st = s.data().status;
+            if (st === 'cancelled' || st === 'missed') cleanupRef.current();
+          });
+          unsubCandidates.current.push(watchUnsub);
         });
       });
     return unsub;
@@ -1839,8 +1916,11 @@ function CallProvider({ children }) {
     if (unsubCallDoc.current) { unsubCallDoc.current(); unsubCallDoc.current = null; }
     unsubCandidates.current.forEach(u => u()); unsubCandidates.current = [];
     if (ringTimeout.current) { clearTimeout(ringTimeout.current); ringTimeout.current = null; }
+    connectedAt.current = null;
     setLocalStream(null); setRemoteStream(null); setCall(null); setRemoteUser(null); setCallStatus('idle');
   }, []);
+  const cleanupRef = useRef(cleanup);
+  useEffect(() => { cleanupRef.current = cleanup; }, [cleanup]);
 
   const setupPeer = (callId, isCaller) => {
     const pc = new RTCPeerConnection(RTC_CONFIG);
@@ -1864,9 +1944,10 @@ function CallProvider({ children }) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
       localStreamRef.current = stream; setLocalStream(stream);
       const callRef = db.collection('smiletak_calls').doc();
+      const callInfo = { id: callRef.id, callerId: profile.id, calleeId: other.id, type };
       const pc = setupPeer(callRef.id, true);
       stream.getTracks().forEach(t => pc.addTrack(t, stream));
-      setRemoteUser(other); setCall({ id: callRef.id, callerId: profile.id, calleeId: other.id, type }); setCallStatus('outgoing');
+      setRemoteUser(other); setCall(callInfo); setCallStatus('outgoing');
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -1883,7 +1964,7 @@ function CallProvider({ children }) {
         if (data.answer && !pc.currentRemoteDescription) {
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
-        if (data.status === 'accepted') { clearTimeout(ringTimeout.current); setCallStatus('connected'); }
+        if (data.status === 'accepted') { clearTimeout(ringTimeout.current); connectedAt.current = Date.now(); setCallStatus('connected'); }
         if (data.status === 'declined') { toast('Call declined', 'info'); cleanup(); }
         if (data.status === 'ended' || data.status === 'missed') cleanup();
       });
@@ -1894,6 +1975,7 @@ function CallProvider({ children }) {
 
       ringTimeout.current = setTimeout(() => {
         db.collection('smiletak_calls').doc(callRef.id).update({ status: 'missed' }).catch(() => {});
+        logCallMessage(callInfo, 'missed', null);
         toast('No answer', 'info'); cleanup();
       }, 45000);
     } catch (e) { toast('Could not start call: ' + e.message, 'error'); cleanup(); }
@@ -1910,6 +1992,7 @@ function CallProvider({ children }) {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       await db.collection('smiletak_calls').doc(call.id).update({ status: 'accepted', answer: { type: answer.type, sdp: answer.sdp } });
+      connectedAt.current = Date.now();
       setCallStatus('connected');
 
       unsubCallDoc.current = db.collection('smiletak_calls').doc(call.id).onSnapshot(snap => {
@@ -1923,12 +2006,20 @@ function CallProvider({ children }) {
   };
 
   const declineCall = () => {
-    if (call) db.collection('smiletak_calls').doc(call.id).update({ status: 'declined' }).catch(() => {});
+    if (call) {
+      db.collection('smiletak_calls').doc(call.id).update({ status: 'declined' }).catch(() => {});
+      logCallMessage(call, 'declined', null);
+    }
     cleanup();
   };
 
   const endCall = () => {
-    if (call) db.collection('smiletak_calls').doc(call.id).update({ status: 'ended' }).catch(() => {});
+    if (call) {
+      const wasConnected = callStatus === 'connected' && connectedAt.current;
+      const duration = wasConnected ? Math.round((Date.now() - connectedAt.current) / 1000) : null;
+      db.collection('smiletak_calls').doc(call.id).update({ status: wasConnected ? 'ended' : 'cancelled' }).catch(() => {});
+      logCallMessage(call, wasConnected ? 'completed' : 'cancelled', duration);
+    }
     cleanup();
   };
 
@@ -1940,7 +2031,13 @@ function CallProvider({ children }) {
 }
 
 function IncomingCallScreen({ remoteUser, call, onAccept, onDecline }) {
-  useEffect(() => { try { navigator.vibrate && navigator.vibrate([400, 200, 400, 200, 400]); } catch (e) {} }, []);
+  useRingTone(true);
+  useEffect(() => {
+    if (!navigator.vibrate) return;
+    navigator.vibrate([400, 200, 400, 200, 400]);
+    const t = setInterval(() => navigator.vibrate([400, 200, 400, 200, 400]), 3000);
+    return () => clearInterval(t);
+  }, []);
   return h('div', { className: 'fixed inset-0 z-[999] bg-ink-900 text-white flex flex-col items-center justify-between py-16 px-6' },
     h('div', { className: 'flex flex-col items-center gap-3 mt-10' },
       h('p', { className: 'text-sm opacity-70' }, (call && call.type === 'video') ? 'Incoming video call' : 'Incoming voice call'),
@@ -1961,6 +2058,7 @@ function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream,
   const remoteVidRef = useRef(null);
   const localVidRef = useRef(null);
   const isVideo = call && call.type === 'video';
+  useRingTone(status === 'outgoing');
 
   useEffect(() => {
     if (status !== 'connected') return;
