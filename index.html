@@ -231,6 +231,21 @@ async function uploadFile(path, file, onProgress) {
     );
   });
 }
+/* Same as uploadFile, but returns a cancel() handle too — used anywhere a
+   person might be stuck waiting a long time (e.g. a video on a slow
+   connection) and needs a way out instead of watching a frozen spinner. */
+function uploadFileCancelable(path, file, onProgress) {
+  const ref = storage.ref().child(path);
+  const task = ref.put(file);
+  const promise = new Promise((resolve, reject) => {
+    task.on('state_changed',
+      snap => onProgress && onProgress(snap.bytesTransferred / snap.totalBytes),
+      reject,
+      async () => { try { resolve(await task.snapshot.ref.getDownloadURL()); } catch (e) { reject(e); } }
+    );
+  });
+  return { promise, cancel: () => task.cancel() };
+}
 function requestNotifyPermission() {
   if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
 }
@@ -485,19 +500,58 @@ function AuthScreen() {
 const inputCls = 'w-full mb-3 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-600 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-brand-500';
 
 /* ============================== APP SHELL ============================== */
+/* Generic helper: makes a locally-controlled "open/close" panel (a modal,
+   viewer, sheet, etc.) participate in the browser's back button. Opening it
+   pushes one history entry; pressing back (hardware/gesture/browser button)
+   closes it instead of leaving the page; closing it via its own UI (an X
+   button, selecting an item) cleanly consumes that same history entry so
+   back-stack depth never grows unbounded. */
+function useBackClose(isOpen, onClose) {
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (isOpen && !wasOpen.current) {
+      wasOpen.current = true;
+      window.history.pushState({ __panel: true }, '');
+    }
+    if (!isOpen) wasOpen.current = false;
+  }, [isOpen]);
+  useEffect(() => {
+    const onPop = () => { if (wasOpen.current) { wasOpen.current = false; onClose(); } };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [onClose]);
+  return function closeViaBack() {
+    if (wasOpen.current) window.history.back();
+    else onClose();
+  };
+}
+
 function AppShell() {
   const { profile } = useAuth();
-  const [tab, setTab] = useState('chats');
-  const [activeChat, setActiveChat] = useState(null); // { chatId, other }
-  const [viewProfile, setViewProfile] = useState(null); // uid to view
+  const initialView = { screen: 'tab', tab: 'chats' };
+  const [view, setView] = useState(initialView);
 
-  if (activeChat) {
-    return h(ChatWindow, { chatId: activeChat.chatId, other: activeChat.other, onBack: () => setActiveChat(null), onViewProfile: (uid) => setViewProfile(uid) });
+  useEffect(() => {
+    window.history.replaceState(initialView, '');
+    const onPop = (e) => setView(e.state || initialView);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line
+  }, []);
+
+  const goToTab = (t) => { const v = { screen: 'tab', tab: t }; window.history.replaceState(v, ''); setView(v); };
+  const openChat = (chatId, other) => { const v = { screen: 'chat', chatId, other }; window.history.pushState(v, ''); setView(v); };
+  const openProfile = (uid) => { const v = { screen: 'profile', uid }; window.history.pushState(v, ''); setView(v); };
+  const goBack = () => window.history.back();
+
+  if (view.screen === 'chat') {
+    return h(ChatWindow, { chatId: view.chatId, other: view.other, onBack: goBack, onViewProfile: openProfile });
   }
-  if (viewProfile) {
-    return h(UserProfileScreen, { uid: viewProfile, onBack: () => setViewProfile(null), onMessage: (chatId, other) => { setViewProfile(null); setActiveChat({ chatId, other }); } });
+  if (view.screen === 'profile') {
+    return h(UserProfileScreen, { uid: view.uid, onBack: goBack, onMessage: (chatId, other) => openChat(chatId, other) });
   }
 
+  const tab = view.tab || 'chats';
   const tabs = [
     { id: 'chats', icon: 'fa-comment-dots', label: 'Chats' },
     { id: 'status', icon: 'fa-circle-notch', label: 'Status' },
@@ -508,16 +562,16 @@ function AppShell() {
 
   return h('div', { className: 'h-full flex flex-col' },
     h('div', { className: 'flex-1 overflow-hidden' },
-      tab === 'chats' && h(ChatsListScreen, { onOpenChat: setActiveChat, onViewProfile: setViewProfile, onNavigate: setTab }),
-      tab === 'status' && h(StatusScreen, { onViewProfile: setViewProfile }),
-      tab === 'search' && h(DiscoverScreen, { onOpenChat: setActiveChat, onViewProfile: setViewProfile }),
+      tab === 'chats' && h(ChatsListScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onViewProfile: openProfile, onNavigate: goToTab }),
+      tab === 'status' && h(StatusScreen, { onViewProfile: openProfile }),
+      tab === 'search' && h(DiscoverScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onViewProfile: openProfile }),
       tab === 'profile' && h(MyProfileScreen, {}),
       tab === 'admin' && h(AdminPanel, {})
     ),
     h('div', { className: 'flex border-t border-slate-200 dark:border-ink-700 bg-white dark:bg-ink-800 shrink-0' },
       tabs.map(t => h('button', {
         key: t.id,
-        onClick: () => setTab(t.id),
+        onClick: () => goToTab(t.id),
         className: 'flex-1 py-2.5 flex flex-col items-center gap-1 text-xs font-medium ' + (tab === t.id ? 'text-brand-600' : 'text-slate-400')
       }, h('i', { className: 'fa-solid ' + t.icon + ' text-lg' }), t.label))
     )
@@ -1064,14 +1118,13 @@ function ForwardPicker({ onClose, onPick }) {
 }
 
 /* ============================== STATUS ============================== */
-function StatusScreen() {
+function StatusScreen({ onViewProfile }) {
   const { profile } = useAuth();
   const toast = useToast();
   const [statuses, setStatuses] = useState([]);
   const [myStatuses, setMyStatuses] = useState([]);
   const [viewing, setViewing] = useState(null);
   const [creating, setCreating] = useState(false);
-  const fileRef = useRef(null);
 
   useEffect(() => {
     const cutoff = Timestamp.fromMillis(Date.now() - 24 * 3600 * 1000);
@@ -1094,31 +1147,60 @@ function StatusScreen() {
     await db.collection('smiletak_statuses').add({ uid: profile.id, type: 'text', content: text, bgColor: bg, createdAt: FieldValue.serverTimestamp() });
     toast('Status posted', 'success');
   };
-  const createMediaStatus = async (file, type) => {
-    const url = await uploadFile('smiletak/status/' + profile.id + '/' + Date.now() + '_' + file.name, file);
+  const createMediaStatus = async (file, type, onProgress, cancelRef) => {
+    const { promise, cancel } = uploadFileCancelable('smiletak/status/' + profile.id + '/' + Date.now() + '_' + file.name, file, onProgress);
+    if (cancelRef) cancelRef.current = cancel;
+    const url = await promise;
     await db.collection('smiletak_statuses').add({ uid: profile.id, type, mediaURL: url, createdAt: FieldValue.serverTimestamp() });
     toast('Status posted', 'success');
   };
 
-  return h('div', { className: 'h-full flex flex-col' },
-    h('div', { className: 'px-4 pt-4 pb-2' }, h('h1', { className: 'text-xl font-extrabold' }, 'Status')),
-    h('div', { className: 'flex-1 overflow-y-auto no-scrollbar px-4' },
-      h('div', { className: 'flex items-center gap-3 py-3 border-b border-slate-100 dark:border-ink-800' },
-        h('div', { className: 'relative cursor-pointer', onClick: () => myStatuses.length ? setViewing({ uid: profile.id, user: profile, items: myStatuses }) : setCreating(true) },
-          h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 48 }),
-          h('button', { onClick: (e) => { e.stopPropagation(); setCreating(true); }, className: 'absolute -bottom-1 -right-1 w-5 h-5 bg-brand-600 text-white rounded-full flex items-center justify-center text-[10px]' }, h('i', { className: 'fa-solid fa-plus' }))
+  const closeViewer = useBackClose(!!viewing, () => setViewing(null));
+  const closeCreate = useBackClose(creating, () => setCreating(false));
+
+  const cardBg = (s) => {
+    const item = s.items ? s.items[0] : s;
+    if (item.type === 'text') return { background: item.bgColor };
+    if (item.type === 'image') return { backgroundImage: 'url(' + item.mediaURL + ')', backgroundSize: 'cover', backgroundPosition: 'center' };
+    return { background: '#222' };
+  };
+
+  return h('div', { className: 'h-full flex flex-col bg-white dark:bg-ink-900' },
+    h('div', { className: 'px-4 pt-4 pb-3' }, h('h1', { className: 'text-2xl font-extrabold' }, 'Status')),
+    h('div', { className: 'flex-1 overflow-y-auto no-scrollbar' },
+      h('p', { className: 'px-4 text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2' }, 'Status'),
+      h('div', { className: 'flex gap-3 px-4 pb-2 overflow-x-auto no-scrollbar' },
+        // Add status / my status card
+        h('div', {
+          className: 'shrink-0 w-[104px] h-[150px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
+          style: myStatuses.length ? cardBg({ items: myStatuses }) : { background: '#1a2230' },
+          onClick: () => myStatuses.length ? setViewing({ uid: profile.id, user: profile, items: myStatuses }) : setCreating(true)
+        },
+          !myStatuses.length && h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 104 }),
+          myStatuses.length > 0 && h('div', { className: 'absolute inset-0 bg-black/25' }),
+          h('div', { className: 'absolute top-2 left-2' },
+            h('div', { className: 'relative' },
+              h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 28 }),
+              h('button', { onClick: (e) => { e.stopPropagation(); setCreating(true); }, className: 'absolute -bottom-1 -right-1 w-4 h-4 bg-brand-600 text-white rounded-full flex items-center justify-center text-[9px] border-2 border-white' }, h('i', { className: 'fa-solid fa-plus' }))
+            )
+          ),
+          h('p', { className: 'relative text-white text-[11px] font-semibold px-2 pb-2 truncate w-full' }, myStatuses.length ? 'My status' : 'Add status')
         ),
-        h('div', null, h('p', { className: 'font-semibold text-sm' }, 'My status'), h('p', { className: 'text-xs text-slate-400' }, myStatuses.length ? myStatuses.length + ' update(s) · tap to view' : 'Tap + to add a status update'))
+        statuses.map(s => h('div', {
+          key: s.uid,
+          className: 'shrink-0 w-[104px] h-[150px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
+          style: cardBg(s),
+          onClick: () => setViewing(s)
+        },
+          h('div', { className: 'absolute inset-0 bg-black/20' }),
+          h('div', { className: 'absolute top-2 left-2 rounded-full ring-2 ring-brand-500' }, h(Avatar, { url: s.user.photoURL, name: s.user.fullName, size: 28 })),
+          h('p', { className: 'relative text-white text-[11px] font-semibold px-2 pb-2 truncate w-full' }, s.user.fullName)
+        ))
       ),
-      h('p', { className: 'text-xs font-semibold text-slate-400 mt-3 mb-1' }, 'Recent updates'),
-      statuses.length === 0 && h('p', { className: 'text-sm text-slate-400 mt-4' }, 'No status updates yet'),
-      statuses.map(s => h('div', { key: s.uid, className: 'flex items-center gap-3 py-2.5 cursor-pointer', onClick: () => setViewing(s) },
-        h('div', { className: 'rounded-full p-[2px] border-2 border-brand-500' }, h(Avatar, { url: s.user.photoURL, name: s.user.fullName, size: 46 })),
-        h('div', null, h('p', { className: 'font-semibold text-sm' }, s.user.fullName), h('p', { className: 'text-xs text-slate-400' }, timeAgo(s.items[0].createdAt)))
-      ))
+      statuses.length === 0 && h('p', { className: 'px-4 text-xs text-slate-400 mt-1' }, 'No one else has posted a status in the last 24 hours')
     ),
-    creating && h(CreateStatusModal, { onClose: () => setCreating(false), onText: createTextStatus, onMedia: createMediaStatus }),
-    viewing && h(StatusViewer, { data: viewing, mine: viewing.uid === profile.id, onClose: () => setViewing(null) })
+    creating && h(CreateStatusModal, { onClose: closeCreate, onText: createTextStatus, onMedia: createMediaStatus }),
+    viewing && h(StatusViewer, { data: viewing, mine: viewing.uid === profile.id, onClose: closeViewer })
   );
 }
 
@@ -1127,19 +1209,28 @@ function CreateStatusModal({ onClose, onText, onMedia }) {
   const bgs = ['#00A884', '#075E54', '#128C7E', '#25D366', '#34495E', '#8E44AD'];
   const [bg, setBg] = useState(bgs[0]);
   const [uploading, setUploading] = useState(null); // 'image' | 'video' | null
+  const [pct, setPct] = useState(0);
   const imgRef = useRef(null);
   const vidRef = useRef(null);
+  const cancelRef = useRef(null);
   const toast = useToast();
 
   const pickMedia = async (file, type) => {
     if (!file) return;
-    if (type === 'video' && file.size > 100 * 1024 * 1024) { toast('Video status must be under 100MB', 'error'); return; }
+    const maxMB = type === 'video' ? 30 : 15;
+    if (file.size > maxMB * 1024 * 1024) { toast(type + ' status must be under ' + maxMB + 'MB', 'error'); return; }
     setUploading(type);
+    setPct(0);
     try {
-      await onMedia(file, type);
+      await onMedia(file, type, (p) => setPct(Math.round(p * 100)), cancelRef);
       onClose();
-    } catch (e) { toast('Upload failed: ' + e.message, 'error'); setUploading(null); }
+    } catch (e) {
+      if (e && e.code === 'storage/canceled') { toast('Upload canceled', 'info'); }
+      else { toast('Upload failed: ' + (e.message || 'check your connection and try again'), 'error'); }
+      setUploading(null);
+    }
   };
+  const cancelUpload = () => { if (cancelRef.current) cancelRef.current(); };
 
   return h('div', { className: 'fixed inset-0 z-50 bg-black/70 flex flex-col' },
     h('div', { className: 'flex justify-between items-center p-4' },
@@ -1151,7 +1242,14 @@ function CreateStatusModal({ onClose, onText, onMedia }) {
         h('button', { className: 'text-white', onClick: () => vidRef.current.click(), disabled: !!uploading }, h('i', { className: 'fa-solid fa-video text-xl' }))
       )
     ),
-    uploading && h('div', { className: 'text-center text-white text-sm py-1' }, h('span', { className: 'inline-block w-3 h-3 border-2 border-white/50 border-t-white rounded-full spinner mr-2' }), 'Uploading ', uploading, '…'),
+    uploading && h('div', { className: 'px-4 pb-2' },
+      h('div', { className: 'flex items-center justify-between text-white text-sm mb-1.5' },
+        h('span', null, 'Uploading ', uploading, '… ', pct, '%'),
+        h('button', { className: 'text-red-300 font-semibold text-xs', onClick: cancelUpload }, 'Cancel')
+      ),
+      h('div', { className: 'h-1.5 bg-white/20 rounded-full overflow-hidden' }, h('div', { className: 'h-full bg-brand-500 transition-all', style: { width: pct + '%' } })),
+      pct < 5 && h('p', { className: 'text-white/50 text-[11px] mt-1' }, 'Slow connection? Large videos can take a while — you can cancel and try a shorter clip.')
+    ),
     h('div', { className: 'flex-1 flex items-center justify-center', style: { background: bg } },
       h('textarea', { autoFocus: true, value: text, onChange: e => setText(e.target.value), placeholder: 'Type a status…', className: 'bg-transparent text-white text-2xl font-semibold text-center w-4/5 outline-none placeholder-white/60', rows: 4 })
     ),
