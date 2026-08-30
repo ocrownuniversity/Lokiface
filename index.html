@@ -585,20 +585,50 @@ function useBackClose(isOpen, onClose) {
 
 function AppShell() {
   const { profile } = useAuth();
+  const toast = useToast();
   const initialView = { screen: 'tab', tab: 'chats' };
   const [view, setView] = useState(initialView);
+  const viewRef = useRef(initialView);
+  const exitArmed = useRef(false);
+  const exitTimer = useRef(null);
 
   useEffect(() => {
+    // Replace the page's initial history entry with our root view, then push
+    // a second identical entry as a buffer. Without this second entry, the
+    // very first back-button press (from the root tab screen) would pop past
+    // our app's own history straight out of the site/tab. With it, that
+    // first press lands back on the same root screen instead — and if the
+    // person presses back again right away (a clear intent to leave), we
+    // let that second press actually exit.
     window.history.replaceState(initialView, '');
-    const onPop = (e) => setView(e.state || initialView);
+    window.history.pushState(initialView, '');
+    const onPop = (e) => {
+      const state = e.state || initialView;
+      const wasAtRoot = viewRef.current.screen === 'tab';
+      if (wasAtRoot && state.screen === 'tab') {
+        if (!exitArmed.current) {
+          exitArmed.current = true;
+          toast('Press back again to exit');
+          window.history.pushState(initialView, '');
+          clearTimeout(exitTimer.current);
+          exitTimer.current = setTimeout(() => { exitArmed.current = false; }, 2000);
+          return;
+        }
+        // second back press within the window — let it through, don't re-arm
+      } else {
+        exitArmed.current = false;
+      }
+      viewRef.current = state;
+      setView(state);
+    };
     window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    return () => { window.removeEventListener('popstate', onPop); clearTimeout(exitTimer.current); };
     // eslint-disable-next-line
   }, []);
 
-  const goToTab = (t) => { const v = { screen: 'tab', tab: t }; window.history.replaceState(v, ''); setView(v); };
-  const openChat = (chatId, other) => { const v = { screen: 'chat', chatId, other }; window.history.pushState(v, ''); setView(v); };
-  const openProfile = (uid) => { const v = { screen: 'profile', uid }; window.history.pushState(v, ''); setView(v); };
+  const goToTab = (t) => { const v = { screen: 'tab', tab: t }; window.history.replaceState(v, ''); viewRef.current = v; setView(v); };
+  const openChat = (chatId, other) => { const v = { screen: 'chat', chatId, other }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openProfile = (uid) => { const v = { screen: 'profile', uid }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const goBack = () => window.history.back();
 
   if (view.screen === 'chat') {
