@@ -508,7 +508,7 @@ function AppShell() {
 
   return h('div', { className: 'h-full flex flex-col' },
     h('div', { className: 'flex-1 overflow-hidden' },
-      tab === 'chats' && h(ChatsListScreen, { onOpenChat: setActiveChat, onViewProfile: setViewProfile }),
+      tab === 'chats' && h(ChatsListScreen, { onOpenChat: setActiveChat, onViewProfile: setViewProfile, onNavigate: setTab }),
       tab === 'status' && h(StatusScreen, { onViewProfile: setViewProfile }),
       tab === 'search' && h(DiscoverScreen, { onOpenChat: setActiveChat, onViewProfile: setViewProfile }),
       tab === 'profile' && h(MyProfileScreen, {}),
@@ -525,13 +525,15 @@ function AppShell() {
 }
 
 /* ============================== CHATS LIST ============================== */
-function ChatsListScreen({ onOpenChat, onViewProfile }) {
+function ChatsListScreen({ onOpenChat, onViewProfile, onNavigate }) {
   const { profile } = useAuth();
   const [memberDocs, setMemberDocs] = useState([]);
   const [chatsMap, setChatsMap] = useState({});
   const [othersMap, setOthersMap] = useState({});
-  const [filter, setFilter] = useState('all'); // all | archived
+  const [filter, setFilter] = useState('all'); // all | unread | pinned | muted | archived
   const [q, setQ] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const camRef = useRef(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -565,7 +567,7 @@ function ChatsListScreen({ onOpenChat, onViewProfile }) {
     // eslint-disable-next-line
   }, [chatsMap]);
 
-  const rows = memberDocs
+  const allRows = memberDocs
     .map(m => {
       const chat = chatsMap[m.chatId];
       if (!chat) return null;
@@ -573,8 +575,21 @@ function ChatsListScreen({ onOpenChat, onViewProfile }) {
       const other = othersMap[otherUid];
       return { meta: m, chat, other };
     })
-    .filter(Boolean)
+    .filter(Boolean);
+
+  const notArchived = allRows.filter(r => !r.meta.archived);
+  const counts = {
+    unread: notArchived.filter(r => r.meta.unreadCount > 0).length,
+    pinned: notArchived.filter(r => r.meta.pinned).length,
+    muted: notArchived.filter(r => r.meta.muted).length,
+    archived: allRows.filter(r => r.meta.archived).length
+  };
+
+  const rows = allRows
     .filter(r => (filter === 'archived' ? r.meta.archived : !r.meta.archived))
+    .filter(r => filter !== 'unread' || r.meta.unreadCount > 0)
+    .filter(r => filter !== 'pinned' || r.meta.pinned)
+    .filter(r => filter !== 'muted' || r.meta.muted)
     .filter(r => !q.trim() || (r.other && (r.other.fullName || '').toLowerCase().includes(q.toLowerCase())))
     .sort((a, b) => {
       if (!!a.meta.pinned !== !!b.meta.pinned) return a.meta.pinned ? -1 : 1;
@@ -585,21 +600,72 @@ function ChatsListScreen({ onOpenChat, onViewProfile }) {
 
   const updateMeta = (chatId, patch) => db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id).update(patch).catch(e => toast(e.message, 'error'));
 
-  return h('div', { className: 'h-full flex flex-col' },
-    h('div', { className: 'px-4 pt-4 pb-2 flex items-center justify-between' },
-      h('h1', { className: 'text-xl font-extrabold' }, filter === 'archived' ? 'Archived' : 'SmileTak'),
+  const postCameraStatus = async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    try {
+      const url = await uploadFile('smiletak/status/' + profile.id + '/' + Date.now() + '_' + f.name, f);
+      await db.collection('smiletak_statuses').add({ uid: profile.id, type: 'image', mediaURL: url, createdAt: FieldValue.serverTimestamp() });
+      toast('Status posted', 'success');
+    } catch (err) { toast('Upload failed: ' + err.message, 'error'); }
+  };
+
+  const chips = [
+    { id: 'all', label: 'All' },
+    { id: 'unread', label: 'Unread', count: counts.unread },
+    { id: 'pinned', label: 'Pinned', count: counts.pinned },
+    { id: 'muted', label: 'Muted', count: counts.muted }
+  ];
+
+  return h('div', { className: 'h-full flex flex-col bg-white dark:bg-ink-900' },
+    h('div', { className: 'px-4 pt-4 pb-3 flex items-center justify-between' },
+      h('h1', { className: 'text-2xl font-extrabold' }, filter === 'archived' ? 'Archived' : 'SmileTak'),
       filter === 'archived'
         ? h('button', { className: 'text-sm text-brand-600 font-semibold', onClick: () => setFilter('all') }, 'Back')
-        : h('button', { className: 'text-sm text-slate-400', onClick: () => setFilter('archived') }, h('i', { className: 'fa-solid fa-box-archive' }))
+        : h('div', { className: 'flex items-center gap-4' },
+            h('input', { type: 'file', accept: 'image/*', capture: 'environment', ref: camRef, className: 'hidden', onChange: postCameraStatus }),
+            h('button', { className: 'text-xl', onClick: () => camRef.current.click(), title: 'Camera status' }, h('i', { className: 'fa-solid fa-camera' })),
+            h('div', { className: 'relative' },
+              h('button', { className: 'text-xl', onClick: () => setMenuOpen(o => !o) }, h('i', { className: 'fa-solid fa-ellipsis-vertical' })),
+              menuOpen && h('div', { className: 'absolute right-0 top-8 z-20 bg-white dark:bg-ink-700 shadow-lg rounded-xl py-1 w-40 text-sm', onMouseLeave: () => setMenuOpen(false) },
+                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNavigate && onNavigate('search'); } }, h('i', { className: 'fa-solid fa-comment-medical mr-2' }), 'New chat'),
+                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); setFilter('archived'); } }, h('i', { className: 'fa-solid fa-box-archive mr-2' }), 'Archived'),
+                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNavigate && onNavigate('profile'); } }, h('i', { className: 'fa-solid fa-gear mr-2' }), 'Settings')
+              )
+            )
+          )
     ),
-    h('div', { className: 'px-4 pb-2' },
+    filter !== 'archived' && h('div', { className: 'px-4 pb-3' },
       h('div', { className: 'relative' },
         h('i', { className: 'fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs' }),
-        h('input', { className: 'w-full pl-9 pr-3 py-2 rounded-full bg-slate-100 dark:bg-ink-700 text-sm focus:outline-none', placeholder: 'Search chats', value: q, onChange: e => setQ(e.target.value) })
+        h('input', { className: 'w-full pl-9 pr-3 py-2.5 rounded-full bg-slate-100 dark:bg-ink-800 text-sm focus:outline-none', placeholder: 'Search', value: q, onChange: e => setQ(e.target.value) })
       )
     ),
+    filter !== 'archived' && h('div', { className: 'flex gap-2 px-4 pb-2 overflow-x-auto no-scrollbar' },
+      chips.map(c => h('button', {
+        key: c.id,
+        onClick: () => setFilter(c.id),
+        className: 'px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap flex items-center gap-1.5 ' +
+          (filter === c.id ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-ink-800 text-slate-700 dark:text-slate-200')
+      }, c.label, typeof c.count === 'number' && c.count > 0 && h('span', { className: 'text-xs ' + (filter === c.id ? 'text-white/80' : 'text-slate-400') }, c.count))
+      )
+    ),
+    filter !== 'archived' && counts.archived > 0 && h('div', {
+      className: 'flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-ink-800 border-b border-slate-100 dark:border-ink-800',
+      onClick: () => setFilter('archived')
+    },
+      h('div', { className: 'w-9 h-9 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center text-slate-500' }, h('i', { className: 'fa-solid fa-box-archive text-sm' })),
+      h('span', { className: 'font-medium text-sm text-slate-600 dark:text-slate-300' }, 'Archived'),
+      h('span', { className: 'ml-auto text-xs text-slate-400' }, counts.archived)
+    ),
     h('div', { className: 'flex-1 overflow-y-auto no-scrollbar' },
-      rows.length === 0 && h('div', { className: 'text-center text-sm text-slate-400 mt-12' }, filter === 'archived' ? 'No archived chats' : 'No chats yet — tap Discover to find people'),
+      rows.length === 0 && h('div', { className: 'text-center text-sm text-slate-400 mt-12 px-8' },
+        filter === 'archived' ? 'No archived chats' :
+        filter === 'unread' ? 'No unread chats' :
+        filter === 'pinned' ? 'No pinned chats' :
+        filter === 'muted' ? 'No muted chats' :
+        'No chats yet — tap the menu above to start one'
+      ),
       rows.map(r => h(ChatRow, {
         key: r.meta.chatId,
         row: r,
@@ -617,24 +683,27 @@ function ChatRow({ row, onOpen, onPin, onMute, onArchive, onProfile }) {
   const { meta, chat, other } = row;
   const [menuOpen, setMenuOpen] = useState(false);
   const typing = chat.typing && other && chat.typing[other.id] && (Date.now() - (chat.typing[other.id].toMillis ? chat.typing[other.id].toMillis() : 0) < 5000);
-  return h('div', { className: 'relative flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-ink-800 cursor-pointer border-b border-slate-100 dark:border-ink-800' },
-    h('div', { onClick: onProfile }, h(Avatar, { url: other && other.photoURL, name: other && other.fullName, online: other && other.online })),
-    h('div', { className: 'flex-1 min-w-0', onClick: onOpen },
+  const unread = !!meta.unreadCount;
+  return h('div', { className: 'relative flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-ink-800 cursor-pointer' },
+    h('div', { onClick: onProfile }, h(Avatar, { url: other && other.photoURL, name: other && other.fullName, size: 48, online: other && other.online })),
+    h('div', { className: 'flex-1 min-w-0 border-b border-slate-100 dark:border-ink-800 pb-3 -mb-3', onClick: onOpen },
       h('div', { className: 'flex justify-between items-baseline' },
-        h('p', { className: 'font-semibold text-sm truncate' }, (other && other.fullName) || 'Unknown user'),
-        h('span', { className: 'text-[11px] text-slate-400 shrink-0 ml-2' }, chat.lastMessageAt ? timeAgo(chat.lastMessageAt) : '')
+        h('p', { className: 'font-semibold text-[15px] truncate' }, (other && other.fullName) || 'Unknown user'),
+        h('span', { className: 'text-[12px] shrink-0 ml-2 ' + (unread ? 'text-brand-500 font-semibold' : 'text-slate-400') }, chat.lastMessageAt ? timeAgo(chat.lastMessageAt) : '')
       ),
-      h('div', { className: 'flex justify-between items-center' },
-        h('p', { className: 'text-xs text-slate-400 truncate max-w-[70%]' },
-          typing ? h('span', { className: 'text-brand-600 font-medium' }, 'typing…') :
-          (chat.lastMessage || 'Say hello 👋')),
-        !!meta.unreadCount && h('span', { className: 'bg-brand-600 text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1' }, meta.unreadCount)
+      h('div', { className: 'flex justify-between items-center mt-0.5' },
+        h('p', { className: 'text-[13px] truncate max-w-[75%] ' + (unread ? 'text-slate-700 dark:text-slate-200 font-medium' : 'text-slate-400') },
+          typing ? h('span', { className: 'text-brand-500 font-medium' }, 'typing…') :
+          (meta.muted && h('i', { className: 'fa-solid fa-volume-xmark mr-1 text-slate-400' })),
+          !typing && (chat.lastMessage || 'Say hello 👋')),
+        h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+          meta.pinned && h('i', { className: 'fa-solid fa-thumbtack text-slate-300 text-[11px]' }),
+          unread && h('span', { className: 'bg-brand-500 text-white text-[11px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5' }, meta.unreadCount > 99 ? '99+' : meta.unreadCount)
+        )
       )
     ),
-    meta.muted && h('i', { className: 'fa-solid fa-volume-xmark text-slate-300 text-xs' }),
-    meta.pinned && h('i', { className: 'fa-solid fa-thumbtack text-slate-300 text-xs' }),
     h('div', { className: 'relative' },
-      h('button', { onClick: () => setMenuOpen(o => !o), className: 'text-slate-300 px-1' }, h('i', { className: 'fa-solid fa-ellipsis-vertical' })),
+      h('button', { onClick: () => setMenuOpen(o => !o), className: 'text-slate-300 px-1' }, h('i', { className: 'fa-solid fa-chevron-down text-xs' })),
       menuOpen && h('div', { className: 'absolute right-0 top-6 z-20 bg-white dark:bg-ink-700 shadow-lg rounded-xl py-1 w-36 text-sm', onMouseLeave: () => setMenuOpen(false) },
         h('button', { className: 'w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { onPin(); setMenuOpen(false); } }, meta.pinned ? 'Unpin' : 'Pin'),
         h('button', { className: 'w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { onMute(); setMenuOpen(false); } }, meta.muted ? 'Unmute' : 'Mute'),
@@ -1092,12 +1161,13 @@ function CreateStatusModal({ onClose, onText, onMedia }) {
 }
 
 function StatusViewer({ data, mine, onClose }) {
+  const { profile } = useAuth();
   const [idx, setIdx] = useState(0);
   const item = data.items[idx];
   const [viewers, setViewers] = useState([]);
   useEffect(() => {
-    db.collection('smiletak_statuses').doc(item.id).collection('views').doc(useAuthUidHack()).set({ viewedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
-  }, [item.id]);
+    db.collection('smiletak_statuses').doc(item.id).collection('views').doc(profile.id).set({ viewedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
+  }, [item.id, profile.id]);
   useEffect(() => {
     if (!mine) return;
     const unsub = db.collection('smiletak_statuses').doc(item.id).collection('views').onSnapshot(async snap => {
@@ -1128,7 +1198,6 @@ function StatusViewer({ data, mine, onClose }) {
     )
   );
 }
-function useAuthUidHack() { const { profile } = useAuth(); return profile.id; }
 
 /* ============================== PROFILE SCREENS ============================== */
 function MyProfileScreen() {
@@ -1343,7 +1412,27 @@ function App() {
   return h(ToastProvider, null, h(AuthProvider, null, h(Root, null)));
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(h(App, null));
+/* Catches runtime errors anywhere in the tree (e.g. a bad screen crashing)
+   and shows a clear "Something went wrong" + reload button instead of a
+   silent blank screen — much easier to diagnose than a white page. */
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error('SmileTak crashed:', error, info); }
+  render() {
+    if (this.state.error) {
+      return h('div', { style: { height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, background: '#0b0f16', color: '#fff', padding: 24, textAlign: 'center', fontFamily: 'sans-serif' } },
+        h('div', { style: { fontSize: 32 } }, '⚠️'),
+        h('div', { style: { fontWeight: 700, fontSize: 16 } }, 'Something went wrong'),
+        h('div', { style: { fontSize: 13, opacity: .7, maxWidth: 320 } }, (this.state.error && this.state.error.message) || 'Unknown error'),
+        h('button', { onClick: () => { this.setState({ error: null }); location.reload(); }, style: { background: '#00A884', color: '#fff', border: 'none', padding: '10px 22px', borderRadius: 999, fontWeight: 600, fontSize: 14 } }, 'Reload')
+      );
+    }
+    return this.props.children;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App, null)));
 } catch (e) {
   document.getElementById('root').innerHTML =
     '<div style="height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0b0f16;color:#fff;padding:24px;text-align:center;font-family:sans-serif;">' +
