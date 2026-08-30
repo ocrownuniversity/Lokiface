@@ -859,14 +859,17 @@ function DiscoverScreen({ onOpenChat, onViewProfile }) {
         const blocked = await db.collection('smiletak_blockedUsers').doc(other.id + '_' + profile.id).get();
         if (blocked.exists) return toast("You can't message this user", 'error');
       } catch (e) { /* if the block check itself can't be read, don't let that block messaging */ }
-      // Write with { merge: true } instead of reading-then-creating: rules
-      // that check resource.data on a nonexistent chat doc deny the read,
-      // which used to make this button silently do nothing.
+      // Sequential, not batched: the chat doc is created and awaited FIRST
+      // so that it genuinely exists in the database before the
+      // chatMembers docs are written. A single batch would have all its
+      // writes checked against the pre-batch state, so a chatMembers rule
+      // that looks up the chat doc's membership would see it as
+      // nonexistent even though it's "in the same batch".
       const chatRef = db.collection('smiletak_chats').doc(chatId);
+      await chatRef.set({ members: [profile.id, other.id], createdAt: FieldValue.serverTimestamp() }, { merge: true });
       const batch = db.batch();
-      batch.set(chatRef, { members: [profile.id, other.id], createdAt: FieldValue.serverTimestamp() }, { merge: true });
-      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id), { chatId, uid: profile.id, pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
-      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + other.id), { chatId, uid: other.id, pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
+      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id), { chatId, uid: profile.id, members: [profile.id, other.id], pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
+      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + other.id), { chatId, uid: other.id, members: [profile.id, other.id], pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
       await batch.commit();
       onOpenChat({ chatId, other });
     } catch (e) {
@@ -1551,19 +1554,21 @@ function UserProfileScreen({ uid, onBack, onMessage }) {
     setReporting(false);
   };
   const message = async () => {
-    // NOTE: deliberately does NOT read the chat doc first. Firestore
-    // security rules that gate reads on "resource.data.members" throw a
-    // permission-denied error when the document doesn't exist yet
-    // (resource is null), which silently killed this button before —
-    // clicking it did nothing because the resulting promise rejection was
-    // never caught. Writing with { merge: true } instead works whether the
-    // chat already exists or not, and needs no pre-read.
+    // NOTE: the chat doc and the two chatMembers docs are written
+    // SEQUENTIALLY, not in one batch. A batched write is evaluated by
+    // Firestore's security rules against the database state BEFORE any of
+    // that batch's own writes have landed — so if the chatMembers rule
+    // checks membership via get() on the smiletak_chats doc, that doc
+    // still looks nonexistent to the rule even though it's in the same
+    // batch, and the write gets denied. Awaiting the chat doc's creation
+    // first means it genuinely exists by the time the chatMembers writes
+    // are evaluated.
     try {
       const chatId = chatIdFor(profile.id, uid);
+      await db.collection('smiletak_chats').doc(chatId).set({ members: [profile.id, uid], createdAt: FieldValue.serverTimestamp() }, { merge: true });
       const batch = db.batch();
-      batch.set(db.collection('smiletak_chats').doc(chatId), { members: [profile.id, uid], createdAt: FieldValue.serverTimestamp() }, { merge: true });
-      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id), { chatId, uid: profile.id, pinned: false, archived: false, muted: false, unreadCount: 0 }, { merge: true });
-      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + uid), { chatId, uid, pinned: false, archived: false, muted: false, unreadCount: 0 }, { merge: true });
+      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id), { chatId, uid: profile.id, members: [profile.id, uid], pinned: false, archived: false, muted: false, unreadCount: 0 }, { merge: true });
+      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + uid), { chatId, uid, members: [profile.id, uid], pinned: false, archived: false, muted: false, unreadCount: 0 }, { merge: true });
       await batch.commit();
       onMessage(chatId, user);
     } catch (e) {
