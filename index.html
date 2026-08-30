@@ -639,6 +639,7 @@ function AppShell() {
 function ChatsListScreen({ onOpenChat, onViewProfile, onNavigate }) {
   const { profile } = useAuth();
   const [memberDocs, setMemberDocs] = useState([]);
+  const [myChatIds, setMyChatIds] = useState([]);
   const [chatsMap, setChatsMap] = useState({});
   const [othersMap, setOthersMap] = useState({});
   const [filter, setFilter] = useState('all'); // all | unread | pinned | muted | archived
@@ -654,6 +655,32 @@ function ChatsListScreen({ onOpenChat, onViewProfile, onNavigate }) {
     });
     return unsub;
   }, [profile]);
+
+  // SELF-HEALING: chatMembers docs are only ever written by their own owner
+  // (uid == auth.uid) — a chat's OTHER member can never write your
+  // chatMembers doc for you, since that's normally blocked by security
+  // rules and there's no server-side function here to do it on their
+  // behalf. So instead: whenever this user is listed in a chat's members
+  // array but doesn't yet have their own chatMembers doc for it (e.g.
+  // someone just started a chat with them), create it themselves, right
+  // here, the moment their chat list loads.
+  useEffect(() => {
+    if (!profile) return;
+    const unsub = db.collection('smiletak_chats').where('members', 'array-contains', profile.id).onSnapshot(snap => {
+      setMyChatIds(snap.docs.map(d => d.id));
+    });
+    return unsub;
+  }, [profile]);
+  useEffect(() => {
+    if (!profile) return;
+    const known = new Set(memberDocs.map(m => m.chatId));
+    myChatIds.forEach(chatId => {
+      if (known.has(chatId)) return;
+      db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id).set({
+        chatId, uid: profile.id, pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp()
+      }, { merge: true }).catch(() => {});
+    });
+  }, [myChatIds, memberDocs, profile]);
 
   useEffect(() => {
     memberDocs.forEach(m => {
@@ -853,32 +880,17 @@ function DiscoverScreen({ onOpenChat, onViewProfile }) {
   };
 
   const startChat = async (other) => {
+    // Only ever write MY OWN chatMembers doc (see the long comment in
+    // UserProfileScreen.message() for why the other person's doc isn't
+    // written here — their client self-heals it themselves).
     try {
       const chatId = chatIdFor(profile.id, other.id);
       try {
         const blocked = await db.collection('smiletak_blockedUsers').doc(other.id + '_' + profile.id).get();
         if (blocked.exists) return toast("You can't message this user", 'error');
       } catch (e) { /* if the block check itself can't be read, don't let that block messaging */ }
-      // Sequential, not batched: the chat doc is created and awaited FIRST
-      // so that it genuinely exists in the database before the
-      // chatMembers docs are written. A single batch would have all its
-      // writes checked against the pre-batch state, so a chatMembers rule
-      // that looks up the chat doc's membership would see it as
-      // nonexistent even though it's "in the same batch".
-      const chatRef = db.collection('smiletak_chats').doc(chatId);
-      try {
-        await chatRef.set({ members: [profile.id, other.id], createdAt: FieldValue.serverTimestamp() }, { merge: true });
-      } catch (e) {
-        throw Object.assign(e, { message: '[chats doc] ' + e.message });
-      }
-      const batch = db.batch();
-      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id), { chatId, uid: profile.id, members: [profile.id, other.id], pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
-      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + other.id), { chatId, uid: other.id, members: [profile.id, other.id], pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
-      try {
-        await batch.commit();
-      } catch (e) {
-        throw Object.assign(e, { message: '[chatMembers docs] ' + e.message });
-      }
+      await db.collection('smiletak_chats').doc(chatId).set({ members: [profile.id, other.id], createdAt: FieldValue.serverTimestamp() }, { merge: true });
+      await db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id).set({ chatId, uid: profile.id, pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
       onOpenChat({ chatId, other });
     } catch (e) {
       console.error('[SmileTak] startChat() failed:', e.code, e.message, e);
@@ -982,7 +994,12 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
     await db.collection('smiletak_chats').doc(chatId).collection('messages').add(Object.assign(base, payload));
     const preview = payload.type === 'text' ? payload.text : ('📎 ' + payload.type);
     await db.collection('smiletak_chats').doc(chatId).set({ lastMessage: preview.slice(0, 100), lastMessageAt: FieldValue.serverTimestamp(), lastSenderId: profile.id }, { merge: true });
-    await db.collection('smiletak_chatMembers').doc(chatId + '_' + other.id).set({ unreadCount: FieldValue.increment(1) }, { merge: true });
+    // This bumps the OTHER person's unread badge, which is a cross-user
+    // write to their chatMembers doc — typically blocked by security
+    // rules (uid must equal auth.uid), same as the chat-start writes.
+    // Non-fatal: caught here so a rules mismatch never breaks sending the
+    // actual message or resetting the compose box below.
+    db.collection('smiletak_chatMembers').doc(chatId + '_' + other.id).set({ unreadCount: FieldValue.increment(1) }, { merge: true }).catch(() => {});
     fireLocalNotification(profile.fullName, preview, profile.photoURL);
     setReplyTo(null);
     setText('');
@@ -1043,7 +1060,8 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
       type: forwardMsg.type, text: forwardMsg.text || '', mediaURL: forwardMsg.mediaURL || null, mediaName: forwardMsg.mediaName || null, forwarded: true
     });
     await db.collection('smiletak_chats').doc(targetChatId).set({ lastMessage: '↪ forwarded message', lastMessageAt: FieldValue.serverTimestamp(), lastSenderId: profile.id }, { merge: true });
-    await db.collection('smiletak_chatMembers').doc(targetChatId + '_' + targetOtherId).set({ unreadCount: FieldValue.increment(1) }, { merge: true });
+    // Cross-user write — see the comment in sendMessage() above.
+    db.collection('smiletak_chatMembers').doc(targetChatId + '_' + targetOtherId).set({ unreadCount: FieldValue.increment(1) }, { merge: true }).catch(() => {});
     toast('Forwarded', 'success');
     setForwardMsg(null);
   };
@@ -1431,7 +1449,8 @@ function StatusViewer({ data, mine, onClose }) {
         senderId: profile.id, createdAt: FieldValue.serverTimestamp(), readBy: [], deliveredTo: [], deletedFor: [], deletedForEveryone: false, forwarded: true
       }, msg));
       await db.collection('smiletak_chats').doc(chatId).set({ lastMessage: '↪ shared a status', lastMessageAt: FieldValue.serverTimestamp(), lastSenderId: profile.id }, { merge: true });
-      await db.collection('smiletak_chatMembers').doc(chatId + '_' + otherId).set({ unreadCount: FieldValue.increment(1) }, { merge: true });
+      // Cross-user write — see the comment in ChatWindow.sendMessage().
+      db.collection('smiletak_chatMembers').doc(chatId + '_' + otherId).set({ unreadCount: FieldValue.increment(1) }, { merge: true }).catch(() => {});
       toast('Status shared', 'success');
     } catch (e) { toast(e.message || 'Could not share status', 'error'); }
     setForwardOpen(false);
@@ -1563,31 +1582,16 @@ function UserProfileScreen({ uid, onBack, onMessage }) {
     setReporting(false);
   };
   const message = async () => {
-    // NOTE: the chat doc and the two chatMembers docs are written
-    // SEQUENTIALLY, not in one batch. A batched write is evaluated by
-    // Firestore's security rules against the database state BEFORE any of
-    // that batch's own writes have landed — so if the chatMembers rule
-    // checks membership via get() on the smiletak_chats doc, that doc
-    // still looks nonexistent to the rule even though it's in the same
-    // batch, and the write gets denied. Awaiting the chat doc's creation
-    // first means it genuinely exists by the time the chatMembers writes
-    // are evaluated.
+    // Only ever write MY OWN chatMembers doc. Writing the other person's
+    // chatMembers doc from here would be a cross-user write, which
+    // security rules correctly block (uid must equal auth.uid) — there's
+    // no server/Cloud Function to do it on their behalf. Their own client
+    // self-heals their chatMembers doc the next time they open their
+    // Chats tab (see ChatsListScreen).
     try {
       const chatId = chatIdFor(profile.id, uid);
-      const chatRef = db.collection('smiletak_chats').doc(chatId);
-      try {
-        await chatRef.set({ members: [profile.id, uid], createdAt: FieldValue.serverTimestamp() }, { merge: true });
-      } catch (e) {
-        throw Object.assign(e, { message: '[chats doc] ' + e.message });
-      }
-      const batch = db.batch();
-      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id), { chatId, uid: profile.id, members: [profile.id, uid], pinned: false, archived: false, muted: false, unreadCount: 0 }, { merge: true });
-      batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + uid), { chatId, uid, members: [profile.id, uid], pinned: false, archived: false, muted: false, unreadCount: 0 }, { merge: true });
-      try {
-        await batch.commit();
-      } catch (e) {
-        throw Object.assign(e, { message: '[chatMembers docs] ' + e.message });
-      }
+      await db.collection('smiletak_chats').doc(chatId).set({ members: [profile.id, uid], createdAt: FieldValue.serverTimestamp() }, { merge: true });
+      await db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id).set({ chatId, uid: profile.id, pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
       onMessage(chatId, user);
     } catch (e) {
       console.error('[SmileTak] message() failed:', e.code, e.message, e);
