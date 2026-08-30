@@ -63,7 +63,7 @@
   ============================================================================
 -->
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/3.4.4/tailwind.min.js" onerror="this.onerror=null;document.write('<script src=\'https://cdn.tailwindcss.com\'><\/script>')"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -75,13 +75,37 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <script>
-  tailwind.config = {
-    darkMode: 'class',
-    theme: { extend: { colors: {
-      brand: { 50:'#e6f9f4',100:'#c0f0e2',200:'#8fe4cc',300:'#54d5b1',400:'#1fc496',500:'#00A884',600:'#008f6f',700:'#00745b',800:'#065f4c',900:'#064e3f' },
-      ink: { 50:'#f4f6f8',100:'#e4e8ee',200:'#c9d1dc',300:'#9fadbf',400:'#6b7a90',500:'#4a5769',600:'#354254',700:'#242e3d',800:'#161e29',900:'#0b0f16' }
-    } } }
-  };
+  // If any CDN script above failed to load (slow/blocked connection), fail
+  // loudly with a retry button instead of leaving the person on an infinite
+  // spinner with a cryptic console error.
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      var missing = [];
+      if (typeof tailwind === 'undefined') missing.push('Tailwind (styling)');
+      if (typeof React === 'undefined') missing.push('React');
+      if (typeof firebase === 'undefined') missing.push('Firebase');
+      if (missing.length) {
+        document.getElementById('root').innerHTML =
+          '<div style="height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0b0f16;color:#fff;padding:24px;text-align:center;font-family:sans-serif;">' +
+          '<div style="font-size:32px;">⚠️</div>' +
+          '<div style="font-weight:700;font-size:16px;">Couldn\'t load required scripts</div>' +
+          '<div style="font-size:13px;opacity:.7;max-width:320px;">' + missing.join(', ') + ' failed to load — this is usually a slow or blocked internet connection, not a bug in the app. Check your connection and try again.</div>' +
+          '<button onclick="location.reload()" style="background:#00A884;color:#fff;border:none;padding:10px 22px;border-radius:999px;font-weight:600;font-size:14px;">Retry</button>' +
+          '</div>';
+      }
+    }, 4000);
+  });
+</script>
+<script>
+  if (typeof tailwind !== 'undefined') {
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: {
+        brand: { 50:'#e6f9f4',100:'#c0f0e2',200:'#8fe4cc',300:'#54d5b1',400:'#1fc496',500:'#00A884',600:'#008f6f',700:'#00745b',800:'#065f4c',900:'#064e3f' },
+        ink: { 50:'#f4f6f8',100:'#e4e8ee',200:'#c9d1dc',300:'#9fadbf',400:'#6b7a90',500:'#4a5769',600:'#354254',700:'#242e3d',800:'#161e29',900:'#0b0f16' }
+      } } }
+    };
+  }
 </script>
 <style>
   html,body{height:100%;overscroll-behavior-y:none;}
@@ -113,6 +137,10 @@
 
 <script>
 "use strict";
+try {
+if (typeof React === 'undefined' || typeof firebase === 'undefined') {
+  throw new Error('Required scripts (React/Firebase) did not load — check your internet connection and reload.');
+}
 const { useState, useEffect, useRef, useContext, createContext, useCallback, useMemo } = React;
 const h = React.createElement;
 
@@ -140,6 +168,11 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+// TEMP DEBUG: prints every Firestore request path in the console, so a
+// "Missing or insufficient permissions" error can be traced to the exact
+// collection/document it happened on. Safe to leave in — remove the next
+// line once the permissions issue is resolved.
+firebase.firestore.setLogLevel('debug');
 const storage = firebase.storage();
 const FieldValue = firebase.firestore.FieldValue;
 const Timestamp = firebase.firestore.Timestamp;
@@ -374,12 +407,15 @@ function AuthScreen() {
 
     setBusy(true);
     try {
-      const [uSnap, pSnap] = await Promise.all([
-        db.collection('smiletak_usernames').doc(uKey).get(),
-        db.collection('smiletak_phoneIndex').doc(phoneDigits.replace(/\D/g, '')).get()
-      ]);
+      const uSnap = await db.collection('smiletak_usernames').doc(uKey).get();
       if (uSnap.exists) { toast('That username is already taken', 'error'); setBusy(false); return; }
-      if (pSnap.exists) { toast('That phone number is already registered', 'error'); setBusy(false); return; }
+      // Phone uniqueness isn't pre-checked here (smiletak_phoneIndex is
+      // intentionally unreadable by anyone, including a not-yet-signed-in
+      // user, to keep phone numbers from being enumerable). Firebase Auth
+      // itself already guarantees uniqueness, since each phone number maps
+      // to one synthetic email — createUserWithEmailAndPassword below will
+      // reject with auth/email-already-in-use if that phone is taken, and
+      // that's caught in the catch block with a clear message.
 
       const cred = await auth.createUserWithEmailAndPassword(phoneToEmail(phone), password);
       const uid = cred.user.uid;
@@ -1024,20 +1060,37 @@ function CreateStatusModal({ onClose, onText, onMedia }) {
   const [text, setText] = useState('');
   const bgs = ['#00A884', '#075E54', '#128C7E', '#25D366', '#34495E', '#8E44AD'];
   const [bg, setBg] = useState(bgs[0]);
-  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(null); // 'image' | 'video' | null
+  const imgRef = useRef(null);
+  const vidRef = useRef(null);
+  const toast = useToast();
+
+  const pickMedia = async (file, type) => {
+    if (!file) return;
+    if (type === 'video' && file.size > 100 * 1024 * 1024) { toast('Video status must be under 100MB', 'error'); return; }
+    setUploading(type);
+    try {
+      await onMedia(file, type);
+      onClose();
+    } catch (e) { toast('Upload failed: ' + e.message, 'error'); setUploading(null); }
+  };
+
   return h('div', { className: 'fixed inset-0 z-50 bg-black/70 flex flex-col' },
     h('div', { className: 'flex justify-between items-center p-4' },
-      h('button', { className: 'text-white', onClick: onClose }, h('i', { className: 'fa-solid fa-xmark text-xl' })),
-      h('div', { className: 'flex gap-3' },
-        h('input', { type: 'file', accept: 'image/*', ref: fileRef, className: 'hidden', onChange: e => { const f = e.target.files[0]; if (f) { onMedia(f, 'image'); onClose(); } } }),
-        h('button', { className: 'text-white', onClick: () => fileRef.current.click() }, h('i', { className: 'fa-solid fa-image text-xl' }))
+      h('button', { className: 'text-white', onClick: onClose, disabled: !!uploading }, h('i', { className: 'fa-solid fa-xmark text-xl' })),
+      h('div', { className: 'flex gap-4' },
+        h('input', { type: 'file', accept: 'image/*', ref: imgRef, className: 'hidden', onChange: e => pickMedia(e.target.files[0], 'image') }),
+        h('input', { type: 'file', accept: 'video/*', ref: vidRef, className: 'hidden', onChange: e => pickMedia(e.target.files[0], 'video') }),
+        h('button', { className: 'text-white', onClick: () => imgRef.current.click(), disabled: !!uploading }, h('i', { className: 'fa-solid fa-image text-xl' })),
+        h('button', { className: 'text-white', onClick: () => vidRef.current.click(), disabled: !!uploading }, h('i', { className: 'fa-solid fa-video text-xl' }))
       )
     ),
+    uploading && h('div', { className: 'text-center text-white text-sm py-1' }, h('span', { className: 'inline-block w-3 h-3 border-2 border-white/50 border-t-white rounded-full spinner mr-2' }), 'Uploading ', uploading, '…'),
     h('div', { className: 'flex-1 flex items-center justify-center', style: { background: bg } },
       h('textarea', { autoFocus: true, value: text, onChange: e => setText(e.target.value), placeholder: 'Type a status…', className: 'bg-transparent text-white text-2xl font-semibold text-center w-4/5 outline-none placeholder-white/60', rows: 4 })
     ),
     h('div', { className: 'flex justify-center gap-2 p-4' }, bgs.map(c => h('button', { key: c, className: 'w-7 h-7 rounded-full border-2 ' + (bg === c ? 'border-white' : 'border-transparent'), style: { background: c }, onClick: () => setBg(c) }))),
-    h('button', { disabled: !text.trim(), onClick: () => { onText(text.trim(), bg); onClose(); }, className: 'mx-4 mb-4 bg-brand-600 disabled:opacity-40 text-white rounded-full py-3 font-semibold' }, 'Post status')
+    h('button', { disabled: !text.trim() || !!uploading, onClick: () => { onText(text.trim(), bg); onClose(); }, className: 'mx-4 mb-4 bg-brand-600 disabled:opacity-40 text-white rounded-full py-3 font-semibold' }, 'Post status')
   );
 }
 
@@ -1294,6 +1347,16 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(h(App, null));
+} catch (e) {
+  document.getElementById('root').innerHTML =
+    '<div style="height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0b0f16;color:#fff;padding:24px;text-align:center;font-family:sans-serif;">' +
+    '<div style="font-size:32px;">⚠️</div>' +
+    '<div style="font-weight:700;font-size:16px;">SmileTak failed to start</div>' +
+    '<div style="font-size:13px;opacity:.7;max-width:320px;">' + (e && e.message ? e.message : 'Unknown error') + '</div>' +
+    '<button onclick="location.reload()" style="background:#00A884;color:#fff;border:none;padding:10px 22px;border-radius:999px;font-weight:600;font-size:14px;">Retry</button>' +
+    '</div>';
+}
+
 </script>
 </body>
 </html>
