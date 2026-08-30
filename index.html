@@ -866,14 +866,23 @@ function DiscoverScreen({ onOpenChat, onViewProfile }) {
       // that looks up the chat doc's membership would see it as
       // nonexistent even though it's "in the same batch".
       const chatRef = db.collection('smiletak_chats').doc(chatId);
-      await chatRef.set({ members: [profile.id, other.id], createdAt: FieldValue.serverTimestamp() }, { merge: true });
+      try {
+        await chatRef.set({ members: [profile.id, other.id], createdAt: FieldValue.serverTimestamp() }, { merge: true });
+      } catch (e) {
+        throw Object.assign(e, { message: '[chats doc] ' + e.message });
+      }
       const batch = db.batch();
       batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id), { chatId, uid: profile.id, members: [profile.id, other.id], pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
       batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + other.id), { chatId, uid: other.id, members: [profile.id, other.id], pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (e) {
+        throw Object.assign(e, { message: '[chatMembers docs] ' + e.message });
+      }
       onOpenChat({ chatId, other });
     } catch (e) {
-      toast(e.message || 'Could not start chat', 'error');
+      console.error('[SmileTak] startChat() failed:', e.code, e.message, e);
+      toast((e.code || 'error') + ': ' + (e.message || 'Could not start chat'), 'error');
     }
   };
 
@@ -1565,14 +1574,24 @@ function UserProfileScreen({ uid, onBack, onMessage }) {
     // are evaluated.
     try {
       const chatId = chatIdFor(profile.id, uid);
-      await db.collection('smiletak_chats').doc(chatId).set({ members: [profile.id, uid], createdAt: FieldValue.serverTimestamp() }, { merge: true });
+      const chatRef = db.collection('smiletak_chats').doc(chatId);
+      try {
+        await chatRef.set({ members: [profile.id, uid], createdAt: FieldValue.serverTimestamp() }, { merge: true });
+      } catch (e) {
+        throw Object.assign(e, { message: '[chats doc] ' + e.message });
+      }
       const batch = db.batch();
       batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id), { chatId, uid: profile.id, members: [profile.id, uid], pinned: false, archived: false, muted: false, unreadCount: 0 }, { merge: true });
       batch.set(db.collection('smiletak_chatMembers').doc(chatId + '_' + uid), { chatId, uid, members: [profile.id, uid], pinned: false, archived: false, muted: false, unreadCount: 0 }, { merge: true });
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (e) {
+        throw Object.assign(e, { message: '[chatMembers docs] ' + e.message });
+      }
       onMessage(chatId, user);
     } catch (e) {
-      toast(e.message || 'Could not start chat', 'error');
+      console.error('[SmileTak] message() failed:', e.code, e.message, e);
+      toast((e.code || 'error') + ': ' + (e.message || 'Could not start chat'), 'error');
     }
   };
 
