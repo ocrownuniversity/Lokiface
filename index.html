@@ -708,6 +708,7 @@ function AppShell() {
   const openBusiness = () => { const v = { screen: 'business' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openGroup = (groupId, group) => { const v = { screen: 'group', groupId, group }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openNewGroup = () => { const v = { screen: 'newGroup' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openNewChat = () => { const v = { screen: 'newChat' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openGroupInfo = (groupId) => { const v = { screen: 'groupInfo', groupId }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openChannel = (channelId) => { const v = { screen: 'channel', channelId }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openNewChannel = () => { const v = { screen: 'newChannel' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
@@ -728,6 +729,14 @@ function AppShell() {
   }
   if (view.screen === 'newGroup') {
     return h(GroupCreateScreen, { onBack: goBack, onCreated: (groupId, group) => openGroup(groupId, group) });
+  }
+  if (view.screen === 'newChat') {
+    return h(SelectContactScreen, {
+      onBack: goBack,
+      onOpenChat: (c) => openChat(c.chatId, c.other),
+      onNewGroup: openNewGroup,
+      onNewChannel: openNewChannel
+    });
   }
   if (view.screen === 'group') {
     return h(GroupChatWindow, { groupId: view.groupId, group: view.group, onBack: goBack, onInfo: () => openGroupInfo(view.groupId) });
@@ -756,7 +765,7 @@ function AppShell() {
 
   return h('div', { className: 'h-full flex flex-col' },
     h('div', { className: 'flex-1 overflow-hidden' },
-      tab === 'chats' && h(ChatsListScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onOpenGroup: openGroup, onNewGroup: openNewGroup, onViewProfile: openProfile, onNavigate: goToTab }),
+      tab === 'chats' && h(ChatsListScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onOpenGroup: openGroup, onNewGroup: openNewGroup, onNewChat: openNewChat, onViewProfile: openProfile, onNavigate: goToTab }),
       tab === 'status' && h(StatusScreen, { onViewProfile: openProfile, onOpenChannel: openChannel, onNewChannel: openNewChannel, onExploreChannels: openExploreChannels }),
       tab === 'search' && h(DiscoverScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onViewProfile: openProfile }),
       tab === 'profile' && h(MyProfileScreen, { onOpenPremium: openPremium, onOpenBusiness: openBusiness }),
@@ -773,7 +782,7 @@ function AppShell() {
 }
 
 /* ============================== CHATS LIST ============================== */
-function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onViewProfile, onNavigate }) {
+function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onViewProfile, onNavigate }) {
   const { profile } = useAuth();
   const [memberDocs, setMemberDocs] = useState([]);
   const [myChatIds, setMyChatIds] = useState([]);
@@ -944,7 +953,7 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onViewProfile, o
     { id: 'muted', label: 'Muted', count: counts.muted }
   ];
 
-  return h('div', { className: 'h-full flex flex-col bg-white dark:bg-ink-900' },
+  return h('div', { className: 'h-full flex flex-col bg-white dark:bg-ink-900 relative' },
     h('div', { className: 'px-4 pt-4 pb-3 flex items-center justify-between' },
       h('h1', { className: 'text-2xl font-extrabold' }, filter === 'archived' ? 'Archived' : 'SmileTak'),
       filter === 'archived'
@@ -955,7 +964,7 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onViewProfile, o
             h('div', { className: 'relative' },
               h('button', { className: 'text-xl', onClick: () => setMenuOpen(o => !o) }, h('i', { className: 'fa-solid fa-ellipsis-vertical' })),
               menuOpen && h('div', { className: 'absolute right-0 top-8 z-20 bg-white dark:bg-ink-700 shadow-lg rounded-xl py-1 w-44 text-sm', onMouseLeave: () => setMenuOpen(false) },
-                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNavigate && onNavigate('search'); } }, h('i', { className: 'fa-solid fa-comment-medical mr-2' }), 'New chat'),
+                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNewChat && onNewChat(); } }, h('i', { className: 'fa-solid fa-comment-medical mr-2' }), 'New chat'),
                 h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNewGroup && onNewGroup(); } }, h('i', { className: 'fa-solid fa-users mr-2' }), 'New group'),
                 h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); setFilter('archived'); } }, h('i', { className: 'fa-solid fa-box-archive mr-2' }), 'Archived'),
                 h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNavigate && onNavigate('profile'); } }, h('i', { className: 'fa-solid fa-gear mr-2' }), 'Settings')
@@ -1008,7 +1017,11 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onViewProfile, o
         onArchive: () => updateMeta(r, { archived: !r.meta.archived }),
         onProfile: () => { if (r.type === 'dm' && r.other) onViewProfile(r.other.id); }
       }))
-    )
+    ),
+    filter !== 'archived' && h('button', {
+      onClick: onNewChat,
+      className: 'absolute bottom-5 right-5 w-14 h-14 rounded-full bg-brand-600 text-white shadow-lg flex items-center justify-center text-xl active:scale-95 transition'
+    }, h('i', { className: 'fa-solid fa-comment-medical' }))
   );
 }
 
@@ -1373,6 +1386,78 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
         ))
       ),
       h('button', { onClick: leaveGroup, className: 'w-full border border-red-200 text-red-500 rounded-xl py-2.5 font-semibold text-sm mt-4 mb-8' }, 'Leave group')
+    )
+  );
+}
+
+/* ============================== SELECT CONTACT (new chat) ============================== */
+function SelectContactScreen({ onBack, onOpenChat, onNewGroup, onNewChannel }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [all, setAll] = useState(null); // null = loading
+  const [q, setQ] = useState('');
+
+  useEffect(() => {
+    db.collection('smiletak_users').orderBy('fullName').limit(300).get()
+      .then(s => setAll(s.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(u => u.id !== profile.id)))
+      .catch(e => { toast(e.message, 'error'); setAll([]); });
+    // eslint-disable-next-line
+  }, []);
+
+  const startChat = async (other) => {
+    try {
+      const blocked = await db.collection('smiletak_blockedUsers').doc(other.id + '_' + profile.id).get().catch(() => null);
+      if (blocked && blocked.exists) return toast("You can't message this user", 'error');
+      const chatId = chatIdFor(profile.id, other.id);
+      await db.collection('smiletak_chats').doc(chatId).set({ members: [profile.id, other.id], createdAt: FieldValue.serverTimestamp() }, { merge: true });
+      await db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id).set({ chatId, uid: profile.id, pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
+      onOpenChat({ chatId, other });
+    } catch (e) { toast((e.code || 'error') + ': ' + (e.message || 'Could not start chat'), 'error'); }
+  };
+
+  const inviteFriend = async () => {
+    const url = window.location.origin + window.location.pathname;
+    const text = 'Chat with me on SmileTak: ' + url;
+    if (navigator.share) {
+      navigator.share({ title: 'SmileTak', text, url }).catch(() => {});
+    } else {
+      try { await navigator.clipboard.writeText(text); toast('Invite link copied', 'success'); }
+      catch (e) { toast(text, 'info'); }
+    }
+  };
+
+  const filtered = (all || []).filter(u => !q.trim() || (u.fullName || '').toLowerCase().includes(q.toLowerCase()) || (u.username || '').toLowerCase().includes(q.toLowerCase()));
+
+  return h('div', { className: 'h-full flex flex-col' },
+    h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+      h('button', { onClick: onBack, className: 'text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('div', null, h('p', { className: 'font-semibold' }, 'Select contact'), h('p', { className: 'text-[11px] text-slate-400' }, (all ? all.length : '…') + ' contacts on SmileTak'))
+    ),
+    h('div', { className: 'px-4 pt-3 pb-1' },
+      h('input', { className: 'w-full px-4 py-2.5 rounded-full bg-slate-100 dark:bg-ink-800 text-sm focus:outline-none', placeholder: 'Search name or username', value: q, onChange: e => setQ(e.target.value) })
+    ),
+    h('div', { className: 'flex-1 overflow-y-auto no-scrollbar' },
+      h('div', { className: 'py-1' },
+        h('button', { className: 'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-ink-800', onClick: onNewGroup },
+          h('div', { className: 'w-11 h-11 rounded-full bg-brand-100 dark:bg-ink-700 text-brand-600 flex items-center justify-center' }, h('i', { className: 'fa-solid fa-users' })),
+          h('p', { className: 'font-semibold text-sm' }, 'New group')
+        ),
+        h('button', { className: 'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-ink-800', onClick: onNewChannel },
+          h('div', { className: 'w-11 h-11 rounded-full bg-brand-100 dark:bg-ink-700 text-brand-600 flex items-center justify-center' }, h('i', { className: 'fa-solid fa-bullhorn' })),
+          h('p', { className: 'font-semibold text-sm' }, 'New channel')
+        ),
+        h('button', { className: 'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-ink-800', onClick: inviteFriend },
+          h('div', { className: 'w-11 h-11 rounded-full bg-brand-100 dark:bg-ink-700 text-brand-600 flex items-center justify-center' }, h('i', { className: 'fa-solid fa-user-plus' })),
+          h('p', { className: 'font-semibold text-sm' }, 'Invite a friend')
+        )
+      ),
+      h('p', { className: 'px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400' }, 'Contacts on SmileTak'),
+      all === null && h('p', { className: 'text-center text-sm text-slate-400 mt-8' }, 'Loading…'),
+      all && filtered.length === 0 && h('p', { className: 'text-center text-sm text-slate-400 mt-8' }, 'No one found'),
+      filtered.map(u => h('div', { key: u.id, className: 'flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-ink-800 cursor-pointer', onClick: () => startChat(u) },
+        h(Avatar, { url: u.photoURL, name: u.fullName, size: 44, online: u.online }),
+        h('div', { className: 'min-w-0' }, h('p', { className: 'font-semibold text-sm truncate' }, h(NameWithBadges, { name: u.fullName, user: u })), h('p', { className: 'text-xs text-slate-400 truncate' }, '@' + u.username))
+      ))
     )
   );
 }
