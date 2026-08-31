@@ -110,6 +110,7 @@
 </script>
 <style>
   html,body{height:100%;overscroll-behavior-y:none;}
+  html{font-size:114%;} /* bumps every Tailwind text-* size (they're rem-based) app-wide */
   body{font-family:'Inter',sans-serif;}
   #root{height:100%;overflow:hidden;}
   input,textarea,select{font-size:16px!important;}
@@ -2203,8 +2204,10 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
     const item = s.items ? s.items[0] : s;
     if (item.type === 'text') return { background: item.bgColor };
     if (item.type === 'image') return { backgroundImage: 'url(' + item.mediaURL + ')', backgroundSize: 'cover', backgroundPosition: 'center' };
-    return { background: '#222' };
+    return null; // video — rendered as an actual <video> element instead of a CSS background
   };
+  const cardFirstItem = (s) => (s.items ? s.items[0] : s);
+  const allGroups = (myStatuses.length ? [{ uid: profile.id, user: profile, items: myStatuses }] : []).concat(statuses);
 
   return h('div', { className: 'h-full flex flex-col bg-white dark:bg-ink-900 relative' },
     h('div', { className: 'px-4 pt-4 pb-3 flex items-center justify-between' },
@@ -2220,9 +2223,13 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
         // Add status / my status card
         h('div', {
           className: 'shrink-0 w-[104px] h-[150px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
-          style: myStatuses.length ? cardBg({ items: myStatuses }) : { background: '#1a2230' },
-          onClick: () => myStatuses.length ? setViewing({ uid: profile.id, user: profile, items: myStatuses }) : setCreating(true)
+          style: myStatuses.length ? (cardBg({ items: myStatuses }) || {}) : { background: '#1a2230' },
+          onClick: () => myStatuses.length ? setViewing({ groups: allGroups, groupIndex: 0 }) : setCreating(true)
         },
+          myStatuses.length > 0 && cardFirstItem({ items: myStatuses }).type === 'video' &&
+            h('video', { src: cardFirstItem({ items: myStatuses }).mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, playsInline: true, preload: 'metadata' }),
+          myStatuses.length > 0 && cardFirstItem({ items: myStatuses }).type === 'video' &&
+            h('video', { src: cardFirstItem({ items: myStatuses }).mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, playsInline: true, preload: 'metadata' }),
           !myStatuses.length && h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 104 }),
           myStatuses.length > 0 && h('div', { className: 'absolute inset-0 bg-black/25' }),
           h('div', { className: 'absolute top-2 left-2' },
@@ -2233,12 +2240,13 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
           ),
           h('p', { className: 'relative text-white text-[11px] font-semibold px-2 pb-2 truncate w-full' }, myStatuses.length ? 'My status' : 'Add status')
         ),
-        statuses.map(s => h('div', {
+        statuses.map((s, i) => h('div', {
           key: s.uid,
           className: 'shrink-0 w-[104px] h-[150px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
-          style: cardBg(s),
-          onClick: () => setViewing(s)
+          style: cardBg(s) || { background: '#222' },
+          onClick: () => setViewing({ groups: allGroups, groupIndex: allGroups.findIndex(g => g.uid === s.uid) })
         },
+          cardFirstItem(s).type === 'video' && h('video', { src: cardFirstItem(s).mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, playsInline: true, preload: 'metadata' }),
           h('div', { className: 'absolute inset-0 bg-black/20' }),
           h('div', { className: 'absolute top-2 left-2 rounded-full ring-2 ring-brand-500' }, h(Avatar, { url: s.user.photoURL, name: s.user.fullName, size: 28 })),
           h('p', { className: 'relative text-white text-[11px] font-semibold px-2 pb-2 truncate w-full' }, s.user.fullName)
@@ -2266,7 +2274,7 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
       myChannels.map(c => h(ChannelRow, { key: c.id, c, onOpen: () => onOpenChannel(c.id) }))
     ),
     creating && h(CreateStatusModal, { onClose: closeCreate, onText: createTextStatus, onMedia: createMediaStatus }),
-    viewing && h(StatusViewer, { data: viewing, mine: viewing.uid === profile.id, onClose: closeViewer }),
+    viewing && h(StatusViewer, { groups: viewing.groups, startIndex: viewing.groupIndex, onClose: closeViewer }),
     h('div', { className: 'absolute bottom-5 right-5 flex flex-col items-center gap-3' },
       h('button', { onClick: onNewChannel, className: 'w-11 h-11 rounded-full bg-slate-700 dark:bg-ink-700 text-white shadow-lg flex items-center justify-center text-base active:scale-95 transition' }, h('i', { className: 'fa-solid fa-pen' })),
       h('button', { onClick: () => setCreating(true), className: 'w-14 h-14 rounded-full bg-brand-600 text-white shadow-lg flex items-center justify-center text-xl active:scale-95 transition' }, h('i', { className: 'fa-solid fa-camera' }))
@@ -2568,10 +2576,13 @@ function CreateStatusModal({ onClose, onText, onMedia }) {
   );
 }
 
-function StatusViewer({ data, mine, onClose }) {
+function StatusViewer({ groups, startIndex, onClose }) {
   const { profile } = useAuth();
   const toast = useToast();
+  const [groupIndex, setGroupIndex] = useState(startIndex || 0);
   const [idx, setIdx] = useState(0);
+  const data = groups[groupIndex];
+  const mine = data.uid === profile.id;
   const item = data.items[idx];
   const [viewers, setViewers] = useState([]);
   const [sharing, setSharing] = useState(false);
@@ -2582,7 +2593,7 @@ function StatusViewer({ data, mine, onClose }) {
     db.collection('smiletak_statuses').doc(item.id).collection('views').doc(profile.id).set({ viewedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
   }, [item.id, profile.id]);
   useEffect(() => {
-    if (!mine) return;
+    if (!mine) { setViewers([]); return; }
     const unsub = db.collection('smiletak_statuses').doc(item.id).collection('views').onSnapshot(async snap => {
       const list = await Promise.all(snap.docs.map(async d => {
         const uSnap = await db.collection('smiletak_users').doc(d.id).get();
@@ -2592,8 +2603,18 @@ function StatusViewer({ data, mine, onClose }) {
     });
     return unsub;
   }, [item.id, mine]);
-  const next = () => idx < data.items.length - 1 ? setIdx(idx + 1) : onClose();
-  const prev = () => idx > 0 && setIdx(idx - 1);
+  // Advancing past the last item of this person moves on to the next
+  // person's status automatically, like Instagram/WhatsApp stories —
+  // only closing the viewer once everyone in `groups` has been shown.
+  const next = () => {
+    if (idx < data.items.length - 1) { setIdx(idx + 1); return; }
+    if (groupIndex < groups.length - 1) { setGroupIndex(groupIndex + 1); setIdx(0); return; }
+    onClose();
+  };
+  const prev = () => {
+    if (idx > 0) { setIdx(idx - 1); return; }
+    if (groupIndex > 0) { setGroupIndex(groupIndex - 1); setIdx(groups[groupIndex - 1].items.length - 1); }
+  };
 
   // ---- Reshare a status: forward it into a chat as a message, repost it
   // to your own status, or hand it off to the device's native share sheet. ----
