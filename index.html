@@ -659,6 +659,29 @@ function useBackClose(isOpen, onClose) {
   };
 }
 
+// Fires onLongPress after a press-and-hold (touch or mouse), and fires
+// onTap for a normal short click/tap. Also wired to right-click so it
+// works the same way with a mouse.
+function useLongPress(onLongPress, onTap, ms) {
+  const timer = useRef(null);
+  const fired = useRef(false);
+  const start = () => {
+    fired.current = false;
+    timer.current = setTimeout(() => { fired.current = true; onLongPress(); }, ms || 500);
+  };
+  const clear = () => { if (timer.current) clearTimeout(timer.current); };
+  const end = () => { clear(); if (!fired.current && onTap) onTap(); };
+  return {
+    onMouseDown: start,
+    onMouseUp: end,
+    onMouseLeave: clear,
+    onTouchStart: start,
+    onTouchEnd: end,
+    onTouchMove: clear,
+    onContextMenu: (e) => { e.preventDefault(); if (!fired.current) { fired.current = true; onLongPress(); } }
+  };
+}
+
 function AppShell() {
   const { profile } = useAuth();
   const toast = useToast();
@@ -772,16 +795,17 @@ function AppShell() {
     { id: 'chats', icon: 'fa-comment-dots', label: 'Chats' },
     { id: 'status', icon: 'fa-circle-notch', label: 'Updates' },
     { id: 'search', icon: 'fa-magnifying-glass', label: 'Discover' },
-    { id: 'profile', icon: 'fa-user', label: 'Profile' }
+    { id: 'calls', icon: 'fa-phone', label: 'Calls' }
   ];
   if (profile && profile.isAdmin) tabs.push({ id: 'admin', icon: 'fa-shield-halved', label: 'Admin' });
 
   return h('div', { className: 'h-full flex flex-col' },
     h('div', { className: 'flex-1 overflow-hidden' },
       tab === 'chats' && h(ChatsListScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onOpenGroup: openGroup, onNewGroup: openNewGroup, onNewChat: openNewChat, onNewBroadcast: openNewBroadcast, onLinkedDevices: openLinkedDevices, onStarred: openStarred, onViewProfile: openProfile, onNavigate: goToTab }),
-      tab === 'status' && h(StatusScreen, { onViewProfile: openProfile, onOpenChannel: openChannel, onNewChannel: openNewChannel, onExploreChannels: openExploreChannels }),
+      tab === 'status' && h(StatusScreen, { onViewProfile: openProfile, onOpenChannel: openChannel, onNewChannel: openNewChannel, onExploreChannels: openExploreChannels, onStarred: openStarred, onNavigate: goToTab }),
       tab === 'search' && h(DiscoverScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onViewProfile: openProfile }),
       tab === 'profile' && h(MyProfileScreen, { onOpenPremium: openPremium, onOpenBusiness: openBusiness }),
+      tab === 'calls' && h(CallsScreen, { onOpenChat: (other) => openChat(chatIdFor(profile.id, other.id), other) }),
       tab === 'admin' && h(AdminPanel, {})
     ),
     h('div', { className: 'flex border-t border-slate-200 dark:border-ink-700 bg-white dark:bg-ink-800 shrink-0' },
@@ -807,6 +831,7 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
   const [filter, setFilter] = useState('all'); // all | unread | pinned | muted | archived
   const [q, setQ] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selected, setSelected] = useState([]); // array of "type_id" keys, e.g. "dm_abc123"
   const camRef = useRef(null);
   const toast = useToast();
 
@@ -956,6 +981,41 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
     toast('Marked all as read', 'success');
   };
 
+  // SELECTION MODE (long-press a chat, like the native app): shows a top
+  // action bar with pin / delete / mute / archive instead of the old
+  // per-row chevron dropdown.
+  const rowKey = (r) => r.type + '_' + r.id;
+  const selectedRows = allRows.filter(r => selected.includes(rowKey(r)));
+  const toggleSelect = (r) => setSelected(sel => {
+    const k = rowKey(r);
+    return sel.includes(k) ? sel.filter(x => x !== k) : sel.concat([k]);
+  });
+  const startSelect = (r) => setSelected([rowKey(r)]);
+  const clearSelect = () => setSelected([]);
+
+  const deleteChat = (row) => {
+    // "Delete" removes the chat from *your* list only (your chatMembers /
+    // groupMembers doc). The other participant(s) and the chat's messages
+    // are untouched, matching the behaviour of the delete icon shown in
+    // the screenshot's selection bar.
+    const coll = row.type === 'group' ? 'smiletak_groupMembers' : 'smiletak_chatMembers';
+    return db.collection(coll).doc(row.id + '_' + profile.id).delete();
+  };
+
+  const bulkDelete = async () => {
+    if (selectedRows.length === 0) return;
+    const n = selectedRows.length;
+    if (!window.confirm(n === 1 ? 'Delete this chat?' : 'Delete ' + n + ' chats?')) return;
+    try {
+      await Promise.all(selectedRows.map(deleteChat));
+      toast(n === 1 ? 'Chat deleted' : n + ' chats deleted', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+    clearSelect();
+  };
+  const bulkPin = () => { selectedRows.forEach(r => updateMeta(r, { pinned: !r.meta.pinned })); clearSelect(); };
+  const bulkMute = () => { selectedRows.forEach(r => updateMeta(r, { muted: !r.meta.muted })); clearSelect(); };
+  const bulkArchive = () => { selectedRows.forEach(r => updateMeta(r, { archived: !r.meta.archived })); clearSelect(); };
+
   const postCameraStatus = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -974,7 +1034,16 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
   ];
 
   return h('div', { className: 'h-full flex flex-col bg-white dark:bg-ink-900 relative' },
-    h('div', { className: 'px-4 pt-4 pb-3 flex items-center justify-between' },
+    selected.length > 0
+      ? h('div', { className: 'px-4 pt-4 pb-3 flex items-center gap-4 bg-slate-50 dark:bg-ink-800' },
+          h('button', { className: 'text-xl', onClick: clearSelect }, h('i', { className: 'fa-solid fa-arrow-left' })),
+          h('span', { className: 'text-lg font-bold flex-1' }, selected.length),
+          h('button', { className: 'text-xl', title: 'Pin', onClick: bulkPin }, h('i', { className: 'fa-solid fa-thumbtack' })),
+          h('button', { className: 'text-xl', title: 'Delete', onClick: bulkDelete }, h('i', { className: 'fa-solid fa-trash' })),
+          h('button', { className: 'text-xl', title: 'Mute', onClick: bulkMute }, h('i', { className: 'fa-solid fa-bell-slash' })),
+          h('button', { className: 'text-xl', title: 'Archive', onClick: bulkArchive }, h('i', { className: 'fa-solid fa-box-archive' }))
+        )
+      : h('div', { className: 'px-4 pt-4 pb-3 flex items-center justify-between' },
       h('h1', { className: 'text-2xl font-extrabold' }, filter === 'archived' ? 'Archived' : 'SmileTak'),
       filter === 'archived'
         ? h('button', { className: 'text-sm text-brand-600 font-semibold', onClick: () => setFilter('all') }, 'Back')
@@ -1030,11 +1099,15 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
       rows.map(r => h(ChatRow, {
         key: r.type + '_' + r.id,
         row: r,
+        selectMode: selected.length > 0,
+        isSelected: selected.includes(rowKey(r)),
         onOpen: () => {
+          if (selected.length > 0) return toggleSelect(r);
           if (r.type === 'group') onOpenGroup(r.id, r.group);
           else onOpenChat({ chatId: r.id, other: r.other });
           if (r.meta.unreadCount) updateMeta(r, { unreadCount: 0 });
         },
+        onLongPress: () => startSelect(r),
         onPin: () => updateMeta(r, { pinned: !r.meta.pinned }),
         onMute: () => updateMeta(r, { muted: !r.meta.muted }),
         onArchive: () => updateMeta(r, { archived: !r.meta.archived }),
@@ -1048,44 +1121,69 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
   );
 }
 
-function ChatRow({ row, onOpen, onPin, onMute, onArchive, onProfile }) {
-  if (row.type === 'group') return h(GroupChatRow, { row, onOpen, onPin, onMute, onArchive });
-  return h(DmChatRow, { row, onOpen, onPin, onMute, onArchive, onProfile });
+function ChatRow({ row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile }) {
+  if (row.type === 'group') return h(GroupChatRow, { row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive });
+  return h(DmChatRow, { row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile });
 }
-function GroupChatRow({ row, onOpen, onPin, onMute, onArchive }) {
+// Small checkmark badge shown over an avatar once a chat is selected —
+// same spot/behaviour as the green check badge in the native app.
+function SelectBadge({ selected }) {
+  return h('span', {
+    className: 'absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full flex items-center justify-center border-2 border-white dark:border-ink-900 ' +
+      (selected ? 'bg-brand-500' : 'bg-white dark:bg-ink-700 border-slate-300 dark:border-ink-600')
+  }, selected && h('i', { className: 'fa-solid fa-check text-white text-[9px]' }));
+}
+function GroupChatRow({ row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive }) {
   const { group, meta } = row;
-  const [menuOpen, setMenuOpen] = useState(false);
   const unread = !!meta.unreadCount;
-  return h('div', { className: 'relative flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-ink-800 cursor-pointer' },
-    h(Avatar, { url: group.photoURL, name: group.name, size: 48 }),
-    h('div', { className: 'flex-1 min-w-0 border-b border-slate-100 dark:border-ink-800 pb-3 -mb-3', onClick: onOpen },
+  // Two separate press zones (avatar / rest of row), same as before —
+  // tapping either opens the chat (or toggles selection once in select
+  // mode); holding either starts selection.
+  const avatarPress = useLongPress(onLongPress, () => { if (selectMode) onOpen(); }, 500);
+  const contentPress = useLongPress(onLongPress, onOpen, 500);
+  return h('div', {
+    className: 'relative flex items-center gap-3 px-4 py-3 select-none ' +
+      (isSelected ? 'bg-brand-50 dark:bg-ink-700' : 'hover:bg-slate-50 dark:hover:bg-ink-800')
+  },
+    h('div', { className: 'relative shrink-0 cursor-pointer', ...avatarPress },
+      h(Avatar, { url: group.photoURL, name: group.name, size: 48 }),
+      selectMode && h(SelectBadge, { selected: isSelected })
+    ),
+    h('div', { className: 'flex-1 min-w-0 cursor-pointer border-b border-slate-100 dark:border-ink-800 pb-3 -mb-3', ...contentPress },
       h('div', { className: 'flex justify-between items-baseline' },
         h('p', { className: 'font-semibold text-[15px] truncate' }, h('i', { className: 'fa-solid fa-users text-slate-400 text-xs mr-1' }), group.name),
         h('span', { className: 'text-[12px] shrink-0 ml-2 ' + (unread ? 'text-brand-500 font-semibold' : 'text-slate-400') }, group.lastMessageAt ? timeAgo(group.lastMessageAt) : '')
       ),
       h('div', { className: 'flex justify-between items-center mt-0.5' },
         h('p', { className: 'text-[13px] truncate max-w-[75%] ' + (unread ? 'text-slate-700 dark:text-slate-200 font-medium' : 'text-slate-400') }, group.lastMessage || 'Group created'),
-        unread && h('span', { className: 'bg-brand-500 text-white text-[11px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5' }, meta.unreadCount > 99 ? '99+' : meta.unreadCount)
-      )
-    ),
-    h('div', { className: 'relative' },
-      h('button', { onClick: () => setMenuOpen(o => !o), className: 'text-slate-300 px-1' }, h('i', { className: 'fa-solid fa-chevron-down text-xs' })),
-      menuOpen && h('div', { className: 'absolute right-0 top-6 z-20 bg-white dark:bg-ink-700 shadow-lg rounded-xl py-1 w-36 text-sm', onMouseLeave: () => setMenuOpen(false) },
-        h('button', { className: 'w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { onPin(); setMenuOpen(false); } }, meta.pinned ? 'Unpin' : 'Pin'),
-        h('button', { className: 'w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { onMute(); setMenuOpen(false); } }, meta.muted ? 'Unmute' : 'Mute'),
-        h('button', { className: 'w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { onArchive(); setMenuOpen(false); } }, meta.archived ? 'Unarchive' : 'Archive')
+        h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+          meta.pinned && h('i', { className: 'fa-solid fa-thumbtack text-slate-300 text-[11px]' }),
+          meta.muted && h('i', { className: 'fa-solid fa-volume-xmark text-slate-300 text-[11px]' }),
+          unread && h('span', { className: 'bg-brand-500 text-white text-[11px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5' }, meta.unreadCount > 99 ? '99+' : meta.unreadCount)
+        )
       )
     )
   );
 }
-function DmChatRow({ row, onOpen, onPin, onMute, onArchive, onProfile } ) {
+function DmChatRow({ row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile } ) {
   const { meta, chat, other } = row;
-  const [menuOpen, setMenuOpen] = useState(false);
   const typing = chat.typing && other && chat.typing[other.id] && (Date.now() - (chat.typing[other.id].toMillis ? chat.typing[other.id].toMillis() : 0) < 5000);
   const unread = !!meta.unreadCount;
-  return h('div', { className: 'relative flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-ink-800 cursor-pointer' },
-    h('div', { onClick: onProfile }, h(Avatar, { url: other && other.photoURL, name: other && other.fullName, size: 48, online: other && other.online })),
-    h('div', { className: 'flex-1 min-w-0 border-b border-slate-100 dark:border-ink-800 pb-3 -mb-3', onClick: onOpen },
+  // Two separate press zones (avatar / rest of row), same as before —
+  // tapping the avatar opens the profile (or toggles selection once in
+  // select mode), tapping the rest opens the chat; holding either starts
+  // selection.
+  const avatarPress = useLongPress(onLongPress, () => { selectMode ? onOpen() : onProfile(); }, 500);
+  const contentPress = useLongPress(onLongPress, onOpen, 500);
+  return h('div', {
+    className: 'relative flex items-center gap-3 px-4 py-3 select-none ' +
+      (isSelected ? 'bg-brand-50 dark:bg-ink-700' : 'hover:bg-slate-50 dark:hover:bg-ink-800')
+  },
+    h('div', { className: 'relative shrink-0 cursor-pointer', ...avatarPress },
+      h(Avatar, { url: other && other.photoURL, name: other && other.fullName, size: 48, online: other && other.online }),
+      selectMode && h(SelectBadge, { selected: isSelected })
+    ),
+    h('div', { className: 'flex-1 min-w-0 cursor-pointer border-b border-slate-100 dark:border-ink-800 pb-3 -mb-3', ...contentPress },
       h('div', { className: 'flex justify-between items-baseline' },
         h('p', { className: 'font-semibold text-[15px] truncate' }, h(NameWithBadges, { name: (other && other.fullName) || 'Unknown user', user: other })),
         h('span', { className: 'text-[12px] shrink-0 ml-2 ' + (unread ? 'text-brand-500 font-semibold' : 'text-slate-400') }, chat.lastMessageAt ? timeAgo(chat.lastMessageAt) : '')
@@ -1099,14 +1197,6 @@ function DmChatRow({ row, onOpen, onPin, onMute, onArchive, onProfile } ) {
           meta.pinned && h('i', { className: 'fa-solid fa-thumbtack text-slate-300 text-[11px]' }),
           unread && h('span', { className: 'bg-brand-500 text-white text-[11px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5' }, meta.unreadCount > 99 ? '99+' : meta.unreadCount)
         )
-      )
-    ),
-    h('div', { className: 'relative' },
-      h('button', { onClick: () => setMenuOpen(o => !o), className: 'text-slate-300 px-1' }, h('i', { className: 'fa-solid fa-chevron-down text-xs' })),
-      menuOpen && h('div', { className: 'absolute right-0 top-6 z-20 bg-white dark:bg-ink-700 shadow-lg rounded-xl py-1 w-36 text-sm', onMouseLeave: () => setMenuOpen(false) },
-        h('button', { className: 'w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { onPin(); setMenuOpen(false); } }, meta.pinned ? 'Unpin' : 'Pin'),
-        h('button', { className: 'w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { onMute(); setMenuOpen(false); } }, meta.muted ? 'Unmute' : 'Mute'),
-        h('button', { className: 'w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { onArchive(); setMenuOpen(false); } }, meta.archived ? 'Unarchive' : 'Archive')
       )
     )
   );
@@ -2148,14 +2238,18 @@ function ForwardPicker({ onClose, onPick }) {
 }
 
 /* ============================== STATUS ============================== */
-function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreChannels }) {
+function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreChannels, onStarred, onNavigate }) {
   const { profile } = useAuth();
   const toast = useToast();
   const [statuses, setStatuses] = useState([]);
   const [myStatuses, setMyStatuses] = useState([]);
   const [viewing, setViewing] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [myListOpen, setMyListOpen] = useState(false);
   const [myChannels, setMyChannels] = useState([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [adPrefOpen, setAdPrefOpen] = useState(false);
   const statusAd = useAd('sponsored_status');
   useEffect(() => { if (statusAd) logAdImpression(statusAd); }, [statusAd]);
 
@@ -2199,6 +2293,9 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
 
   const closeViewer = useBackClose(!!viewing, () => setViewing(null));
   const closeCreate = useBackClose(creating, () => setCreating(false));
+  const closeMyList = useBackClose(myListOpen, () => setMyListOpen(false));
+  const closePrivacy = useBackClose(privacyOpen, () => setPrivacyOpen(false));
+  const closeAdPref = useBackClose(adPrefOpen, () => setAdPrefOpen(false));
 
   const cardBg = (s) => {
     const item = s.items ? s.items[0] : s;
@@ -2214,7 +2311,16 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
       h('h1', { className: 'text-2xl font-extrabold' }, 'Updates'),
       h('div', { className: 'flex items-center gap-4 text-lg' },
         h('button', { className: 'text-slate-500 dark:text-slate-300', title: 'Search' }, h('i', { className: 'fa-solid fa-magnifying-glass text-base' })),
-        h('button', { className: 'text-slate-500 dark:text-slate-300', title: 'More' }, h('i', { className: 'fa-solid fa-ellipsis-vertical text-base' }))
+        h('div', { className: 'relative' },
+          h('button', { className: 'text-slate-500 dark:text-slate-300', title: 'More', onClick: () => setMenuOpen(o => !o) }, h('i', { className: 'fa-solid fa-ellipsis-vertical text-base' })),
+          menuOpen && h('div', { className: 'absolute right-0 top-8 z-20 bg-white dark:bg-ink-700 shadow-lg rounded-xl py-1 w-48 text-sm', onMouseLeave: () => setMenuOpen(false) },
+            h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNewChannel && onNewChannel(); } }, 'Create channel'),
+            h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); setPrivacyOpen(true); } }, 'Status privacy'),
+            h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onStarred && onStarred(); } }, 'Starred'),
+            h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); setAdPrefOpen(true); } }, 'Ad preferences'),
+            h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNavigate && onNavigate('profile'); } }, 'Settings')
+          )
+        )
       )
     ),
     h('div', { className: 'flex-1 overflow-y-auto no-scrollbar' },
@@ -2224,7 +2330,7 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
         h('div', {
           className: 'shrink-0 w-[104px] h-[150px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
           style: myStatuses.length ? (cardBg({ items: myStatuses }) || {}) : { background: '#1a2230' },
-          onClick: () => myStatuses.length ? setViewing({ groups: allGroups, groupIndex: 0 }) : setCreating(true)
+          onClick: () => myStatuses.length ? setMyListOpen(true) : setCreating(true)
         },
           myStatuses.length > 0 && cardFirstItem({ items: myStatuses }).type === 'video' &&
             h('video', { src: cardFirstItem({ items: myStatuses }).mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, playsInline: true, preload: 'metadata' }),
@@ -2251,7 +2357,7 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
           h('div', { className: 'absolute top-2 left-2 rounded-full ring-2 ring-brand-500' }, h(Avatar, { url: s.user.photoURL, name: s.user.fullName, size: 28 })),
           h('p', { className: 'relative text-white text-[11px] font-semibold px-2 pb-2 truncate w-full' }, s.user.fullName)
         )),
-        statusAd && !isPremiumActive(profile) && h('div', {
+        statusAd && !isPremiumActive(profile) && !profile.adOptOut && h('div', {
           key: 'ad',
           className: 'shrink-0 w-[104px] h-[150px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
           style: statusAd.mediaType === 'image' && statusAd.mediaURL ? { backgroundImage: 'url(' + statusAd.mediaURL + ')', backgroundSize: 'cover', backgroundPosition: 'center' } : { background: '#2b2b2b' },
@@ -2274,13 +2380,181 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
       myChannels.map(c => h(ChannelRow, { key: c.id, c, onOpen: () => onOpenChannel(c.id) }))
     ),
     creating && h(CreateStatusModal, { onClose: closeCreate, onText: createTextStatus, onMedia: createMediaStatus }),
-    viewing && h(StatusViewer, { groups: viewing.groups, startIndex: viewing.groupIndex, onClose: closeViewer }),
+    viewing && h(StatusViewer, { groups: viewing.groups, startIndex: viewing.groupIndex, startItemIndex: viewing.itemIndex, onClose: closeViewer }),
+    myListOpen && h(MyStatusListScreen, {
+      myStatuses, profile,
+      onClose: closeMyList,
+      onAdd: () => { setMyListOpen(false); setCreating(true); },
+      onDelete: async (item) => { await db.collection('smiletak_statuses').doc(item.id).delete(); toast('Status deleted', 'success'); },
+      onView: (i) => { setMyListOpen(false); setViewing({ groups: allGroups, groupIndex: 0, itemIndex: i }); }
+    }),
+    privacyOpen && h(StatusPrivacyModal, { profile, onClose: closePrivacy }),
+    adPrefOpen && h(AdPreferencesModal, { profile, onClose: closeAdPref }),
     h('div', { className: 'absolute bottom-5 right-5 flex flex-col items-center gap-3' },
       h('button', { onClick: onNewChannel, className: 'w-11 h-11 rounded-full bg-slate-700 dark:bg-ink-700 text-white shadow-lg flex items-center justify-center text-base active:scale-95 transition' }, h('i', { className: 'fa-solid fa-pen' })),
       h('button', { onClick: () => setCreating(true), className: 'w-14 h-14 rounded-full bg-brand-600 text-white shadow-lg flex items-center justify-center text-xl active:scale-95 transition' }, h('i', { className: 'fa-solid fa-camera' }))
     )
   );
 }
+
+/* Downloads a status's media to the device by fetching it as a blob first —
+   a plain <a download> is silently ignored by browsers for cross-origin
+   URLs (like Firebase Storage links), so we pull the bytes ourselves. */
+async function saveMediaFile(url, filename) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Download failed');
+  const blob = await res.blob();
+  const objUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objUrl; a.download = filename || 'status';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(objUrl), 4000);
+}
+
+/* Full-screen list of the signed-in user's own statuses — mirrors WhatsApp's
+   "My status" screen: a thumbnail + view count + timestamp per item, with a
+   per-item menu to delete, save, or share. Tapping a row jumps straight into
+   the auto-playing story viewer starting at that item. */
+function MyStatusListScreen({ myStatuses, profile, onClose, onAdd, onDelete, onView }) {
+  const [menuFor, setMenuFor] = useState(null); // index of item whose sheet is open
+  const closeMenu = useBackClose(menuFor !== null, () => setMenuFor(null));
+  const sorted = myStatuses.slice().sort((a, b) => (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0));
+
+  return h('div', { className: 'fixed inset-0 z-50 bg-white dark:bg-ink-900 flex flex-col' },
+    h('div', { className: 'flex items-center gap-4 px-4 pt-4 pb-3' },
+      h('button', { onClick: onClose, className: 'text-xl' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('h1', { className: 'text-xl font-extrabold' }, 'My status')
+    ),
+    h('div', { className: 'flex-1 overflow-y-auto no-scrollbar' },
+      sorted.map((item, i) => h(MyStatusRow, { key: item.id, item, onOpen: () => onView(i), onMenu: () => setMenuFor(i) })),
+      h('p', { className: 'px-6 py-6 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5' },
+        h('i', { className: 'fa-solid fa-lock text-[10px]' }),
+        h('span', null, 'Your statuses are ', h('span', { className: 'text-brand-600 font-semibold' }, 'end-to-end encrypted'), '. They will disappear after 24 hours.')
+      )
+    ),
+    h('div', { className: 'absolute bottom-5 right-5 flex flex-col items-center gap-3' },
+      h('button', { onClick: onAdd, className: 'w-11 h-11 rounded-full bg-slate-700 dark:bg-ink-700 text-white shadow-lg flex items-center justify-center text-base active:scale-95 transition' }, h('i', { className: 'fa-solid fa-pen' })),
+      h('button', { onClick: onAdd, className: 'w-14 h-14 rounded-full bg-brand-600 text-white shadow-lg flex items-center justify-center text-xl active:scale-95 transition' }, h('i', { className: 'fa-solid fa-camera' }))
+    ),
+    menuFor !== null && sorted[menuFor] && h(MyStatusRowMenu, {
+      item: sorted[menuFor],
+      onClose: closeMenu,
+      onDelete: async () => { closeMenu(); if (onDelete) await onDelete(sorted[menuFor]); },
+    })
+  );
+}
+
+function MyStatusRow({ item, onOpen, onMenu }) {
+  const [views, setViews] = useState(0);
+  useEffect(() => {
+    const unsub = db.collection('smiletak_statuses').doc(item.id).collection('views').onSnapshot(snap => setViews(snap.size));
+    return unsub;
+  }, [item.id]);
+  const thumbStyle = item.type === 'text' ? { background: item.bgColor } : item.type === 'image' ? { backgroundImage: 'url(' + item.mediaURL + ')', backgroundSize: 'cover', backgroundPosition: 'center' } : {};
+  return h('div', { className: 'flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-ink-800', onClick: onOpen },
+    h('div', { className: 'w-12 h-12 rounded-full overflow-hidden shrink-0 relative ring-2 ring-brand-500', style: thumbStyle },
+      item.type === 'video' && h('video', { src: item.mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, playsInline: true, preload: 'metadata' }),
+      item.type === 'text' && h('div', { className: 'absolute inset-0 flex items-center justify-center text-white text-[9px] font-semibold px-1 text-center' }, (item.content || '').slice(0, 12))
+    ),
+    h('div', { className: 'flex-1 min-w-0' },
+      h('p', { className: 'text-[15px] font-bold flex items-center gap-1.5' }, views, ' view' + (views === 1 ? '' : 's')),
+      h('p', { className: 'text-[13px] text-slate-400' }, fmtDay(item.createdAt) + ', ' + fmtClock(item.createdAt))
+    ),
+    h('button', { onClick: (e) => { e.stopPropagation(); onMenu(); }, className: 'text-slate-400 px-2' }, h('i', { className: 'fa-solid fa-ellipsis-vertical' }))
+  );
+}
+
+function MyStatusRowMenu({ item, onClose, onDelete }) {
+  const toast = useToast();
+  const canSaveOrShare = item.type === 'image' || item.type === 'video';
+  const save = async () => {
+    onClose();
+    try { await saveMediaFile(item.mediaURL, 'status_' + item.id + (item.type === 'video' ? '.mp4' : '.jpg')); toast('Saved', 'success'); }
+    catch (e) { toast('Could not save — opening in a new tab instead', 'info'); window.open(item.mediaURL, '_blank'); }
+  };
+  const share = async () => {
+    onClose();
+    try {
+      const shareData = { title: 'SmileTak status' };
+      if (item.type === 'text') shareData.text = item.content;
+      else { shareData.url = item.mediaURL; shareData.text = item.caption || ''; }
+      if (navigator.share) await navigator.share(shareData);
+      else { await navigator.clipboard.writeText(shareData.url || shareData.text || ''); toast('Copied to clipboard', 'success'); }
+    } catch (e) { /* user cancelled the native share sheet */ }
+  };
+  return h('div', { className: 'fixed inset-0 z-[60] bg-black/50 flex items-end justify-center', onClick: onClose },
+    h('div', { className: 'bg-white dark:bg-ink-800 w-full max-w-sm rounded-t-2xl p-2', onClick: e => e.stopPropagation() },
+      canSaveOrShare && h('button', { className: 'w-full flex items-center gap-3 text-left px-3 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-sm', onClick: save }, h('i', { className: 'fa-solid fa-download w-5' }), 'Save to device'),
+      canSaveOrShare && h('button', { className: 'w-full flex items-center gap-3 text-left px-3 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-sm', onClick: share }, h('i', { className: 'fa-solid fa-arrow-up-from-bracket w-5' }), 'Share via…'),
+      h('button', { className: 'w-full flex items-center gap-3 text-left px-3 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-sm text-red-500', onClick: onDelete }, h('i', { className: 'fa-solid fa-trash w-5' }), 'Delete'),
+      h('button', { className: 'w-full text-center px-3 py-3 mt-1 rounded-xl bg-slate-100 dark:bg-white/5 text-sm font-semibold', onClick: onClose }, 'Cancel')
+    )
+  );
+}
+
+/* Who can see your future status updates. This is a saved preference on the
+   profile — since statuses in this app are visible to everyone the same way
+   a public "Updates" feed is (there's no separate contacts graph to filter
+   against), the options mirror WhatsApp's wording but the enforcement here
+   is limited to hiding your status from anyone you've blocked. */
+function StatusPrivacyModal({ profile, onClose }) {
+  const toast = useToast();
+  const [choice, setChoice] = useState(profile.statusPrivacy || 'contacts');
+  const options = [
+    { id: 'contacts', label: 'My contacts', desc: 'Share with all your contacts' },
+    { id: 'contacts_except', label: 'My contacts except…', desc: 'Share with your contacts except people you\u2019ve blocked' },
+    { id: 'only_share', label: 'Only share with…', desc: 'Share only with the people you choose' }
+  ];
+  const save = async (id) => {
+    setChoice(id);
+    await db.collection('smiletak_users').doc(profile.id).update({ statusPrivacy: id });
+    toast('Status privacy updated', 'success');
+    onClose();
+  };
+  return h('div', { className: 'fixed inset-0 z-[60] bg-black/50 flex items-end justify-center', onClick: onClose },
+    h('div', { className: 'bg-white dark:bg-ink-800 w-full max-w-sm rounded-t-2xl p-4', onClick: e => e.stopPropagation() },
+      h('p', { className: 'text-lg font-bold mb-1' }, 'Status privacy'),
+      h('p', { className: 'text-xs text-slate-400 mb-3' }, 'People you\u2019ve blocked will never see your status, regardless of this setting.'),
+      options.map(o => h('button', {
+        key: o.id,
+        onClick: () => save(o.id),
+        className: 'w-full text-left px-3 py-3 rounded-xl flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-white/5'
+      },
+        h('i', { className: 'fa-solid ' + (choice === o.id ? 'fa-circle-dot text-brand-600' : 'fa-circle text-slate-300') + ' mt-1' }),
+        h('div', null, h('p', { className: 'text-sm font-semibold' }, o.label), h('p', { className: 'text-xs text-slate-400' }, o.desc))
+      )),
+      h('button', { className: 'w-full text-center px-3 py-3 mt-1 rounded-xl bg-slate-100 dark:bg-white/5 text-sm font-semibold', onClick: onClose }, 'Cancel')
+    )
+  );
+}
+
+function AdPreferencesModal({ profile, onClose }) {
+  const toast = useToast();
+  const [optOut, setOptOut] = useState(!!profile.adOptOut);
+  const premium = isPremiumActive(profile);
+  const toggle = async () => {
+    const next = !optOut;
+    setOptOut(next);
+    await db.collection('smiletak_users').doc(profile.id).update({ adOptOut: next });
+    toast(next ? 'Sponsored status hidden' : 'Sponsored status re-enabled', 'success');
+  };
+  return h('div', { className: 'fixed inset-0 z-[60] bg-black/50 flex items-end justify-center', onClick: onClose },
+    h('div', { className: 'bg-white dark:bg-ink-800 w-full max-w-sm rounded-t-2xl p-4', onClick: e => e.stopPropagation() },
+      h('p', { className: 'text-lg font-bold mb-1' }, 'Ad preferences'),
+      h('p', { className: 'text-xs text-slate-400 mb-4' }, premium ? 'You\u2019re on Premium, so sponsored status cards are already hidden for you.' : 'Control whether sponsored cards appear in your Updates feed.'),
+      h('div', { className: 'flex items-center justify-between py-2' },
+        h('div', null, h('p', { className: 'text-sm font-semibold' }, 'Hide sponsored status'), h('p', { className: 'text-xs text-slate-400' }, 'Turn off to stop seeing sponsored cards in Updates')),
+        h('button', {
+          disabled: premium,
+          onClick: toggle,
+          className: 'w-11 h-6 rounded-full relative shrink-0 ' + ((optOut || premium) ? 'bg-brand-600' : 'bg-slate-200') + (premium ? ' opacity-60' : '')
+        }, h('span', { className: 'absolute top-0.5 w-5 h-5 bg-white rounded-full transition ' + ((optOut || premium) ? 'left-[22px]' : 'left-0.5') }))
+      ),
+      h('button', { className: 'w-full text-center px-3 py-3 mt-4 rounded-xl bg-slate-100 dark:bg-white/5 text-sm font-semibold', onClick: onClose }, 'Done')
+    )
+  );
+}
+
 function ChannelRow({ c, onOpen }) {
   const { profile } = useAuth();
   const [unread, setUnread] = useState(false);
@@ -2576,11 +2850,11 @@ function CreateStatusModal({ onClose, onText, onMedia }) {
   );
 }
 
-function StatusViewer({ groups, startIndex, onClose }) {
+function StatusViewer({ groups, startIndex, startItemIndex, onClose }) {
   const { profile } = useAuth();
   const toast = useToast();
   const [groupIndex, setGroupIndex] = useState(startIndex || 0);
-  const [idx, setIdx] = useState(0);
+  const [idx, setIdx] = useState(startItemIndex || 0);
   const data = groups[groupIndex];
   const mine = data.uid === profile.id;
   const item = data.items[idx];
@@ -2614,6 +2888,71 @@ function StatusViewer({ groups, startIndex, onClose }) {
   const prev = () => {
     if (idx > 0) { setIdx(idx - 1); return; }
     if (groupIndex > 0) { setGroupIndex(groupIndex - 1); setIdx(groups[groupIndex - 1].items.length - 1); }
+  };
+
+  // ---- Auto-playback: every status (text, image, or video) advances to the
+  // next one on its own, exactly like WhatsApp/Instagram stories. Text and
+  // image items play for a fixed 5s; video items play for their own length
+  // and advance the instant they finish. Press-and-hold pauses playback;
+  // releasing resumes it (a quick tap still taps to go prev/next). ----
+  const IMAGE_DURATION_MS = 5000;
+  const [progress, setProgress] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const videoRef = useRef(null);
+  const rafRef = useRef(null);
+  const elapsedRef = useRef(0);
+  const runStartRef = useRef(null);
+  const holdStartRef = useRef(0);
+  const itemKey = groupIndex + '-' + idx;
+
+  // Reset progress whenever the active item changes.
+  useEffect(() => { elapsedRef.current = 0; runStartRef.current = null; setProgress(0); setMuted(false); }, [itemKey]);
+
+  // Time-based auto-advance for text/image items.
+  useEffect(() => {
+    if (item.type === 'video') return; // videos drive their own progress below
+    if (paused) { runStartRef.current = null; return; }
+    runStartRef.current = performance.now() - elapsedRef.current;
+    const tick = (now) => {
+      const elapsed = now - runStartRef.current;
+      elapsedRef.current = elapsed;
+      const pct = Math.min(100, (elapsed / IMAGE_DURATION_MS) * 100);
+      setProgress(pct);
+      if (pct >= 100) { next(); return; }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [itemKey, paused]);
+
+  // Video items: autoplay immediately (falling back to muted playback if the
+  // browser blocks audio autoplay), sync the progress bar to playback time,
+  // and auto-advance the moment the clip ends — no tap or play button needed.
+  useEffect(() => {
+    if (item.type !== 'video') return;
+    const v = videoRef.current;
+    if (!v) return;
+    if (paused) { v.pause(); return; }
+    v.muted = false;
+    const p = v.play();
+    if (p && p.catch) p.catch(() => { v.muted = true; setMuted(true); v.play().catch(() => {}); });
+  }, [itemKey, paused]);
+  useEffect(() => {
+    if (item.type !== 'video') return;
+    const v = videoRef.current;
+    if (!v) return;
+    const onTime = () => { if (v.duration) setProgress((v.currentTime / v.duration) * 100); };
+    v.addEventListener('timeupdate', onTime);
+    v.addEventListener('ended', next);
+    return () => { v.removeEventListener('timeupdate', onTime); v.removeEventListener('ended', next); };
+  }, [itemKey]);
+
+  const holdDown = () => { holdStartRef.current = Date.now(); setPaused(true); };
+  const holdUp = (side) => () => {
+    const held = Date.now() - holdStartRef.current;
+    setPaused(false);
+    if (held < 300) { side === 'prev' ? prev() : next(); }
   };
 
   // ---- Reshare a status: forward it into a chat as a message, repost it
@@ -2654,19 +2993,32 @@ function StatusViewer({ groups, startIndex, onClose }) {
   };
 
   return h('div', { className: 'fixed inset-0 z-50 bg-black flex flex-col' },
-    h('div', { className: 'flex gap-1 p-2' }, data.items.map((_, i) => h('div', { key: i, className: 'flex-1 h-1 rounded-full ' + (i <= idx ? 'bg-white' : 'bg-white/30') }))),
+    h('div', { className: 'flex gap-1 p-2' }, data.items.map((_, i) => h('div', { key: i, className: 'flex-1 h-1 rounded-full bg-white/30 overflow-hidden' },
+      h('div', { className: 'h-full bg-white', style: { width: (i < idx ? 100 : i === idx ? progress : 0) + '%' } })
+    ))),
     h('div', { className: 'flex items-center gap-2 px-3 pb-2' }, h(Avatar, { url: data.user.photoURL, name: data.user.fullName, size: 32 }), h('p', { className: 'text-white text-sm font-semibold' }, data.user.fullName), h('span', { className: 'text-white/60 text-xs' }, timeAgo(item.createdAt)),
       h('div', { className: 'ml-auto flex items-center gap-4' },
+        paused && h('i', { className: 'fa-solid fa-pause text-white/70 text-xs' }),
         h('button', { className: 'text-white', onClick: () => setSharing(true), title: 'Share status' }, h('i', { className: 'fa-solid fa-share' })),
         h('button', { className: 'text-white', onClick: onClose }, h('i', { className: 'fa-solid fa-xmark' }))
       )
     ),
-    h('div', { className: 'flex-1 flex items-center justify-center relative', style: item.type === 'text' ? { background: item.bgColor } : {} },
-      h('div', { className: 'absolute inset-y-0 left-0 w-1/3', onClick: prev }),
-      h('div', { className: 'absolute inset-y-0 right-0 w-1/3', onClick: next }),
+    h('div', { className: 'flex-1 flex items-center justify-center relative select-none', style: item.type === 'text' ? { background: item.bgColor } : {} },
+      h('div', {
+        className: 'absolute inset-y-0 left-0 w-1/3 z-10',
+        onPointerDown: holdDown, onPointerUp: holdUp('prev'), onPointerLeave: () => setPaused(false), onPointerCancel: () => setPaused(false)
+      }),
+      h('div', {
+        className: 'absolute inset-y-0 right-0 w-2/3 z-10',
+        onPointerDown: holdDown, onPointerUp: holdUp('next'), onPointerLeave: () => setPaused(false), onPointerCancel: () => setPaused(false)
+      }),
       item.type === 'text' && h('p', { className: 'text-white text-2xl font-semibold text-center w-4/5' }, item.content),
       item.type === 'image' && h('img', { src: item.mediaURL, className: 'max-h-full max-w-full object-contain' }),
-      item.type === 'video' && h('video', { src: item.mediaURL, autoPlay: true, controls: true, className: 'max-h-full max-w-full' }),
+      item.type === 'video' && h('video', { ref: videoRef, src: item.mediaURL, playsInline: true, className: 'max-h-full max-w-full' }),
+      item.type === 'video' && muted && h('button', {
+        className: 'absolute bottom-4 right-4 z-20 w-9 h-9 rounded-full bg-black/50 text-white flex items-center justify-center',
+        onClick: (e) => { e.stopPropagation(); const v = videoRef.current; if (v) { v.muted = false; v.play().catch(() => {}); setMuted(false); } }
+      }, h('i', { className: 'fa-solid fa-volume-xmark text-sm' })),
       item.caption && (item.type === 'image' || item.type === 'video') && h('div', { className: 'absolute bottom-4 left-0 right-0 px-6 text-center pointer-events-none' },
         h('span', { className: 'inline-block text-white text-sm font-medium bg-black/40 px-3 py-1.5 rounded-xl' }, item.caption)
       )
@@ -2683,6 +3035,77 @@ function StatusViewer({ groups, startIndex, onClose }) {
       )
     ),
     forwardOpen && h(ForwardPicker, { onClose: closeForward, onPick: forwardToChat })
+  );
+}
+
+/* ============================== CALLS ============================== */
+function CallsScreen({ onOpenChat }) {
+  const { profile } = useAuth();
+  const call = useCall();
+  const [asCaller, setAsCaller] = useState([]);
+  const [asCallee, setAsCallee] = useState([]);
+  const [usersMap, setUsersMap] = useState({});
+
+  useEffect(() => {
+    const unsub = db.collection('smiletak_calls').where('callerId', '==', profile.id).onSnapshot(snap => {
+      setAsCaller(snap.docs.map(d => Object.assign({ id: d.id }, d.data())));
+    });
+    return unsub;
+  }, [profile.id]);
+  useEffect(() => {
+    const unsub = db.collection('smiletak_calls').where('calleeId', '==', profile.id).onSnapshot(snap => {
+      setAsCallee(snap.docs.map(d => Object.assign({ id: d.id }, d.data())));
+    });
+    return unsub;
+  }, [profile.id]);
+
+  // Merge both sides of the conversation, drop the diagnostics test call
+  // (written by the admin-only "Run test" tool), dedupe, and sort newest first.
+  const merged = asCaller.concat(asCallee)
+    .filter(c => c.id.indexOf('__diag_') !== 0)
+    .filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i)
+    .sort((a, b) => (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0))
+    .slice(0, 50);
+
+  useEffect(() => {
+    merged.forEach(c => {
+      const otherUid = c.callerId === profile.id ? c.calleeId : c.callerId;
+      if (otherUid && !usersMap[otherUid]) {
+        db.collection('smiletak_users').doc(otherUid).get().then(s => {
+          if (s.exists) setUsersMap(prev => Object.assign({}, prev, { [otherUid]: Object.assign({ id: s.id }, s.data()) }));
+        }).catch(() => {});
+      }
+    });
+    // eslint-disable-next-line
+  }, [merged.map(c => c.id).join(',')]);
+
+  return h('div', { className: 'h-full flex flex-col bg-white dark:bg-ink-900' },
+    h('div', { className: 'px-4 pt-4 pb-3 flex items-center justify-between' },
+      h('h1', { className: 'text-2xl font-extrabold' }, 'Calls')
+    ),
+    h('div', { className: 'flex-1 overflow-y-auto no-scrollbar' },
+      merged.length === 0 && h('p', { className: 'px-4 text-sm text-slate-400 mt-2' }, 'No calls yet. Open a chat and tap the phone or video icon to start one.'),
+      merged.map(c => {
+        const otherUid = c.callerId === profile.id ? c.calleeId : c.callerId;
+        const other = usersMap[otherUid];
+        const outgoing = c.callerId === profile.id;
+        const missed = !outgoing && (c.status === 'missed' || c.status === 'cancelled');
+        const declined = c.status === 'declined';
+        const flagged = missed || declined;
+        return h('div', { key: c.id, className: 'flex items-center gap-3 px-4 py-2.5' },
+          h(Avatar, { url: other && other.photoURL, name: other ? other.fullName : '?', size: 44 }),
+          h('div', { className: 'flex-1 min-w-0 cursor-pointer', onClick: () => other && onOpenChat && onOpenChat(other) },
+            h('p', { className: 'text-[15px] font-semibold truncate' }, other ? other.fullName : 'Unknown'),
+            h('p', { className: 'text-[13px] flex items-center gap-1.5 ' + (flagged ? 'text-red-500' : 'text-slate-400') },
+              h('i', { className: 'fa-solid ' + (outgoing ? 'fa-arrow-up-right' : 'fa-arrow-down-left') + ' text-[10px]' }),
+              (missed ? 'Missed' : declined ? 'Declined' : outgoing ? 'Outgoing' : 'Incoming') + (c.durationSecs ? ' · ' + fmtDuration(c.durationSecs) : ''),
+              h('span', { className: 'text-slate-400' }, ' · ' + timeAgo(c.createdAt))
+            )
+          ),
+          other && h('button', { className: 'text-slate-400 px-2', onClick: () => call.startCall(other, c.type || 'audio') }, h('i', { className: 'fa-solid ' + (c.type === 'video' ? 'fa-video' : 'fa-phone') }))
+        );
+      })
+    )
   );
 }
 
@@ -2710,6 +3133,7 @@ function MyProfileScreen({ onOpenPremium, onOpenBusiness }) {
   };
 
   const runDiagnostics = async () => {
+    if (!profile.isAdmin) return;
     setDiag('running');
     const results = [];
     const test = async (name, fn) => {
@@ -2792,7 +3216,7 @@ function MyProfileScreen({ onOpenPremium, onOpenBusiness }) {
         h('span', { className: 'font-medium text-sm' }, 'Notifications'),
         h('button', { className: 'text-brand-600 text-sm font-semibold', onClick: requestNotifyPermission }, 'Enable')
       ),
-      h('div', { className: 'py-3 border-t border-slate-100 dark:border-ink-800' },
+      profile.isAdmin && h('div', { className: 'py-3 border-t border-slate-100 dark:border-ink-800' },
         h('div', { className: 'flex items-center justify-between' },
           h('span', { className: 'font-medium text-sm' }, 'Check permissions'),
           h('button', { className: 'text-brand-600 text-sm font-semibold', onClick: runDiagnostics, disabled: diag === 'running' }, diag === 'running' ? 'Testing…' : 'Run test')
