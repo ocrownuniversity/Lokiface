@@ -1925,8 +1925,14 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
     return { background: '#222' };
   };
 
-  return h('div', { className: 'h-full flex flex-col bg-white dark:bg-ink-900' },
-    h('div', { className: 'px-4 pt-4 pb-3' }, h('h1', { className: 'text-2xl font-extrabold' }, 'Updates')),
+  return h('div', { className: 'h-full flex flex-col bg-white dark:bg-ink-900 relative' },
+    h('div', { className: 'px-4 pt-4 pb-3 flex items-center justify-between' },
+      h('h1', { className: 'text-2xl font-extrabold' }, 'Updates'),
+      h('div', { className: 'flex items-center gap-4 text-lg' },
+        h('button', { className: 'text-slate-500 dark:text-slate-300', title: 'Search' }, h('i', { className: 'fa-solid fa-magnifying-glass text-base' })),
+        h('button', { className: 'text-slate-500 dark:text-slate-300', title: 'More' }, h('i', { className: 'fa-solid fa-ellipsis-vertical text-base' }))
+      )
+    ),
     h('div', { className: 'flex-1 overflow-y-auto no-scrollbar' },
       h('p', { className: 'px-4 text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2' }, 'Status'),
       h('div', { className: 'flex gap-3 px-4 pb-2 overflow-x-auto no-scrollbar' },
@@ -1969,21 +1975,44 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
       ),
       statuses.length === 0 && h('p', { className: 'px-4 text-xs text-slate-400 mt-1' }, 'No one else has posted a status in the last 24 hours'),
       h('div', { className: 'flex items-center justify-between px-4 mt-5 mb-2' },
-        h('p', { className: 'text-sm font-semibold text-slate-500 dark:text-slate-400' }, 'Channels'),
-        h('div', { className: 'flex items-center gap-3' },
-          h('button', { className: 'text-brand-600 text-xs font-semibold', onClick: onExploreChannels }, 'Explore'),
+        h('p', { className: 'text-lg font-bold' }, 'Channels'),
+        h('div', { className: 'flex items-center gap-2' },
+          h('button', { className: 'text-xs font-semibold px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-ink-700 text-slate-700 dark:text-slate-200', onClick: onExploreChannels }, 'Explore'),
           h('button', { className: 'text-brand-600 text-xs font-semibold', onClick: onNewChannel }, '+ New')
         )
       ),
       myChannels.length === 0 && h('p', { className: 'px-4 text-xs text-slate-400 mb-4' }, 'You are not following any channels yet'),
-      myChannels.map(c => h('div', { key: c.id, className: 'flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-ink-800', onClick: () => onOpenChannel(c.id) },
-        h(Avatar, { url: c.photoURL, name: c.name, size: 44 }),
-        h('div', { className: 'flex-1 min-w-0' }, h('p', { className: 'text-sm font-semibold truncate' }, c.name), h('p', { className: 'text-xs text-slate-400 truncate' }, c.lastPost || 'No posts yet')),
-        h('span', { className: 'text-[10px] text-slate-400' }, c.lastPostAt ? timeAgo(c.lastPostAt) : '')
-      ))
+      myChannels.map(c => h(ChannelRow, { key: c.id, c, onOpen: () => onOpenChannel(c.id) }))
     ),
     creating && h(CreateStatusModal, { onClose: closeCreate, onText: createTextStatus, onMedia: createMediaStatus }),
-    viewing && h(StatusViewer, { data: viewing, mine: viewing.uid === profile.id, onClose: closeViewer })
+    viewing && h(StatusViewer, { data: viewing, mine: viewing.uid === profile.id, onClose: closeViewer }),
+    h('div', { className: 'absolute bottom-5 right-5 flex flex-col items-center gap-3' },
+      h('button', { onClick: onNewChannel, className: 'w-11 h-11 rounded-full bg-slate-700 dark:bg-ink-700 text-white shadow-lg flex items-center justify-center text-base active:scale-95 transition' }, h('i', { className: 'fa-solid fa-pen' })),
+      h('button', { onClick: () => setCreating(true), className: 'w-14 h-14 rounded-full bg-brand-600 text-white shadow-lg flex items-center justify-center text-xl active:scale-95 transition' }, h('i', { className: 'fa-solid fa-camera' }))
+    )
+  );
+}
+function ChannelRow({ c, onOpen }) {
+  const { profile } = useAuth();
+  const [unread, setUnread] = useState(false);
+  useEffect(() => {
+    if (!c.lastPostAt) return;
+    db.collection('smiletak_channelSubs').doc(c.id + '_' + profile.id).get().then(s => {
+      const lastReadAt = s.exists ? s.data().lastReadAt : null;
+      setUnread(!lastReadAt || c.lastPostAt.toMillis() > lastReadAt.toMillis());
+    }).catch(() => {});
+  }, [c.id, c.lastPostAt, profile.id]);
+  const icon = c.lastPostType === 'video' ? 'fa-video' : c.lastPostType === 'image' ? 'fa-image' : c.lastPostType === 'link' ? 'fa-link' : null;
+  return h('div', { className: 'flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-ink-800', onClick: onOpen },
+    h(Avatar, { url: c.photoURL, name: c.name, size: 48 }),
+    h('div', { className: 'flex-1 min-w-0' },
+      h('p', { className: 'text-[15px] font-bold truncate' }, c.name),
+      h('p', { className: 'text-[13px] text-slate-400 truncate flex items-center gap-1' }, icon && h('i', { className: 'fa-solid ' + icon + ' text-[11px]' }), c.lastPost || 'No posts yet')
+    ),
+    h('div', { className: 'flex flex-col items-end gap-1' },
+      h('span', { className: 'text-[11px] ' + (unread ? 'text-brand-500 font-semibold' : 'text-slate-400') }, c.lastPostAt ? timeAgo(c.lastPostAt) : ''),
+      unread && h('span', { className: 'w-2.5 h-2.5 rounded-full bg-brand-500' })
+    )
   );
 }
 
@@ -2087,6 +2116,16 @@ function ChannelViewScreen({ channelId, onBack }) {
   }, [channelId]);
   useEffect(() => { db.collection('smiletak_channelSubs').where('channelId', '==', channelId).get().then(s => setSubCount(s.size)); }, [channelId]);
   useEffect(() => { db.collection('smiletak_channelSubs').doc(channelId + '_' + profile.id).get().then(s => setSubscribed(s.exists)); }, [channelId, profile.id]);
+  useEffect(() => {
+    // Mark this channel as read for me — but only if I'm actually
+    // subscribed (or the owner). Otherwise this write would silently
+    // create a subscription just from previewing the channel.
+    if (!channel) return;
+    if (!subscribed && channel.ownerId !== profile.id) return;
+    db.collection('smiletak_channelSubs').doc(channelId + '_' + profile.id).set({
+      channelId, uid: profile.id, lastReadAt: FieldValue.serverTimestamp()
+    }, { merge: true }).catch(() => {});
+  }, [channelId, profile.id, subscribed, channel]);
 
   const toggleSub = async () => {
     try {
