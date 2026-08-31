@@ -259,6 +259,77 @@ function fmtDuration(secs) {
   const s = Math.max(0, Math.round(secs || 0));
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 }
+
+/* ============================== PREMIUM + BUSINESS BADGES ============================== */
+function isPremiumActive(u) {
+  return !!(u && u.isPremium && u.premiumExpiresAt && u.premiumExpiresAt.toMillis && u.premiumExpiresAt.toMillis() > Date.now());
+}
+function PremiumBadge({ size }) {
+  return h('i', { className: 'fa-solid fa-crown text-amber-400', title: 'Premium member', style: { fontSize: (size || 12) + 'px' } });
+}
+function VerifiedBadge({ size }) {
+  return h('i', { className: 'fa-solid fa-circle-check text-sky-500', title: 'Verified business', style: { fontSize: (size || 12) + 'px' } });
+}
+function NameWithBadges({ name, user, className }) {
+  return h('span', { className: 'inline-flex items-center gap-1 min-w-0 ' + (className || '') },
+    h('span', { className: 'truncate' }, name),
+    user && isPremiumActive(user) && h(PremiumBadge, { size: 11 }),
+    user && user.businessVerified && h(VerifiedBadge, { size: 11 })
+  );
+}
+
+/* ============================== ADVERTISING ==============================
+   Admin-managed ad campaigns (smiletak_adCampaigns). No self-serve
+   advertiser flow — the admin creates/uploads/enables campaigns from the
+   Admin panel. Impressions/clicks are incremented by whichever logged-in
+   client sees/taps the ad (security rule restricts that update to ONLY
+   the impressions/clicks fields, so a viewer can never edit the ad
+   itself). Premium members never see ads. */
+const loggedAdImpressions = new Set();
+function logAdImpression(ad) {
+  if (!ad || loggedAdImpressions.has(ad.id)) return;
+  loggedAdImpressions.add(ad.id);
+  db.collection('smiletak_adCampaigns').doc(ad.id).update({ impressions: FieldValue.increment(1) }).catch(() => {});
+}
+function logAdClick(ad) {
+  if (!ad) return;
+  db.collection('smiletak_adCampaigns').doc(ad.id).update({ clicks: FieldValue.increment(1) }).catch(() => {});
+  if (ad.targetURL) window.open(ad.targetURL, '_blank');
+}
+function useAd(type) {
+  const [ad, setAd] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    db.collection('smiletak_adCampaigns').where('type', '==', type).where('enabled', '==', true).limit(20).get()
+      .then(s => {
+        if (!alive) return;
+        const now = Date.now();
+        const eligible = s.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(c => {
+          const start = c.startAt ? c.startAt.toMillis() : 0;
+          const end = c.endAt ? c.endAt.toMillis() : Infinity;
+          return now >= start && now <= end;
+        });
+        setAd(eligible.length ? eligible[Math.floor(Math.random() * eligible.length)] : null);
+      }).catch(() => {});
+    return () => { alive = false; };
+  }, [type]);
+  return ad;
+}
+function AdBanner({ type }) {
+  const { profile } = useAuth();
+  const ad = useAd(type);
+  useEffect(() => { if (ad) logAdImpression(ad); }, [ad]);
+  if (!ad || isPremiumActive(profile)) return null;
+  return h('div', { className: 'mx-4 my-2 rounded-xl overflow-hidden border border-slate-200 dark:border-ink-700 cursor-pointer relative shrink-0', onClick: () => logAdClick(ad) },
+    h('span', { className: 'absolute top-1.5 left-1.5 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded-full z-10' }, 'Sponsored'),
+    ad.mediaType === 'image' && ad.mediaURL && h('img', { src: ad.mediaURL, className: 'w-full max-h-32 object-cover' }),
+    ad.mediaType === 'video' && ad.mediaURL && h('video', { src: ad.mediaURL, className: 'w-full max-h-32 object-cover', muted: true, autoPlay: true, loop: true, playsInline: true }),
+    h('div', { className: 'p-2 bg-slate-50 dark:bg-ink-800' },
+      h('p', { className: 'text-sm font-semibold truncate' }, ad.headline || ad.advertiserName || 'Sponsored'),
+      ad.body && h('p', { className: 'text-xs text-slate-500 truncate' }, ad.body)
+    )
+  );
+}
 function bytesToSize(b) {
   if (!b) return '';
   const u = ['B', 'KB', 'MB', 'GB']; let i = 0; let n = b;
@@ -633,6 +704,8 @@ function AppShell() {
   const goToTab = (t) => { const v = { screen: 'tab', tab: t }; window.history.replaceState(v, ''); viewRef.current = v; setView(v); };
   const openChat = (chatId, other) => { const v = { screen: 'chat', chatId, other }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openProfile = (uid) => { const v = { screen: 'profile', uid }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openPremium = () => { const v = { screen: 'premium' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openBusiness = () => { const v = { screen: 'business' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const goBack = () => window.history.back();
 
   if (view.screen === 'chat') {
@@ -640,6 +713,12 @@ function AppShell() {
   }
   if (view.screen === 'profile') {
     return h(UserProfileScreen, { uid: view.uid, onBack: goBack, onMessage: (chatId, other) => openChat(chatId, other) });
+  }
+  if (view.screen === 'premium') {
+    return h(PremiumScreen, { onBack: goBack });
+  }
+  if (view.screen === 'business') {
+    return h(BusinessScreen, { onBack: goBack });
   }
 
   const tab = view.tab || 'chats';
@@ -656,7 +735,7 @@ function AppShell() {
       tab === 'chats' && h(ChatsListScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onViewProfile: openProfile, onNavigate: goToTab }),
       tab === 'status' && h(StatusScreen, { onViewProfile: openProfile }),
       tab === 'search' && h(DiscoverScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onViewProfile: openProfile }),
-      tab === 'profile' && h(MyProfileScreen, {}),
+      tab === 'profile' && h(MyProfileScreen, { onOpenPremium: openPremium, onOpenBusiness: openBusiness }),
       tab === 'admin' && h(AdminPanel, {})
     ),
     h('div', { className: 'flex border-t border-slate-200 dark:border-ink-700 bg-white dark:bg-ink-800 shrink-0' },
@@ -822,6 +901,7 @@ function ChatsListScreen({ onOpenChat, onViewProfile, onNavigate }) {
       }, c.label, typeof c.count === 'number' && c.count > 0 && h('span', { className: 'text-xs ' + (filter === c.id ? 'text-white/80' : 'text-slate-400') }, c.count))
       )
     ),
+    filter !== 'archived' && h(AdBanner, { type: 'chatlist_banner' }),
     filter !== 'archived' && counts.archived > 0 && h('div', {
       className: 'flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-ink-800 border-b border-slate-100 dark:border-ink-800',
       onClick: () => setFilter('archived')
@@ -860,7 +940,7 @@ function ChatRow({ row, onOpen, onPin, onMute, onArchive, onProfile }) {
     h('div', { onClick: onProfile }, h(Avatar, { url: other && other.photoURL, name: other && other.fullName, size: 48, online: other && other.online })),
     h('div', { className: 'flex-1 min-w-0 border-b border-slate-100 dark:border-ink-800 pb-3 -mb-3', onClick: onOpen },
       h('div', { className: 'flex justify-between items-baseline' },
-        h('p', { className: 'font-semibold text-[15px] truncate' }, (other && other.fullName) || 'Unknown user'),
+        h('p', { className: 'font-semibold text-[15px] truncate' }, h(NameWithBadges, { name: (other && other.fullName) || 'Unknown user', user: other })),
         h('span', { className: 'text-[12px] shrink-0 ml-2 ' + (unread ? 'text-brand-500 font-semibold' : 'text-slate-400') }, chat.lastMessageAt ? timeAgo(chat.lastMessageAt) : '')
       ),
       h('div', { className: 'flex justify-between items-center mt-0.5' },
@@ -933,6 +1013,7 @@ function DiscoverScreen({ onOpenChat, onViewProfile }) {
   };
 
   return h('div', { className: 'h-full flex flex-col' },
+    h(AdBanner, { type: 'in_app_banner' }),
     h('div', { className: 'px-4 pt-4 pb-2' }, h('h1', { className: 'text-xl font-extrabold' }, 'Discover people')),
     h('div', { className: 'px-4 pb-2 flex gap-2' },
       h('input', {
@@ -1036,6 +1117,24 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
     // actual message or resetting the compose box below.
     db.collection('smiletak_chatMembers').doc(chatId + '_' + other.id).set({ unreadCount: FieldValue.increment(1) }, { merge: true }).catch(() => {});
     fireLocalNotification(profile.fullName, preview, profile.photoURL);
+    // Business auto-reply: written by the CUSTOMER'S own client (there's no
+    // Cloud Function here), which is the only reason this is allowed to set
+    // a senderId other than its own uid — the chat message rule only checks
+    // chat membership, not senderId. Logged as its own analytics event
+    // rather than a cross-user counter update on the business's profile doc.
+    if (otherLive && otherLive.isBusiness && otherLive.businessProfile && otherLive.businessProfile.autoReplyEnabled) {
+      db.collection('smiletak_businessEvents').add({ businessUid: otherLive.id, viewerUid: profile.id, type: 'message', createdAt: FieldValue.serverTimestamp() }).catch(() => {});
+      const last = chat && chat.lastAutoReplyAt ? chat.lastAutoReplyAt.toMillis() : 0;
+      if (Date.now() - last > 24 * 3600 * 1000) {
+        const reply = otherLive.businessProfile.autoReplyMessage || 'Thanks for reaching out! We will get back to you shortly.';
+        db.collection('smiletak_chats').doc(chatId).collection('messages').add({
+          type: 'text', text: reply, senderId: otherLive.id, createdAt: FieldValue.serverTimestamp(),
+          readBy: [], deliveredTo: [], deletedFor: [], deletedForEveryone: false
+        }).then(() => db.collection('smiletak_chats').doc(chatId).set({
+          lastAutoReplyAt: FieldValue.serverTimestamp(), lastMessage: reply.slice(0, 100), lastMessageAt: FieldValue.serverTimestamp(), lastSenderId: otherLive.id
+        }, { merge: true })).catch(() => {});
+      }
+    }
     setReplyTo(null);
     setText('');
     setTyping(false);
@@ -1051,6 +1150,8 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
     const f = e.target.files[0];
     if (!f) return;
     fileRef.current.value = '';
+    const capMB = isPremiumActive(profile) ? 200 : 25;
+    if (f.size > capMB * 1024 * 1024) { toast('File must be under ' + capMB + 'MB' + (isPremiumActive(profile) ? '' : ' — go Premium for higher limits'), 'error'); return; }
     let type = 'document';
     if (f.type.startsWith('image/')) type = 'image';
     else if (f.type.startsWith('video/')) type = 'video';
@@ -1115,7 +1216,7 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
       h('div', { className: 'cursor-pointer flex items-center gap-2 flex-1 min-w-0', onClick: () => onViewProfile(other.id) },
         h(Avatar, { url: otherLive.photoURL, name: otherLive.fullName, size: 36, online: otherLive.online }),
         h('div', { className: 'min-w-0' },
-          h('p', { className: 'font-semibold text-sm truncate' }, otherLive.fullName),
+          h('p', { className: 'font-semibold text-sm truncate' }, h(NameWithBadges, { name: otherLive.fullName, user: otherLive })),
           h('p', { className: 'text-[11px] text-slate-400' }, typingNow ? h('span', { className: 'text-brand-600' }, 'typing…') : (otherLive.online ? 'Online' : otherLive.lastSeen ? 'last seen ' + timeAgo(otherLive.lastSeen) : ''))
         )
       ),
@@ -1275,6 +1376,8 @@ function StatusScreen({ onViewProfile }) {
   const [myStatuses, setMyStatuses] = useState([]);
   const [viewing, setViewing] = useState(null);
   const [creating, setCreating] = useState(false);
+  const statusAd = useAd('sponsored_status');
+  useEffect(() => { if (statusAd) logAdImpression(statusAd); }, [statusAd]);
 
   useEffect(() => {
     const cutoff = Timestamp.fromMillis(Date.now() - 24 * 3600 * 1000);
@@ -1345,7 +1448,17 @@ function StatusScreen({ onViewProfile }) {
           h('div', { className: 'absolute inset-0 bg-black/20' }),
           h('div', { className: 'absolute top-2 left-2 rounded-full ring-2 ring-brand-500' }, h(Avatar, { url: s.user.photoURL, name: s.user.fullName, size: 28 })),
           h('p', { className: 'relative text-white text-[11px] font-semibold px-2 pb-2 truncate w-full' }, s.user.fullName)
-        ))
+        )),
+        statusAd && !isPremiumActive(profile) && h('div', {
+          key: 'ad',
+          className: 'shrink-0 w-[104px] h-[150px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
+          style: statusAd.mediaType === 'image' && statusAd.mediaURL ? { backgroundImage: 'url(' + statusAd.mediaURL + ')', backgroundSize: 'cover', backgroundPosition: 'center' } : { background: '#2b2b2b' },
+          onClick: () => logAdClick(statusAd)
+        },
+          h('div', { className: 'absolute inset-0 bg-black/25' }),
+          h('span', { className: 'absolute top-2 left-2 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded-full' }, 'Sponsored'),
+          h('p', { className: 'relative text-white text-[11px] font-semibold px-2 pb-2 truncate w-full' }, statusAd.headline || statusAd.advertiserName || 'Ad')
+        )
       ),
       statuses.length === 0 && h('p', { className: 'px-4 text-xs text-slate-400 mt-1' }, 'No one else has posted a status in the last 24 hours')
     ),
@@ -1376,7 +1489,8 @@ function CreateStatusModal({ onClose, onText, onMedia }) {
 
   const pickMedia = (file, type) => {
     if (!file) return;
-    const maxMB = type === 'video' ? 30 : 15;
+    const capBonus = isPremiumActive(profile) ? 3 : 1;
+    const maxMB = (type === 'video' ? 30 : 15) * capBonus;
     if (file.size > maxMB * 1024 * 1024) { toast(type + ' status must be under ' + maxMB + 'MB', 'error'); return; }
     setPickedFile(file);
     setPickedType(type);
@@ -1558,7 +1672,7 @@ function StatusViewer({ data, mine, onClose }) {
 }
 
 /* ============================== PROFILE SCREENS ============================== */
-function MyProfileScreen() {
+function MyProfileScreen({ onOpenPremium, onOpenBusiness }) {
   const { profile } = useAuth();
   const [theme, setTheme] = useContext(ThemeCtx);
   const toast = useToast();
@@ -1624,7 +1738,21 @@ function MyProfileScreen() {
       )
     ),
     h('div', { className: 'px-4 space-y-4' },
-      h(FieldBlock, { label: 'Full name', value: editing ? h('input', { className: inputCls + ' mb-0', value: fullName, onChange: e => setFullName(e.target.value) }) : profile.fullName }),
+      h('div', { className: 'flex items-center justify-between rounded-xl p-3 ' + (isPremiumActive(profile) ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50 dark:bg-ink-800') },
+        h('div', null,
+          h('p', { className: 'font-semibold text-sm flex items-center gap-1.5' }, h('i', { className: 'fa-solid fa-crown text-amber-400' }), 'SmileTak Premium'),
+          h('p', { className: 'text-xs text-slate-400 mt-0.5' }, isPremiumActive(profile) ? 'Active until ' + fmtDay(profile.premiumExpiresAt) : 'Ad-free, badges, higher limits & more')
+        ),
+        h('button', { onClick: onOpenPremium, className: 'text-brand-600 text-sm font-semibold shrink-0' }, isPremiumActive(profile) ? 'Manage' : 'Upgrade')
+      ),
+      h('div', { className: 'flex items-center justify-between rounded-xl p-3 bg-slate-50 dark:bg-ink-800' },
+        h('div', null,
+          h('p', { className: 'font-semibold text-sm flex items-center gap-1.5' }, h('i', { className: 'fa-solid fa-store' }), 'Business account', profile.businessVerified && h(VerifiedBadge, { size: 12 })),
+          h('p', { className: 'text-xs text-slate-400 mt-0.5' }, profile.isBusiness ? 'Manage your business profile & catalog' : 'Get a catalog, auto-replies & analytics')
+        ),
+        h('button', { onClick: onOpenBusiness, className: 'text-brand-600 text-sm font-semibold shrink-0' }, profile.isBusiness ? 'Manage' : 'Set up')
+      ),
+      h(FieldBlock, { label: 'Full name', value: editing ? h('input', { className: inputCls + ' mb-0', value: fullName, onChange: e => setFullName(e.target.value) }) : h(NameWithBadges, { name: profile.fullName, user: profile }) }),
       h(FieldBlock, { label: 'Username', value: '@' + profile.username }),
       h(FieldBlock, { label: 'Phone number', value: '+' + profile.phone.replace(/^\+/, '') }),
       h(FieldBlock, { label: 'Bio', value: editing ? h('textarea', { className: inputCls + ' mb-0', rows: 3, value: bio, onChange: e => setBio(e.target.value) }) : (profile.bio || 'No bio yet') }),
@@ -1661,6 +1789,213 @@ function FieldBlock({ label, value }) {
   );
 }
 
+/* ============================== PREMIUM SUBSCRIPTION ============================== */
+function PremiumScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [pricing, setPricing] = useState({ premiumMonthly: 1000, premiumYearly: 10000, currency: '₦' });
+  const [account, setAccount] = useState(null);
+  const [myRequests, setMyRequests] = useState([]);
+  const [plan, setPlan] = useState('monthly');
+  const [reference, setReference] = useState('');
+  const [proofFile, setProofFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const fileRef = useRef(null);
+  const active = isPremiumActive(profile);
+
+  useEffect(() => {
+    db.collection('smiletak_settings').doc('pricing').get().then(s => { if (s.exists) setPricing(p => Object.assign({}, p, s.data())); }).catch(() => {});
+    db.collection('smiletak_settings').doc('paymentAccount').get().then(s => setAccount(s.exists ? s.data() : null)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const unsub = db.collection('smiletak_paymentRequests').where('uid', '==', profile.id).onSnapshot(snap => {
+      const rows = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+      rows.sort((a, b) => (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0));
+      setMyRequests(rows);
+    });
+    return unsub;
+  }, [profile.id]);
+
+  const price = plan === 'monthly' ? pricing.premiumMonthly : pricing.premiumYearly;
+
+  const submit = async () => {
+    if (!reference.trim()) return toast('Enter your payment reference / teller number', 'error');
+    setSubmitting(true);
+    try {
+      let proofURL = null;
+      if (proofFile) proofURL = await uploadFile('smiletak/payment-proofs/' + profile.id + '/' + Date.now() + '_' + proofFile.name, proofFile);
+      await db.collection('smiletak_paymentRequests').add({
+        uid: profile.id, type: 'premium', plan, amount: price, currency: pricing.currency || '₦',
+        reference: reference.trim(), proofURL, status: 'pending', createdAt: FieldValue.serverTimestamp()
+      });
+      toast('Submitted — an admin will review your payment', 'success');
+      setReference(''); setProofFile(null);
+    } catch (e) { toast('Could not submit: ' + e.message, 'error'); }
+    setSubmitting(false);
+  };
+
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+      h('button', { onClick: onBack, className: 'text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('p', { className: 'font-semibold' }, 'SmileTak Premium')
+    ),
+    h('div', { className: 'p-4' },
+      h('div', { className: 'rounded-2xl p-4 mb-4 ' + (active ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50 dark:bg-ink-800') },
+        h('div', { className: 'flex items-center gap-2' }, h('i', { className: 'fa-solid fa-crown text-amber-400 text-lg' }), h('p', { className: 'font-bold' }, active ? 'Premium active' : 'Not subscribed')),
+        active && h('p', { className: 'text-xs text-slate-500 mt-1' }, 'Valid until ' + fmtDay(profile.premiumExpiresAt)),
+        !active && profile.premiumExpiresAt && h('p', { className: 'text-xs text-red-500 mt-1' }, 'Your premium expired on ' + fmtDay(profile.premiumExpiresAt))
+      ),
+      h('p', { className: 'font-semibold text-sm mb-2' }, 'Benefits'),
+      h('ul', { className: 'text-sm text-slate-600 dark:text-slate-300 space-y-1 mb-5 list-disc pl-5' },
+        ['Ad-free experience', 'Custom app themes', 'Premium profile badge', 'Exclusive stickers & emojis', 'Higher file upload limits', 'Advanced privacy settings', 'Priority support'].map(b => h('li', { key: b }, b))
+      ),
+      h('p', { className: 'font-semibold text-sm mb-2' }, 'Choose a plan'),
+      h('div', { className: 'flex gap-2 mb-4' },
+        ['monthly', 'yearly'].map(p => h('button', {
+          key: p, onClick: () => setPlan(p),
+          className: 'flex-1 rounded-xl border py-3 text-sm font-semibold ' + (plan === p ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-slate-200 dark:border-ink-600')
+        }, p === 'monthly' ? 'Monthly' : 'Yearly', h('p', { className: 'text-xs font-normal mt-0.5' }, (pricing.currency || '₦') + (p === 'monthly' ? pricing.premiumMonthly : pricing.premiumYearly))))
+      ),
+      account && h('div', { className: 'bg-slate-50 dark:bg-ink-800 rounded-xl p-3 mb-4 text-sm' },
+        h('p', { className: 'font-semibold mb-1' }, 'Pay by bank transfer'),
+        h('p', null, 'Bank: ', account.bankName),
+        h('p', null, 'Account number: ', account.accountNumber),
+        h('p', null, 'Account name: ', account.accountName),
+        account.instructions && h('p', { className: 'text-xs text-slate-400 mt-1' }, account.instructions),
+        h('p', { className: 'text-xs text-slate-400 mt-2' }, 'Transfer ' + (pricing.currency || '₦') + price + ' then submit your reference below.')
+      ),
+      !account && h('p', { className: 'text-xs text-red-500 mb-4' }, 'Payment account not set up yet — contact the admin.'),
+      h('input', { className: inputCls, placeholder: 'Payment reference / teller number', value: reference, onChange: e => setReference(e.target.value) }),
+      h('input', { type: 'file', accept: 'image/*', ref: fileRef, className: 'hidden', onChange: e => setProofFile(e.target.files[0]) }),
+      h('button', { className: 'w-full mb-3 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-600 text-sm text-left', onClick: () => fileRef.current.click() }, proofFile ? proofFile.name : h('span', { className: 'text-slate-400' }, 'Attach payment screenshot (optional)')),
+      h('button', { onClick: submit, disabled: submitting, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm' }, submitting ? 'Submitting…' : 'I have paid — submit for review'),
+      myRequests.length > 0 && h('div', { className: 'mt-6' },
+        h('p', { className: 'font-semibold text-sm mb-2' }, 'Your payment history'),
+        myRequests.map(r => h('div', { key: r.id, className: 'flex items-center justify-between py-2 border-b border-slate-100 dark:border-ink-800 text-sm' },
+          h('div', null, h('p', null, (r.plan === 'monthly' ? 'Monthly' : 'Yearly') + ' · ' + (r.currency || '₦') + r.amount), h('p', { className: 'text-xs text-slate-400' }, timeAgo(r.createdAt))),
+          h('span', { className: 'text-xs font-semibold px-2 py-1 rounded-full ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700') }, r.status)
+        ))
+      )
+    )
+  );
+}
+
+/* ============================== BUSINESS ACCOUNT ============================== */
+function BusinessScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const bp = profile.businessProfile || {};
+  const [name, setName] = useState(bp.name || '');
+  const [category, setCategory] = useState(bp.category || '');
+  const [description, setDescription] = useState(bp.description || '');
+  const [phone, setPhone] = useState(bp.phone || '');
+  const [email, setEmail] = useState(bp.email || '');
+  const [address, setAddress] = useState(bp.address || '');
+  const [autoReplyEnabled, setAutoReplyEnabled] = useState(!!bp.autoReplyEnabled);
+  const [autoReplyMessage, setAutoReplyMessage] = useState(bp.autoReplyMessage || '');
+  const [catalog, setCatalog] = useState(bp.catalog || []);
+  const [newItem, setNewItem] = useState({ name: '', price: '', desc: '' });
+  const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState('profile');
+  const [counts, setCounts] = useState({ views: 0, messages: 0 });
+  const vStatus = profile.businessVerificationStatus || 'none';
+
+  useEffect(() => {
+    if (tab !== 'analytics') return;
+    Promise.all([
+      db.collection('smiletak_businessEvents').where('businessUid', '==', profile.id).where('type', '==', 'view').get(),
+      db.collection('smiletak_businessEvents').where('businessUid', '==', profile.id).where('type', '==', 'message').get()
+    ]).then(([v, m]) => setCounts({ views: v.size, messages: m.size })).catch(() => {});
+  }, [tab, profile.id]);
+
+  const save = async () => {
+    if (!name.trim()) return toast('Enter a business name', 'error');
+    setSaving(true);
+    try {
+      await db.collection('smiletak_users').doc(profile.id).update({
+        isBusiness: true,
+        businessProfile: { name: name.trim(), category: category.trim(), description: description.trim(), phone: phone.trim(), email: email.trim(), address: address.trim(), autoReplyEnabled, autoReplyMessage: autoReplyMessage.trim(), catalog },
+        businessVerificationStatus: profile.businessVerificationStatus || 'none'
+      });
+      toast('Business profile saved', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+    setSaving(false);
+  };
+
+  const addItem = () => {
+    if (!newItem.name.trim()) return;
+    setCatalog(c => c.concat([{ id: Date.now().toString(36), name: newItem.name.trim(), price: newItem.price.trim(), desc: newItem.desc.trim() }]));
+    setNewItem({ name: '', price: '', desc: '' });
+  };
+  const removeItem = (id) => setCatalog(c => c.filter(i => i.id !== id));
+
+  const requestVerification = async () => {
+    if (!name.trim()) return toast('Save your business profile first', 'error');
+    try {
+      await db.collection('smiletak_businessVerificationRequests').add({ uid: profile.id, businessName: name.trim(), status: 'pending', createdAt: FieldValue.serverTimestamp() });
+      await db.collection('smiletak_users').doc(profile.id).update({ businessVerificationStatus: 'pending' });
+      toast('Verification requested', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  };
+
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+      h('button', { onClick: onBack, className: 'text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('p', { className: 'font-semibold' }, 'Business account')
+    ),
+    h('div', { className: 'flex gap-1 px-4 py-3 overflow-x-auto no-scrollbar' },
+      ['profile', 'catalog', 'analytics', 'verification'].map(t => h('button', { key: t, onClick: () => setTab(t), className: 'px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ' + (tab === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-ink-700') }, t[0].toUpperCase() + t.slice(1)))
+    ),
+    h('div', { className: 'px-4 pb-8' },
+      tab === 'profile' && h('div', null,
+        h('input', { className: inputCls, placeholder: 'Business name', value: name, onChange: e => setName(e.target.value) }),
+        h('input', { className: inputCls, placeholder: 'Category (e.g. Restaurant, Fashion)', value: category, onChange: e => setCategory(e.target.value) }),
+        h('textarea', { className: inputCls, rows: 3, placeholder: 'Description', value: description, onChange: e => setDescription(e.target.value) }),
+        h('input', { className: inputCls, placeholder: 'Contact phone', value: phone, onChange: e => setPhone(e.target.value) }),
+        h('input', { className: inputCls, placeholder: 'Contact email', value: email, onChange: e => setEmail(e.target.value) }),
+        h('input', { className: inputCls, placeholder: 'Address', value: address, onChange: e => setAddress(e.target.value) }),
+        h('div', { className: 'flex items-center justify-between py-3 border-t border-slate-100 dark:border-ink-800' },
+          h('span', { className: 'font-medium text-sm' }, 'Auto-reply to new messages'),
+          h('button', { onClick: () => setAutoReplyEnabled(v => !v), className: 'w-11 h-6 rounded-full relative ' + (autoReplyEnabled ? 'bg-brand-600' : 'bg-slate-200') },
+            h('span', { className: 'absolute top-0.5 w-5 h-5 bg-white rounded-full transition ' + (autoReplyEnabled ? 'left-[22px]' : 'left-0.5') }))
+        ),
+        autoReplyEnabled && h('textarea', { className: inputCls, rows: 2, placeholder: 'Auto-reply message', value: autoReplyMessage, onChange: e => setAutoReplyMessage(e.target.value) }),
+        h('button', { onClick: save, disabled: saving, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm mt-2' }, saving ? 'Saving…' : 'Save business profile')
+      ),
+      tab === 'catalog' && h('div', null,
+        catalog.map(item => h('div', { key: item.id, className: 'flex items-center justify-between py-2 border-b border-slate-100 dark:border-ink-800' },
+          h('div', null, h('p', { className: 'text-sm font-semibold' }, item.name), h('p', { className: 'text-xs text-slate-400' }, item.price + ' · ' + item.desc)),
+          h('button', { onClick: () => removeItem(item.id), className: 'text-red-500 text-xs' }, 'Remove')
+        )),
+        h('div', { className: 'mt-3 space-y-2' },
+          h('input', { className: inputCls, placeholder: 'Item / service name', value: newItem.name, onChange: e => setNewItem(v => Object.assign({}, v, { name: e.target.value })) }),
+          h('input', { className: inputCls, placeholder: 'Price', value: newItem.price, onChange: e => setNewItem(v => Object.assign({}, v, { price: e.target.value })) }),
+          h('input', { className: inputCls, placeholder: 'Short description', value: newItem.desc, onChange: e => setNewItem(v => Object.assign({}, v, { desc: e.target.value })) }),
+          h('button', { onClick: addItem, className: 'w-full border border-brand-600 text-brand-600 rounded-xl py-2 font-semibold text-sm' }, '+ Add item'),
+          h('button', { onClick: save, disabled: saving, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm mt-2' }, 'Save catalog')
+        )
+      ),
+      tab === 'analytics' && h('div', { className: 'grid grid-cols-2 gap-3 mt-2' },
+        h(StatCard, { label: 'Profile views', value: counts.views }),
+        h(StatCard, { label: 'Messages received', value: counts.messages }),
+        h(StatCard, { label: 'Catalog items', value: catalog.length }),
+        h(StatCard, { label: 'Status', value: vStatus === 'approved' ? 'Verified' : vStatus.charAt(0).toUpperCase() + vStatus.slice(1) })
+      ),
+      tab === 'verification' && h('div', { className: 'mt-2' },
+        h('p', { className: 'text-sm mb-3' }, 'Verification status: ',
+          h('span', { className: 'font-semibold ' + (vStatus === 'approved' ? 'text-green-600' : vStatus === 'rejected' ? 'text-red-500' : 'text-amber-600') }, vStatus)),
+        (vStatus === 'none' || vStatus === 'rejected')
+          ? h('button', { onClick: requestVerification, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm' }, 'Request verification')
+          : vStatus === 'pending'
+            ? h('p', { className: 'text-sm text-slate-400' }, 'Your request is being reviewed by an admin.')
+            : h('p', { className: 'text-sm text-green-600' }, h('i', { className: 'fa-solid fa-circle-check mr-1' }), 'Your business is verified!')
+      )
+    )
+  );
+}
+
+
 function UserProfileScreen({ uid, onBack, onMessage }) {
   const { profile } = useAuth();
   const toast = useToast();
@@ -1670,6 +2005,18 @@ function UserProfileScreen({ uid, onBack, onMessage }) {
 
   useEffect(() => { const unsub = db.collection('smiletak_users').doc(uid).onSnapshot(s => setUser(s.exists ? Object.assign({ id: s.id }, s.data()) : null)); return unsub; }, [uid]);
   useEffect(() => { db.collection('smiletak_blockedUsers').doc(profile.id + '_' + uid).get().then(s => setBlocked(s.exists)); }, [uid, profile.id]);
+  useEffect(() => {
+    // Log a profile-view analytics event for business accounts. Written by
+    // the VIEWER about themselves (viewerUid == auth.uid), never as a
+    // cross-user field update on the business's own doc — see the
+    // smiletak_businessEvents rule.
+    if (uid === profile.id) return;
+    db.collection('smiletak_users').doc(uid).get().then(s => {
+      if (s.exists && s.data().isBusiness) {
+        db.collection('smiletak_businessEvents').add({ businessUid: uid, viewerUid: profile.id, type: 'view', createdAt: FieldValue.serverTimestamp() }).catch(() => {});
+      }
+    });
+  }, [uid, profile.id]);
 
   if (!user) return h('div', { className: 'p-6 text-center text-sm text-slate-400' }, 'Loading…');
 
@@ -1707,9 +2054,25 @@ function UserProfileScreen({ uid, onBack, onMessage }) {
     ),
     h('div', { className: 'flex flex-col items-center py-6' },
       h(Avatar, { url: user.photoURL, name: user.fullName, size: 96, online: user.online }),
-      h('h2', { className: 'font-extrabold text-lg mt-3' }, user.fullName),
+      h('h2', { className: 'font-extrabold text-lg mt-3' }, h(NameWithBadges, { name: user.fullName, user })),
       h('p', { className: 'text-sm text-slate-400' }, '@' + user.username),
       h('p', { className: 'text-xs text-slate-400 mt-1' }, user.online ? 'Online' : user.lastSeen ? 'Last seen ' + timeAgo(user.lastSeen) : '')
+    ),
+    user.isBusiness && user.businessProfile && h('div', { className: 'px-4 mb-2' },
+      h('div', { className: 'bg-slate-50 dark:bg-ink-800 rounded-xl p-3' },
+        h('p', { className: 'font-semibold text-sm' }, user.businessProfile.category || 'Business'),
+        user.businessProfile.description && h('p', { className: 'text-xs text-slate-500 mt-1' }, user.businessProfile.description),
+        user.businessProfile.phone && h('p', { className: 'text-xs text-slate-500 mt-1' }, h('i', { className: 'fa-solid fa-phone mr-1' }), user.businessProfile.phone),
+        user.businessProfile.email && h('p', { className: 'text-xs text-slate-500' }, h('i', { className: 'fa-solid fa-envelope mr-1' }), user.businessProfile.email),
+        user.businessProfile.address && h('p', { className: 'text-xs text-slate-500' }, h('i', { className: 'fa-solid fa-location-dot mr-1' }), user.businessProfile.address)
+      ),
+      (user.businessProfile.catalog || []).length > 0 && h('div', { className: 'mt-2' },
+        h('p', { className: 'text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1' }, 'Products & services'),
+        user.businessProfile.catalog.map(item => h('div', { key: item.id, className: 'flex items-center justify-between py-2 border-b border-slate-100 dark:border-ink-800' },
+          h('div', null, h('p', { className: 'text-sm font-semibold' }, item.name), item.desc && h('p', { className: 'text-xs text-slate-400' }, item.desc)),
+          item.price && h('p', { className: 'text-sm font-semibold' }, item.price)
+        ))
+      )
     ),
     h('div', { className: 'px-4' },
       h(FieldBlock, { label: 'Bio', value: user.bio || 'No bio yet' }),
@@ -1734,14 +2097,30 @@ function AdminPanel() {
   const { profile } = useAuth();
   const toast = useToast();
   const [tab, setTab] = useState('dashboard');
-  const [stats, setStats] = useState({ users: null, online: null, reports: null, suspended: null });
+  const [stats, setStats] = useState({ users: null, online: null, reports: null, suspended: null, premium: null, revenue: null });
   const [users, setUsers] = useState([]);
   const [reports, setReports] = useState([]);
   const [search, setSearch] = useState('');
+  const [paymentReqs, setPaymentReqs] = useState([]);
+  const [bizReqs, setBizReqs] = useState([]);
+  const [ads, setAds] = useState([]);
+  const [settingsForm, setSettingsForm] = useState({ bankName: '', accountNumber: '', accountName: '', instructions: '', premiumMonthly: 1000, premiumYearly: 10000, currency: '₦' });
 
   useEffect(() => {
-    db.collection('smiletak_users').get().then(s => setStats(st => Object.assign({}, st, { users: s.size, online: s.docs.filter(d => d.data().online).length, suspended: s.docs.filter(d => d.data().isSuspended).length })));
+    db.collection('smiletak_users').get().then(s => {
+      const docs = s.docs;
+      setStats(st => Object.assign({}, st, {
+        users: docs.length,
+        online: docs.filter(d => d.data().online).length,
+        suspended: docs.filter(d => d.data().isSuspended).length,
+        premium: docs.filter(d => isPremiumActive(d.data())).length
+      }));
+    });
     db.collection('smiletak_reports').where('status', '==', 'pending').get().then(s => setStats(st => Object.assign({}, st, { reports: s.size })));
+    db.collection('smiletak_paymentRequests').where('status', '==', 'approved').get().then(s => {
+      const rev = s.docs.reduce((sum, d) => sum + (Number(d.data().amount) || 0), 0);
+      setStats(st => Object.assign({}, st, { revenue: rev }));
+    });
   }, []);
 
   useEffect(() => {
@@ -1756,29 +2135,94 @@ function AdminPanel() {
     return unsub;
   }, [tab]);
 
+  useEffect(() => {
+    if (tab !== 'payments') return;
+    const unsub = db.collection('smiletak_paymentRequests').orderBy('createdAt', 'desc').limit(200).onSnapshot(s => setPaymentReqs(s.docs.map(d => Object.assign({ id: d.id }, d.data()))));
+    return unsub;
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'business') return;
+    const unsub = db.collection('smiletak_businessVerificationRequests').orderBy('createdAt', 'desc').limit(200).onSnapshot(s => setBizReqs(s.docs.map(d => Object.assign({ id: d.id }, d.data()))));
+    return unsub;
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'ads') return;
+    const unsub = db.collection('smiletak_adCampaigns').orderBy('createdAt', 'desc').limit(200).onSnapshot(s => setAds(s.docs.map(d => Object.assign({ id: d.id }, d.data()))));
+    return unsub;
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'settings') return;
+    Promise.all([
+      db.collection('smiletak_settings').doc('paymentAccount').get(),
+      db.collection('smiletak_settings').doc('pricing').get()
+    ]).then(([a, p]) => setSettingsForm(f => Object.assign({}, f, a.exists ? a.data() : {}, p.exists ? p.data() : {})));
+  }, [tab]);
+
   const toggleSuspend = (u) => db.collection('smiletak_users').doc(u.id).update({ isSuspended: !u.isSuspended }).then(() => toast(u.isSuspended ? 'Unsuspended' : 'Suspended', 'success'));
   const toggleAdmin = (u) => db.collection('smiletak_users').doc(u.id).update({ isAdmin: !u.isAdmin }).then(() => toast('Updated', 'success'));
   const resolveReport = (r) => db.collection('smiletak_reports').doc(r.id).update({ status: 'resolved' });
+
+  const approvePayment = async (r) => {
+    try {
+      const days = r.plan === 'yearly' ? 365 : 30;
+      const expires = Timestamp.fromMillis(Date.now() + days * 24 * 3600 * 1000);
+      await db.collection('smiletak_users').doc(r.uid).update({ isPremium: true, premiumPlan: r.plan, premiumExpiresAt: expires, premiumSince: FieldValue.serverTimestamp() });
+      await db.collection('smiletak_paymentRequests').doc(r.id).update({ status: 'approved', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: profile.id });
+      toast('Approved — user is now Premium', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  };
+  const rejectPayment = (r) => db.collection('smiletak_paymentRequests').doc(r.id).update({ status: 'rejected', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: profile.id }).then(() => toast('Rejected', 'info'));
+
+  const approveBusiness = async (r) => {
+    try {
+      await db.collection('smiletak_users').doc(r.uid).update({ businessVerified: true, businessVerificationStatus: 'approved' });
+      await db.collection('smiletak_businessVerificationRequests').doc(r.id).update({ status: 'approved', reviewedAt: FieldValue.serverTimestamp() });
+      toast('Business verified', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  };
+  const rejectBusiness = async (r) => {
+    try {
+      await db.collection('smiletak_users').doc(r.uid).update({ businessVerificationStatus: 'rejected' });
+      await db.collection('smiletak_businessVerificationRequests').doc(r.id).update({ status: 'rejected', reviewedAt: FieldValue.serverTimestamp() });
+      toast('Rejected', 'info');
+    } catch (e) { toast(e.message, 'error'); }
+  };
+
+  const toggleAd = (ad) => db.collection('smiletak_adCampaigns').doc(ad.id).update({ enabled: !ad.enabled }).catch(e => toast(e.message, 'error'));
+  const deleteAd = (ad) => { if (confirm('Delete this campaign?')) db.collection('smiletak_adCampaigns').doc(ad.id).delete().catch(e => toast(e.message, 'error')); };
+
+  const saveSettings = async () => {
+    try {
+      await db.collection('smiletak_settings').doc('paymentAccount').set({ bankName: settingsForm.bankName || '', accountNumber: settingsForm.accountNumber || '', accountName: settingsForm.accountName || '', instructions: settingsForm.instructions || '' });
+      await db.collection('smiletak_settings').doc('pricing').set({ premiumMonthly: Number(settingsForm.premiumMonthly) || 0, premiumYearly: Number(settingsForm.premiumYearly) || 0, currency: settingsForm.currency || '₦' });
+      toast('Settings saved', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  };
 
   const filteredUsers = users.filter(u => !search || (u.fullName || '').toLowerCase().includes(search.toLowerCase()) || (u.username || '').includes(search.toLowerCase()) || (u.phone || '').includes(search));
 
   return h('div', { className: 'h-full flex flex-col' },
     h('div', { className: 'px-4 pt-4 pb-2' }, h('h1', { className: 'text-xl font-extrabold' }, 'Admin Panel')),
     h('div', { className: 'flex gap-1 px-4 pb-2 overflow-x-auto no-scrollbar' },
-      ['dashboard', 'users', 'reports'].map(t => h('button', { key: t, onClick: () => setTab(t), className: 'px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ' + (tab === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-ink-700') }, t[0].toUpperCase() + t.slice(1)))
+      ['dashboard', 'users', 'reports', 'payments', 'business', 'ads', 'settings'].map(t => h('button', { key: t, onClick: () => setTab(t), className: 'px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ' + (tab === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-ink-700') }, t[0].toUpperCase() + t.slice(1)))
     ),
     h('div', { className: 'flex-1 overflow-y-auto no-scrollbar px-4 pb-6' },
       tab === 'dashboard' && h('div', { className: 'grid grid-cols-2 gap-3' },
         h(StatCard, { label: 'Total users', value: stats.users }),
         h(StatCard, { label: 'Online now', value: stats.online }),
         h(StatCard, { label: 'Pending reports', value: stats.reports }),
-        h(StatCard, { label: 'Suspended', value: stats.suspended })
+        h(StatCard, { label: 'Suspended', value: stats.suspended }),
+        h(StatCard, { label: 'Premium members', value: stats.premium }),
+        h(StatCard, { label: 'Premium revenue', value: stats.revenue === null ? null : '₦' + stats.revenue })
       ),
       tab === 'users' && h('div', null,
         h('input', { className: inputCls, placeholder: 'Search users…', value: search, onChange: e => setSearch(e.target.value) }),
         filteredUsers.map(u => h('div', { key: u.id, className: 'flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
           h(Avatar, { url: u.photoURL, name: u.fullName, size: 36 }),
-          h('div', { className: 'flex-1 min-w-0' }, h('p', { className: 'text-sm font-semibold truncate' }, u.fullName, u.isAdmin && h('span', { className: 'ml-1 text-[10px] bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full' }, 'admin'), u.isSuspended && h('span', { className: 'ml-1 text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full' }, 'suspended')),
+          h('div', { className: 'flex-1 min-w-0' }, h('p', { className: 'text-sm font-semibold truncate' }, u.fullName, u.isAdmin && h('span', { className: 'ml-1 text-[10px] bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full' }, 'admin'), u.isSuspended && h('span', { className: 'ml-1 text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full' }, 'suspended'), isPremiumActive(u) && h('span', { className: 'ml-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full' }, 'premium'), u.businessVerified && h('span', { className: 'ml-1 text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full' }, 'verified biz')),
             h('p', { className: 'text-xs text-slate-400' }, '@' + u.username, ' · +', u.phone)),
           h('div', { className: 'flex gap-1' },
             h('button', { className: 'text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-ink-600', onClick: () => toggleSuspend(u) }, u.isSuspended ? 'Unsuspend' : 'Suspend'),
@@ -1793,8 +2237,126 @@ function AdminPanel() {
           h('p', { className: 'text-xs text-slate-400' }, 'Reported user: ', r.reportedUid, ' · ', timeAgo(r.createdAt)),
           r.status === 'pending' && h('button', { className: 'text-xs text-brand-600 font-semibold mt-1', onClick: () => resolveReport(r) }, 'Mark resolved')
         ))
+      ),
+      tab === 'payments' && h('div', null,
+        paymentReqs.length === 0 && h('p', { className: 'text-sm text-slate-400 mt-4' }, 'No payment requests yet'),
+        paymentReqs.map(r => h(PaymentRequestRow, { key: r.id, r, onApprove: () => approvePayment(r), onReject: () => rejectPayment(r) }))
+      ),
+      tab === 'business' && h('div', null,
+        bizReqs.length === 0 && h('p', { className: 'text-sm text-slate-400 mt-4' }, 'No verification requests yet'),
+        bizReqs.map(r => h('div', { key: r.id, className: 'py-2.5 border-b border-slate-100 dark:border-ink-800' },
+          h('p', { className: 'text-sm font-semibold' }, r.businessName, h('span', { className: 'ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700') }, r.status)),
+          h('p', { className: 'text-xs text-slate-400' }, timeAgo(r.createdAt)),
+          r.status === 'pending' && h('div', { className: 'flex gap-2 mt-1' },
+            h('button', { className: 'text-xs text-green-600 font-semibold', onClick: () => approveBusiness(r) }, 'Approve'),
+            h('button', { className: 'text-xs text-red-500 font-semibold', onClick: () => rejectBusiness(r) }, 'Reject')
+          )
+        ))
+      ),
+      tab === 'ads' && h(AdCampaignsAdmin, { ads, onToggle: toggleAd, onDelete: deleteAd }),
+      tab === 'settings' && h('div', { className: 'space-y-1' },
+        h('p', { className: 'font-semibold text-sm mt-2 mb-1' }, 'Manual payment account'),
+        h('input', { className: inputCls, placeholder: 'Bank name', value: settingsForm.bankName, onChange: e => setSettingsForm(f => Object.assign({}, f, { bankName: e.target.value })) }),
+        h('input', { className: inputCls, placeholder: 'Account number', value: settingsForm.accountNumber, onChange: e => setSettingsForm(f => Object.assign({}, f, { accountNumber: e.target.value })) }),
+        h('input', { className: inputCls, placeholder: 'Account name', value: settingsForm.accountName, onChange: e => setSettingsForm(f => Object.assign({}, f, { accountName: e.target.value })) }),
+        h('textarea', { className: inputCls, rows: 2, placeholder: 'Extra instructions (optional)', value: settingsForm.instructions, onChange: e => setSettingsForm(f => Object.assign({}, f, { instructions: e.target.value })) }),
+        h('p', { className: 'font-semibold text-sm mt-4 mb-1' }, 'Premium pricing'),
+        h('input', { className: inputCls, placeholder: 'Currency symbol (e.g. ₦)', value: settingsForm.currency, onChange: e => setSettingsForm(f => Object.assign({}, f, { currency: e.target.value })) }),
+        h('input', { className: inputCls, type: 'number', placeholder: 'Monthly price', value: settingsForm.premiumMonthly, onChange: e => setSettingsForm(f => Object.assign({}, f, { premiumMonthly: e.target.value })) }),
+        h('input', { className: inputCls, type: 'number', placeholder: 'Yearly price', value: settingsForm.premiumYearly, onChange: e => setSettingsForm(f => Object.assign({}, f, { premiumYearly: e.target.value })) }),
+        h('button', { onClick: saveSettings, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm mt-2' }, 'Save settings')
       )
     )
+  );
+}
+function PaymentRequestRow({ r, onApprove, onReject }) {
+  const [user, setUser] = useState(null);
+  useEffect(() => { db.collection('smiletak_users').doc(r.uid).get().then(s => setUser(s.exists ? s.data() : null)); }, [r.uid]);
+  return h('div', { className: 'py-2.5 border-b border-slate-100 dark:border-ink-800' },
+    h('p', { className: 'text-sm font-semibold' }, (user ? user.fullName : r.uid), ' · ', r.plan === 'yearly' ? 'Yearly' : 'Monthly', ' · ', (r.currency || '₦') + r.amount,
+      h('span', { className: 'ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700') }, r.status)),
+    h('p', { className: 'text-xs text-slate-400' }, 'Ref: ', r.reference, ' · ', timeAgo(r.createdAt)),
+    r.proofURL && h('a', { href: r.proofURL, target: '_blank', rel: 'noreferrer', className: 'text-xs text-brand-600 underline' }, 'View proof'),
+    r.status === 'pending' && h('div', { className: 'flex gap-2 mt-1' },
+      h('button', { className: 'text-xs text-green-600 font-semibold', onClick: onApprove }, 'Approve'),
+      h('button', { className: 'text-xs text-red-500 font-semibold', onClick: onReject }, 'Reject')
+    )
+  );
+}
+function AdCampaignsAdmin({ ads, onToggle, onDelete }) {
+  const toast = useToast();
+  const [form, setForm] = useState({ advertiserName: '', type: 'chatlist_banner', mediaType: 'text', headline: '', body: '', targetURL: '', startAt: '', endAt: '', amountPaid: '' });
+  const [file, setFile] = useState(null);
+  const [creating, setCreating] = useState(false);
+
+  const create = async () => {
+    if (!form.headline.trim() && form.mediaType === 'text') return toast('Enter a headline for a text ad', 'error');
+    setCreating(true);
+    try {
+      let mediaURL = null;
+      if (file && (form.mediaType === 'image' || form.mediaType === 'video')) {
+        mediaURL = await uploadFile('smiletak/ads/' + Date.now() + '_' + file.name, file);
+      }
+      await db.collection('smiletak_adCampaigns').add({
+        advertiserName: form.advertiserName.trim(), type: form.type, mediaType: form.mediaType,
+        mediaURL, headline: form.headline.trim(), body: form.body.trim(), targetURL: form.targetURL.trim(),
+        startAt: form.startAt ? Timestamp.fromDate(new Date(form.startAt)) : Timestamp.now(),
+        endAt: form.endAt ? Timestamp.fromDate(new Date(form.endAt)) : Timestamp.fromMillis(Date.now() + 30 * 24 * 3600 * 1000),
+        enabled: true, impressions: 0, clicks: 0, amountPaid: Number(form.amountPaid) || 0,
+        createdAt: FieldValue.serverTimestamp()
+      });
+      toast('Campaign created', 'success');
+      setForm({ advertiserName: '', type: 'chatlist_banner', mediaType: 'text', headline: '', body: '', targetURL: '', startAt: '', endAt: '', amountPaid: '' });
+      setFile(null);
+    } catch (e) { toast('Could not create: ' + e.message, 'error'); }
+    setCreating(false);
+  };
+
+  const totalRevenue = ads.reduce((sum, a) => sum + (Number(a.amountPaid) || 0), 0);
+  const totalImpr = ads.reduce((sum, a) => sum + (a.impressions || 0), 0);
+  const totalClicks = ads.reduce((sum, a) => sum + (a.clicks || 0), 0);
+
+  return h('div', null,
+    h('div', { className: 'grid grid-cols-2 gap-3 mb-4' },
+      h(StatCard, { label: 'Total impressions', value: totalImpr }),
+      h(StatCard, { label: 'Total clicks', value: totalClicks }),
+      h(StatCard, { label: 'Overall CTR', value: totalImpr ? ((totalClicks / totalImpr) * 100).toFixed(1) + '%' : '0%' }),
+      h(StatCard, { label: 'Ad revenue', value: '₦' + totalRevenue })
+    ),
+    h('p', { className: 'font-semibold text-sm mb-2' }, 'Create campaign'),
+    h('input', { className: inputCls, placeholder: 'Advertiser name', value: form.advertiserName, onChange: e => setForm(f => Object.assign({}, f, { advertiserName: e.target.value })) }),
+    h('select', { className: inputCls, value: form.type, onChange: e => setForm(f => Object.assign({}, f, { type: e.target.value })) },
+      h('option', { value: 'sponsored_status' }, 'Sponsored status'),
+      h('option', { value: 'sponsored_post' }, 'Sponsored post'),
+      h('option', { value: 'chatlist_banner' }, 'Chat list banner'),
+      h('option', { value: 'in_app_banner' }, 'In-app banner')
+    ),
+    h('select', { className: inputCls, value: form.mediaType, onChange: e => setForm(f => Object.assign({}, f, { mediaType: e.target.value })) },
+      h('option', { value: 'text' }, 'Text only'),
+      h('option', { value: 'image' }, 'Image'),
+      h('option', { value: 'video' }, 'Video')
+    ),
+    (form.mediaType === 'image' || form.mediaType === 'video') && h('input', { type: 'file', accept: form.mediaType + '/*', className: inputCls, onChange: e => setFile(e.target.files[0]) }),
+    h('input', { className: inputCls, placeholder: 'Headline', value: form.headline, onChange: e => setForm(f => Object.assign({}, f, { headline: e.target.value })) }),
+    h('textarea', { className: inputCls, rows: 2, placeholder: 'Body text (optional)', value: form.body, onChange: e => setForm(f => Object.assign({}, f, { body: e.target.value })) }),
+    h('input', { className: inputCls, placeholder: 'Target URL (opened on tap)', value: form.targetURL, onChange: e => setForm(f => Object.assign({}, f, { targetURL: e.target.value })) }),
+    h('div', { className: 'flex gap-2' },
+      h('input', { type: 'date', className: inputCls + ' flex-1', value: form.startAt, onChange: e => setForm(f => Object.assign({}, f, { startAt: e.target.value })) }),
+      h('input', { type: 'date', className: inputCls + ' flex-1', value: form.endAt, onChange: e => setForm(f => Object.assign({}, f, { endAt: e.target.value })) })
+    ),
+    h('input', { type: 'number', className: inputCls, placeholder: 'Amount paid by advertiser (for revenue tracking)', value: form.amountPaid, onChange: e => setForm(f => Object.assign({}, f, { amountPaid: e.target.value })) }),
+    h('button', { onClick: create, disabled: creating, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm mb-6' }, creating ? 'Creating…' : '+ Create campaign'),
+
+    h('p', { className: 'font-semibold text-sm mb-2' }, 'Campaigns'),
+    ads.length === 0 && h('p', { className: 'text-sm text-slate-400' }, 'No campaigns yet'),
+    ads.map(ad => h('div', { key: ad.id, className: 'py-2.5 border-b border-slate-100 dark:border-ink-800' },
+      h('p', { className: 'text-sm font-semibold' }, ad.headline || ad.advertiserName || '(untitled)', h('span', { className: 'ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ' + (ad.enabled ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500') }, ad.enabled ? 'enabled' : 'disabled')),
+      h('p', { className: 'text-xs text-slate-400' }, ad.type, ' · ', ad.mediaType, ' · ', ad.impressions || 0, ' impressions · ', ad.clicks || 0, ' clicks · CTR ', ad.impressions ? (((ad.clicks || 0) / ad.impressions) * 100).toFixed(1) : '0', '%'),
+      h('div', { className: 'flex gap-2 mt-1' },
+        h('button', { className: 'text-xs text-brand-600 font-semibold', onClick: () => onToggle(ad) }, ad.enabled ? 'Disable' : 'Enable'),
+        h('button', { className: 'text-xs text-red-500 font-semibold', onClick: () => onDelete(ad) }, 'Delete')
+      )
+    ))
   );
 }
 function StatCard({ label, value }) {
