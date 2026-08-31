@@ -709,6 +709,9 @@ function AppShell() {
   const openGroup = (groupId, group) => { const v = { screen: 'group', groupId, group }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openNewGroup = () => { const v = { screen: 'newGroup' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openNewChat = () => { const v = { screen: 'newChat' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openNewBroadcast = () => { const v = { screen: 'newBroadcast' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openLinkedDevices = () => { const v = { screen: 'linkedDevices' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openStarred = () => { const v = { screen: 'starred' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openGroupInfo = (groupId) => { const v = { screen: 'groupInfo', groupId }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openChannel = (channelId) => { const v = { screen: 'channel', channelId }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openNewChannel = () => { const v = { screen: 'newChannel' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
@@ -738,6 +741,15 @@ function AppShell() {
       onNewChannel: openNewChannel
     });
   }
+  if (view.screen === 'newBroadcast') {
+    return h(NewBroadcastScreen, { onBack: goBack });
+  }
+  if (view.screen === 'linkedDevices') {
+    return h(LinkedDevicesScreen, { onBack: goBack });
+  }
+  if (view.screen === 'starred') {
+    return h(StarredMessagesScreen, { onBack: goBack });
+  }
   if (view.screen === 'group') {
     return h(GroupChatWindow, { groupId: view.groupId, group: view.group, onBack: goBack, onInfo: () => openGroupInfo(view.groupId) });
   }
@@ -765,7 +777,7 @@ function AppShell() {
 
   return h('div', { className: 'h-full flex flex-col' },
     h('div', { className: 'flex-1 overflow-hidden' },
-      tab === 'chats' && h(ChatsListScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onOpenGroup: openGroup, onNewGroup: openNewGroup, onNewChat: openNewChat, onViewProfile: openProfile, onNavigate: goToTab }),
+      tab === 'chats' && h(ChatsListScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onOpenGroup: openGroup, onNewGroup: openNewGroup, onNewChat: openNewChat, onNewBroadcast: openNewBroadcast, onLinkedDevices: openLinkedDevices, onStarred: openStarred, onViewProfile: openProfile, onNavigate: goToTab }),
       tab === 'status' && h(StatusScreen, { onViewProfile: openProfile, onOpenChannel: openChannel, onNewChannel: openNewChannel, onExploreChannels: openExploreChannels }),
       tab === 'search' && h(DiscoverScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onViewProfile: openProfile }),
       tab === 'profile' && h(MyProfileScreen, { onOpenPremium: openPremium, onOpenBusiness: openBusiness }),
@@ -782,7 +794,7 @@ function AppShell() {
 }
 
 /* ============================== CHATS LIST ============================== */
-function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onViewProfile, onNavigate }) {
+function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNewBroadcast, onLinkedDevices, onStarred, onViewProfile, onNavigate }) {
   const { profile } = useAuth();
   const [memberDocs, setMemberDocs] = useState([]);
   const [myChatIds, setMyChatIds] = useState([]);
@@ -936,6 +948,13 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onVie
     db.collection(coll).doc(row.id + '_' + profile.id).update(patch).catch(e => toast(e.message, 'error'));
   };
 
+  const readAllChats = () => {
+    const unreadRows = allRows.filter(r => r.meta.unreadCount > 0);
+    if (unreadRows.length === 0) return toast('Nothing to mark as read', 'info');
+    unreadRows.forEach(r => updateMeta(r, { unreadCount: 0 }));
+    toast('Marked all as read', 'success');
+  };
+
   const postCameraStatus = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -963,9 +982,12 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onVie
             h('button', { className: 'text-xl', onClick: () => camRef.current.click(), title: 'Camera status' }, h('i', { className: 'fa-solid fa-camera' })),
             h('div', { className: 'relative' },
               h('button', { className: 'text-xl', onClick: () => setMenuOpen(o => !o) }, h('i', { className: 'fa-solid fa-ellipsis-vertical' })),
-              menuOpen && h('div', { className: 'absolute right-0 top-8 z-20 bg-white dark:bg-ink-700 shadow-lg rounded-xl py-1 w-44 text-sm', onMouseLeave: () => setMenuOpen(false) },
-                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNewChat && onNewChat(); } }, h('i', { className: 'fa-solid fa-comment-medical mr-2' }), 'New chat'),
+              menuOpen && h('div', { className: 'absolute right-0 top-8 z-20 bg-white dark:bg-ink-700 shadow-lg rounded-xl py-1 w-48 text-sm', onMouseLeave: () => setMenuOpen(false) },
                 h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNewGroup && onNewGroup(); } }, h('i', { className: 'fa-solid fa-users mr-2' }), 'New group'),
+                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNewBroadcast && onNewBroadcast(); } }, h('i', { className: 'fa-solid fa-bullhorn mr-2' }), 'New broadcast'),
+                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onLinkedDevices && onLinkedDevices(); } }, h('i', { className: 'fa-solid fa-laptop-mobile mr-2' }), 'Linked devices'),
+                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onStarred && onStarred(); } }, h('i', { className: 'fa-solid fa-star mr-2' }), 'Starred'),
+                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); readAllChats(); } }, h('i', { className: 'fa-solid fa-check-double mr-2' }), 'Read all'),
                 h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); setFilter('archived'); } }, h('i', { className: 'fa-solid fa-box-archive mr-2' }), 'Archived'),
                 h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNavigate && onNavigate('profile'); } }, h('i', { className: 'fa-solid fa-gear mr-2' }), 'Settings')
               )
@@ -1307,11 +1329,20 @@ function GroupMessageBubble({ m, mine, sender }) {
 function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
   const { profile } = useAuth();
   const toast = useToast();
+  const call = useCall();
   const [group, setGroup] = useState(null);
   const [membersList, setMembersList] = useState([]);
   const [adding, setAdding] = useState(false);
+  const [memberQ, setMemberQ] = useState('');
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
+  const [mediaCount, setMediaCount] = useState(null);
+  const [showMedia, setShowMedia] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhotoFile, setEditPhotoFile] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => { const unsub = db.collection('smiletak_groups').doc(groupId).onSnapshot(s => setGroup(s.exists ? Object.assign({ id: s.id }, s.data()) : null)); return unsub; }, [groupId]);
   useEffect(() => {
@@ -1319,6 +1350,13 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
     Promise.all((group.members || []).map(uid => db.collection('smiletak_users').doc(uid).get()))
       .then(snaps => setMembersList(snaps.filter(s => s.exists).map(s => Object.assign({ id: s.id }, s.data()))));
   }, [group]);
+  useEffect(() => {
+    db.collection('smiletak_groups').doc(groupId).collection('messages').where('type', 'in', ['image', 'video']).get()
+      .then(s => setMediaCount(s.size)).catch(() => setMediaCount(0));
+  }, [groupId]);
+  useEffect(() => {
+    db.collection('smiletak_groupMembers').doc(groupId + '_' + profile.id).get().then(s => setMuted(s.exists && !!s.data().muted));
+  }, [groupId, profile.id]);
 
   if (!group) return h('div', { className: 'p-6 text-center text-sm text-slate-400' }, 'Loading…');
   const isAdmin = (group.admins || []).includes(profile.id);
@@ -1356,6 +1394,32 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
       onBack();
     } catch (e) { toast(e.message, 'error'); }
   };
+  const toggleMute = async () => {
+    try {
+      await db.collection('smiletak_groupMembers').doc(groupId + '_' + profile.id).set({ groupId, uid: profile.id, muted: !muted }, { merge: true });
+      setMuted(m => !m);
+    } catch (e) { toast(e.message, 'error'); }
+  };
+  const startEdit = () => { setEditName(group.name); setEditPhotoFile(null); setEditing(true); };
+  const saveEdit = async () => {
+    if (!editName.trim()) return toast('Enter a group name', 'error');
+    setSaving(true);
+    try {
+      const patch = { name: editName.trim() };
+      if (editPhotoFile) patch.photoURL = await uploadFile('smiletak/groups/' + Date.now() + '_' + editPhotoFile.name, editPhotoFile);
+      await db.collection('smiletak_groups').doc(groupId).update(patch);
+      setEditing(false);
+      toast('Group updated', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+    setSaving(false);
+  };
+  const callGroup = (type) => {
+    const others = (group.members || []).filter(u => u !== profile.id);
+    if (others.length === 0) return toast('No other members to call', 'error');
+    call.startGroupCall(others, type, groupId, group.name);
+  };
+
+  const filteredMembers = membersList.filter(u => !memberQ.trim() || (u.fullName || '').toLowerCase().includes(memberQ.toLowerCase()) || (u.username || '').toLowerCase().includes(memberQ.toLowerCase()));
 
   return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
     h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
@@ -1363,13 +1427,53 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
       h('p', { className: 'font-semibold' }, 'Group info')
     ),
     h('div', { className: 'flex flex-col items-center py-6' },
-      h(Avatar, { url: group.photoURL, name: group.name, size: 88 }),
-      h('h2', { className: 'font-extrabold text-lg mt-3' }, group.name),
-      h('p', { className: 'text-xs text-slate-400' }, (group.members || []).length + ' members')
+      editing
+        ? h('div', { className: 'w-full px-8' },
+            h('input', { type: 'file', accept: 'image/*', id: 'grp-edit-photo', className: 'hidden', onChange: e => setEditPhotoFile(e.target.files[0]) }),
+            h('label', { htmlFor: 'grp-edit-photo', className: 'flex flex-col items-center cursor-pointer mb-3' },
+              h(Avatar, { url: editPhotoFile ? URL.createObjectURL(editPhotoFile) : group.photoURL, name: editName, size: 88 }),
+              h('span', { className: 'text-xs text-brand-600 mt-1' }, 'Change photo')
+            ),
+            h('input', { className: inputCls, value: editName, onChange: e => setEditName(e.target.value) }),
+            h('div', { className: 'flex gap-2' },
+              h('button', { onClick: () => setEditing(false), className: 'flex-1 border border-slate-200 dark:border-ink-600 rounded-xl py-2 text-sm font-semibold' }, 'Cancel'),
+              h('button', { onClick: saveEdit, disabled: saving, className: 'flex-1 bg-brand-600 text-white rounded-xl py-2 text-sm font-semibold' }, saving ? 'Saving…' : 'Save')
+            )
+          )
+        : h('div', { className: 'flex flex-col items-center cursor-pointer', onClick: () => isAdmin && startEdit() },
+            h(Avatar, { url: group.photoURL, name: group.name, size: 88 }),
+            h('h2', { className: 'font-extrabold text-lg mt-3' }, group.name, isAdmin && h('i', { className: 'fa-solid fa-pen text-xs text-slate-400 ml-2' })),
+            h('p', { className: 'text-xs text-slate-400' }, (group.members || []).length + ' members')
+          )
     ),
-    h('div', { className: 'px-4' },
-      h('p', { className: 'text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2' }, 'Members'),
-      membersList.map(u => h('div', { key: u.id, className: 'flex items-center gap-3 py-2 border-b border-slate-100 dark:border-ink-800' },
+    h('div', { className: 'flex items-center justify-center gap-10 pb-5' },
+      h('button', { className: 'flex flex-col items-center gap-1', onClick: () => callGroup('audio') },
+        h('div', { className: 'w-11 h-11 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center text-slate-600 dark:text-slate-200' }, h('i', { className: 'fa-solid fa-phone' })),
+        h('span', { className: 'text-[11px] text-slate-500' }, 'Voice call')
+      ),
+      h('button', { className: 'flex flex-col items-center gap-1', onClick: () => callGroup('video') },
+        h('div', { className: 'w-11 h-11 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center text-slate-600 dark:text-slate-200' }, h('i', { className: 'fa-solid fa-video' })),
+        h('span', { className: 'text-[11px] text-slate-500' }, 'Video call')
+      )
+    ),
+    h('button', { className: 'w-full flex items-center justify-between px-4 py-3 border-t border-b border-slate-100 dark:border-ink-800', onClick: () => setShowMedia(true) },
+      h('span', { className: 'text-sm font-medium' }, 'Media, links, and docs'),
+      h('span', { className: 'text-sm text-slate-400 flex items-center gap-1' }, mediaCount === null ? '…' : mediaCount, h('i', { className: 'fa-solid fa-chevron-right text-xs' }))
+    ),
+    h('div', { className: 'px-4 pt-4' },
+      h('p', { className: 'text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2' }, 'Settings'),
+      h('div', { className: 'flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-ink-800' },
+        h('span', { className: 'text-sm' }, 'Mute notifications'),
+        h('button', { onClick: toggleMute, className: 'w-11 h-6 rounded-full relative ' + (muted ? 'bg-brand-600' : 'bg-slate-200 dark:bg-ink-600') },
+          h('span', { className: 'absolute top-0.5 w-5 h-5 bg-white rounded-full transition ' + (muted ? 'left-[22px]' : 'left-0.5') }))
+      )
+    ),
+    h('div', { className: 'px-4 pt-4' },
+      h('div', { className: 'flex items-center justify-between mb-2' },
+        h('p', { className: 'text-[11px] font-semibold uppercase tracking-wide text-slate-400' }, (group.members || []).length + ' members'),
+      ),
+      h('input', { className: inputCls + ' mb-2', placeholder: 'Search members', value: memberQ, onChange: e => setMemberQ(e.target.value) }),
+      filteredMembers.map(u => h('div', { key: u.id, className: 'flex items-center gap-3 py-2 border-b border-slate-100 dark:border-ink-800' },
         h('div', { className: 'flex items-center gap-3 flex-1 min-w-0 cursor-pointer', onClick: () => onViewProfile(u.id) },
           h(Avatar, { url: u.photoURL, name: u.fullName, size: 40 }),
           h('div', { className: 'min-w-0' }, h('p', { className: 'text-sm font-semibold truncate' }, u.fullName, (group.admins || []).includes(u.id) && h('span', { className: 'ml-1 text-[10px] text-brand-600' }, '(admin)')), h('p', { className: 'text-xs text-slate-400' }, '@' + u.username))
@@ -1386,11 +1490,164 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
         ))
       ),
       h('button', { onClick: leaveGroup, className: 'w-full border border-red-200 text-red-500 rounded-xl py-2.5 font-semibold text-sm mt-4 mb-8' }, 'Leave group')
+    ),
+    showMedia && h(GroupMediaGrid, { groupId, onClose: () => setShowMedia(false) })
+  );
+}
+
+function GroupMediaGrid({ groupId, onClose }) {
+  const [items, setItems] = useState(null);
+  useEffect(() => {
+    db.collection('smiletak_groups').doc(groupId).collection('messages').where('type', 'in', ['image', 'video']).orderBy('createdAt', 'desc').limit(60).get()
+      .then(s => setItems(s.docs.map(d => Object.assign({ id: d.id }, d.data()))))
+      .catch(() => setItems([]));
+  }, [groupId]);
+  return h('div', { className: 'fixed inset-0 z-[900] bg-white dark:bg-ink-900 flex flex-col' },
+    h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+      h('button', { onClick: onClose, className: 'text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('p', { className: 'font-semibold' }, 'Media, links, and docs')
+    ),
+    h('div', { className: 'flex-1 overflow-y-auto no-scrollbar p-1' },
+      items === null && h('p', { className: 'text-center text-sm text-slate-400 mt-8' }, 'Loading…'),
+      items && items.length === 0 && h('p', { className: 'text-center text-sm text-slate-400 mt-8' }, 'No media shared yet'),
+      h('div', { className: 'grid grid-cols-3 gap-1' },
+        (items || []).map(m => h('div', { key: m.id, className: 'aspect-square bg-slate-100 dark:bg-ink-800 overflow-hidden' },
+          m.type === 'image' ? h('img', { src: m.mediaURL, className: 'w-full h-full object-cover' }) : h('video', { src: m.mediaURL, className: 'w-full h-full object-cover' })
+        ))
+      )
     )
   );
 }
 
 /* ============================== SELECT CONTACT (new chat) ============================== */
+/* ============================== NEW BROADCAST ============================== */
+function NewBroadcastScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const runSearch = async () => {
+    const term = q.trim();
+    if (!term) { setResults([]); return; }
+    try {
+      const snaps = await Promise.all([
+        db.collection('smiletak_users').orderBy('username').startAt(term.toLowerCase()).endAt(term.toLowerCase() + '\uf8ff').limit(10).get(),
+        db.collection('smiletak_users').orderBy('fullName').startAt(term).endAt(term + '\uf8ff').limit(10).get()
+      ]);
+      const map = {};
+      snaps.forEach(s => s.docs.forEach(d => { if (d.id !== profile.id) map[d.id] = Object.assign({ id: d.id }, d.data()); }));
+      setResults(Object.values(map));
+    } catch (e) { toast(e.message, 'error'); }
+  };
+  const toggle = (u) => setSelected(sel => sel.find(x => x.id === u.id) ? sel.filter(x => x.id !== u.id) : sel.concat([u]));
+
+  const send = async () => {
+    if (selected.length === 0) return toast('Pick at least one recipient', 'error');
+    if (!text.trim()) return toast('Write a message', 'error');
+    setSending(true);
+    try {
+      await Promise.all(selected.map(async (other) => {
+        const chatId = chatIdFor(profile.id, other.id);
+        await db.collection('smiletak_chats').doc(chatId).set({ members: [profile.id, other.id], createdAt: FieldValue.serverTimestamp() }, { merge: true });
+        await db.collection('smiletak_chatMembers').doc(chatId + '_' + profile.id).set({ chatId, uid: profile.id, pinned: false, archived: false, muted: false, unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }, { merge: true });
+        await db.collection('smiletak_chats').doc(chatId).collection('messages').add({ type: 'text', text: text.trim(), senderId: profile.id, createdAt: FieldValue.serverTimestamp(), readBy: [], deletedFor: [] });
+        await db.collection('smiletak_chats').doc(chatId).set({ lastMessage: text.trim().slice(0, 100), lastMessageAt: FieldValue.serverTimestamp(), lastSenderId: profile.id }, { merge: true });
+        await db.collection('smiletak_chatMembers').doc(chatId + '_' + other.id).set({ unreadCount: FieldValue.increment(1) }, { merge: true }).catch(() => {});
+      }));
+      toast('Sent to ' + selected.length + ' people', 'success');
+      onBack();
+    } catch (e) { toast(e.message, 'error'); }
+    setSending(false);
+  };
+
+  return h('div', { className: 'h-full flex flex-col' },
+    h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+      h('button', { onClick: onBack, className: 'text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('p', { className: 'font-semibold' }, 'New broadcast')
+    ),
+    h('p', { className: 'text-xs text-slate-400 px-4 pt-3' }, 'Your message will be sent as an individual chat to each person below — they won\u2019t see who else received it.'),
+    selected.length > 0 && h('div', { className: 'flex gap-2 px-4 py-2 overflow-x-auto no-scrollbar' },
+      selected.map(u => h('div', { key: u.id, className: 'flex flex-col items-center shrink-0', onClick: () => toggle(u) },
+        h(Avatar, { url: u.photoURL, name: u.fullName, size: 44 }),
+        h('span', { className: 'text-[10px] mt-1 max-w-[48px] truncate' }, u.fullName)
+      ))
+    ),
+    h('div', { className: 'px-4 pb-2 pt-2' },
+      h('input', { className: inputCls + ' mb-0', placeholder: 'Search people to add', value: q, onChange: e => setQ(e.target.value), onKeyUp: runSearch })
+    ),
+    h('div', { className: 'flex-1 overflow-y-auto no-scrollbar px-2' },
+      results.map(u => {
+        const picked = !!selected.find(x => x.id === u.id);
+        return h('div', { key: u.id, className: 'flex items-center gap-3 px-2 py-2.5 cursor-pointer', onClick: () => toggle(u) },
+          h(Avatar, { url: u.photoURL, name: u.fullName, size: 44 }),
+          h('div', { className: 'flex-1 min-w-0' }, h('p', { className: 'font-semibold text-sm' }, u.fullName), h('p', { className: 'text-xs text-slate-400' }, '@' + u.username)),
+          h('div', { className: 'w-5 h-5 rounded-full border-2 flex items-center justify-center ' + (picked ? 'bg-brand-600 border-brand-600' : 'border-slate-300') }, picked && h('i', { className: 'fa-solid fa-check text-white text-[10px]' }))
+        );
+      })
+    ),
+    h('div', { className: 'p-4 border-t border-slate-100 dark:border-ink-800' },
+      h('textarea', { className: inputCls, rows: 2, placeholder: 'Broadcast message', value: text, onChange: e => setText(e.target.value) }),
+      h('button', { onClick: send, disabled: sending, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm disabled:opacity-40' }, sending ? 'Sending…' : 'Send to ' + selected.length)
+    )
+  );
+}
+
+/* ============================== LINKED DEVICES ============================== */
+function LinkedDevicesScreen({ onBack }) {
+  return h('div', { className: 'h-full flex flex-col' },
+    h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+      h('button', { onClick: onBack, className: 'text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('p', { className: 'font-semibold' }, 'Linked devices')
+    ),
+    h('div', { className: 'flex flex-col items-center text-center px-8 pt-16' },
+      h('div', { className: 'w-20 h-20 rounded-full bg-slate-100 dark:bg-ink-800 flex items-center justify-center text-3xl text-slate-400 mb-4' }, h('i', { className: 'fa-solid fa-laptop-mobile' })),
+      h('p', { className: 'font-semibold mb-1' }, 'No linked devices yet'),
+      h('p', { className: 'text-sm text-slate-400' }, 'SmileTak currently runs on this device only. Linking additional devices isn\u2019t available yet.')
+    )
+  );
+}
+
+/* ============================== STARRED MESSAGES ============================== */
+function StarredMessagesScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [items, setItems] = useState(null);
+
+  useEffect(() => {
+    const unsub = db.collection('smiletak_starredMessages').where('uid', '==', profile.id).onSnapshot(snap => {
+      const rows = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+      rows.sort((a, b) => (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0));
+      setItems(rows);
+    });
+    return unsub;
+  }, [profile.id]);
+
+  const unstar = (item) => db.collection('smiletak_starredMessages').doc(item.id).delete().catch(e => toast(e.message, 'error'));
+
+  return h('div', { className: 'h-full flex flex-col' },
+    h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+      h('button', { onClick: onBack, className: 'text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('p', { className: 'font-semibold' }, 'Starred messages')
+    ),
+    h('div', { className: 'flex-1 overflow-y-auto no-scrollbar' },
+      items === null && h('p', { className: 'text-center text-sm text-slate-400 mt-8' }, 'Loading…'),
+      items && items.length === 0 && h('p', { className: 'text-center text-sm text-slate-400 mt-8 px-8' }, 'Tap and hold a message, then choose Star, to save it here'),
+      (items || []).map(item => h('div', { key: item.id, className: 'flex items-start gap-3 px-4 py-3 border-b border-slate-100 dark:border-ink-800' },
+        h('div', { className: 'flex-1 min-w-0' },
+          h('p', { className: 'text-xs text-slate-400 mb-0.5' }, item.senderName || 'Unknown'),
+          item.text ? h('p', { className: 'text-sm truncate' }, item.text) : h('p', { className: 'text-sm text-slate-400' }, '📎 ' + (item.msgType || 'attachment')),
+          h('p', { className: 'text-[10px] text-slate-400 mt-0.5' }, timeAgo(item.createdAt))
+        ),
+        h('button', { className: 'text-amber-400', onClick: () => unstar(item) }, h('i', { className: 'fa-solid fa-star' }))
+      ))
+    )
+  );
+}
+
 function SelectContactScreen({ onBack, onOpenChat, onNewGroup, onNewChannel }) {
   const { profile } = useAuth();
   const toast = useToast();
@@ -1546,6 +1803,13 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
   const [replyTo, setReplyTo] = useState(null);
   const [search, setSearch] = useState(null);
   const [menuMsg, setMenuMsg] = useState(null);
+  const [starredIds, setStarredIds] = useState({});
+  useEffect(() => {
+    const unsub = db.collection('smiletak_starredMessages').where('uid', '==', profile.id).where('chatId', '==', chatId).onSnapshot(snap => {
+      const m = {}; snap.docs.forEach(d => { m[d.data().messageId] = true; }); setStarredIds(m);
+    });
+    return unsub;
+  }, [chatId, profile.id]);
   const [forwardMsg, setForwardMsg] = useState(null);
   const [recording, setRecording] = useState(false);
   const [uploadPct, setUploadPct] = useState(null);
@@ -1687,6 +1951,21 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
   const deleteForMe = (m) => db.collection('smiletak_chats').doc(chatId).collection('messages').doc(m.id).update({ deletedFor: FieldValue.arrayUnion(profile.id) });
   const deleteForEveryone = (m) => db.collection('smiletak_chats').doc(chatId).collection('messages').doc(m.id).update({ deletedForEveryone: true, text: '', mediaURL: null });
   const copyText = (m) => { navigator.clipboard.writeText(m.text || ''); toast('Copied', 'success'); };
+  const isStarred = (m) => !!starredIds[m.id];
+  const toggleStar = async (m) => {
+    const docId = profile.id + '_' + m.id;
+    try {
+      if (isStarred(m)) {
+        await db.collection('smiletak_starredMessages').doc(docId).delete();
+      } else {
+        const senderName = m.senderId === profile.id ? profile.fullName : (other && other.fullName) || 'Unknown';
+        await db.collection('smiletak_starredMessages').doc(docId).set({
+          uid: profile.id, chatId, messageId: m.id, msgType: m.type, text: m.text || null,
+          senderName, createdAt: m.createdAt || FieldValue.serverTimestamp(), starredAt: FieldValue.serverTimestamp()
+        });
+      }
+    } catch (e) { toast(e.message, 'error'); }
+  };
   const doForward = async (targetChatId, targetOtherId) => {
     await db.collection('smiletak_chats').doc(targetChatId).collection('messages').add({
       senderId: profile.id, createdAt: FieldValue.serverTimestamp(), readBy: [], deliveredTo: [], deletedFor: [], deletedForEveryone: false,
@@ -1761,11 +2040,12 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
           }, h('i', { className: 'fa-solid fa-microphone text-sm' }))
     ),
     menuMsg && h(MessageMenu, {
-      m: menuMsg, mine: menuMsg.senderId === profile.id,
+      m: menuMsg, mine: menuMsg.senderId === profile.id, starred: isStarred(menuMsg),
       onClose: () => setMenuMsg(null),
       onReply: () => { setReplyTo(menuMsg); setMenuMsg(null); },
       onCopy: () => { copyText(menuMsg); setMenuMsg(null); },
       onForward: () => { setForwardMsg(menuMsg); setMenuMsg(null); },
+      onStar: () => { toggleStar(menuMsg); setMenuMsg(null); },
       onDeleteMe: () => { deleteForMe(menuMsg); setMenuMsg(null); },
       onDeleteEveryone: () => { deleteForEveryone(menuMsg); setMenuMsg(null); }
     }),
@@ -1821,12 +2101,13 @@ function MessageBubble({ m, mine, onMenu, onReply }) {
   );
 }
 
-function MessageMenu({ m, mine, onClose, onReply, onCopy, onForward, onDeleteMe, onDeleteEveryone }) {
+function MessageMenu({ m, mine, starred, onClose, onReply, onCopy, onForward, onStar, onDeleteMe, onDeleteEveryone }) {
   return h('div', { className: 'fixed inset-0 z-50 flex items-end justify-center bg-black/30', onClick: onClose },
     h('div', { className: 'bg-white dark:bg-ink-800 w-full max-w-sm rounded-t-2xl p-2 pb-4', onClick: e => e.stopPropagation() },
       h(MenuBtn, { icon: 'fa-reply', label: 'Reply', onClick: onReply }),
       m.type === 'text' && h(MenuBtn, { icon: 'fa-copy', label: 'Copy', onClick: onCopy }),
       h(MenuBtn, { icon: 'fa-share', label: 'Forward', onClick: onForward }),
+      h(MenuBtn, { icon: starred ? 'fa-star' : 'fa-star', label: starred ? 'Unstar' : 'Star', onClick: onStar }),
       h(MenuBtn, { icon: 'fa-trash', label: 'Delete for me', onClick: onDeleteMe }),
       mine && h(MenuBtn, { icon: 'fa-trash-can', label: 'Delete for everyone', danger: true, onClick: onDeleteEveryone })
     )
