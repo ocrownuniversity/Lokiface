@@ -2315,6 +2315,13 @@ function MyProfileScreen({ onOpenPremium, onOpenBusiness }) {
       await test('Write payment account (smiletak_settings) [admin]', () =>
         db.collection('smiletak_settings').doc('paymentAccount').set({ __diag: true }, { merge: true }));
     }
+    await test('Create + delete test channel (smiletak_channels)', async () => {
+      const ref = db.collection('smiletak_channels').doc();
+      await ref.set({ name: '__diag', description: '', photoURL: null, ownerId: profile.id, admins: [profile.id], createdAt: FieldValue.serverTimestamp() });
+      await db.collection('smiletak_channelSubs').doc(ref.id + '_' + profile.id).set({ channelId: ref.id, uid: profile.id, subscribedAt: FieldValue.serverTimestamp() });
+      await db.collection('smiletak_channelSubs').doc(ref.id + '_' + profile.id).delete();
+      await ref.delete();
+    });
     setDiag(results);
   };
 
