@@ -268,8 +268,14 @@ function fmtDuration(secs) {
 function isPremiumActive(u) {
   return !!(u && u.isPremium && u.premiumExpiresAt && u.premiumExpiresAt.toMillis && u.premiumExpiresAt.toMillis() > Date.now());
 }
+function isBusinessPremiumActive(u) {
+  return !!(u && u.isBusinessPremium && u.businessPremiumExpiresAt && u.businessPremiumExpiresAt.toMillis && u.businessPremiumExpiresAt.toMillis() > Date.now());
+}
 function PremiumBadge({ size }) {
   return h('i', { className: 'fa-solid fa-crown text-amber-400', title: 'Premium member', style: { fontSize: (size || 12) + 'px' } });
+}
+function BizPremiumBadge({ size }) {
+  return h('i', { className: 'fa-solid fa-gem text-sky-500', title: 'Business Premium', style: { fontSize: (size || 12) + 'px' } });
 }
 function VerifiedBadge({ size }) {
   return h('i', { className: 'fa-solid fa-circle-check text-sky-500', title: 'Verified business', style: { fontSize: (size || 12) + 'px' } });
@@ -278,6 +284,7 @@ function NameWithBadges({ name, user, className }) {
   return h('span', { className: 'inline-flex items-center gap-1 min-w-0 ' + (className || '') },
     h('span', { className: 'truncate' }, name),
     user && isPremiumActive(user) && h(PremiumBadge, { size: 11 }),
+    user && isBusinessPremiumActive(user) && h(BizPremiumBadge, { size: 11 }),
     user && user.businessVerified && h(VerifiedBadge, { size: 11 })
   );
 }
@@ -3239,6 +3246,14 @@ function MyProfileScreen({ onOpenPremium, onOpenBusiness, onBack }) {
     if (profile.isAdmin) {
       await test('Write payment account (smiletak_settings) [admin]', () =>
         db.collection('smiletak_settings').doc('paymentAccount').set({ __diag: true }, { merge: true }));
+      await test('List all payment requests (smiletak_paymentRequests) [admin]', () =>
+        db.collection('smiletak_paymentRequests').orderBy('createdAt', 'desc').limit(5).get({ source: 'server' }));
+      await test('Approve a payment request (smiletak_paymentRequests) [admin]', async () => {
+        const ref = db.collection('smiletak_paymentRequests').doc('__diag_' + profile.id);
+        await ref.set({ uid: profile.id, type: 'premium', plan: 'monthly', amount: 0, currency: '₦', status: 'pending', createdAt: FieldValue.serverTimestamp() });
+        await ref.update({ status: 'approved', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: profile.id });
+        await ref.delete();
+      });
     }
     await test('Create + delete test channel (smiletak_channels)', async () => {
       const ref = db.collection('smiletak_channels').doc();
@@ -3898,6 +3913,18 @@ function BusinessScreen({ onBack }) {
   const [counts, setCounts] = useState({ views: 0, messages: 0 });
   const vStatus = profile.businessVerificationStatus || 'none';
 
+  // Business Premium (paid upgrade) state
+  const bizPremiumActive = isBusinessPremiumActive(profile);
+  const [bizPricing, setBizPricing] = useState({ businessPremiumMonthly: 3000, businessPremiumYearly: 30000, currency: '₦' });
+  const [bizAccount, setBizAccount] = useState(null);
+  const [bizPlan, setBizPlan] = useState('monthly');
+  const [bizReference, setBizReference] = useState('');
+  const [bizProofFile, setBizProofFile] = useState(null);
+  const [bizSubmitting, setBizSubmitting] = useState(false);
+  const [myBizRequests, setMyBizRequests] = useState([]);
+  const bizFileRef = useRef(null);
+  const bizPrice = bizPlan === 'monthly' ? bizPricing.businessPremiumMonthly : bizPricing.businessPremiumYearly;
+
   useEffect(() => {
     if (tab !== 'analytics') return;
     Promise.all([
@@ -3905,6 +3932,39 @@ function BusinessScreen({ onBack }) {
       db.collection('smiletak_businessEvents').where('businessUid', '==', profile.id).where('type', '==', 'message').get()
     ]).then(([v, m]) => setCounts({ views: v.size, messages: m.size })).catch(() => {});
   }, [tab, profile.id]);
+
+  useEffect(() => {
+    if (tab !== 'premium') return;
+    db.collection('smiletak_settings').doc('pricing').get().then(s => { if (s.exists) setBizPricing(p => Object.assign({}, p, s.data())); }).catch(() => {});
+    db.collection('smiletak_settings').doc('paymentAccount').get().then(s => setBizAccount(s.exists ? s.data() : null)).catch(() => {});
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'premium') return;
+    const unsub = db.collection('smiletak_paymentRequests').where('uid', '==', profile.id).where('type', '==', 'business').onSnapshot(snap => {
+      const rows = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+      rows.sort((a, b) => (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0));
+      setMyBizRequests(rows);
+    });
+    return unsub;
+  }, [tab, profile.id]);
+
+  const submitBizPremium = async () => {
+    if (!name.trim()) return toast('Save your business profile first', 'error');
+    if (!bizReference.trim()) return toast('Enter your payment reference / teller number', 'error');
+    setBizSubmitting(true);
+    try {
+      let proofURL = null;
+      if (bizProofFile) proofURL = await uploadFile('smiletak/payment-proofs/' + profile.id + '/' + Date.now() + '_' + bizProofFile.name, bizProofFile);
+      await db.collection('smiletak_paymentRequests').add({
+        uid: profile.id, type: 'business', plan: bizPlan, amount: bizPrice, currency: bizPricing.currency || '₦',
+        businessName: name.trim(), reference: bizReference.trim(), proofURL, status: 'pending', createdAt: FieldValue.serverTimestamp()
+      });
+      toast('Submitted — an admin will review your payment', 'success');
+      setBizReference(''); setBizProofFile(null);
+    } catch (e) { toast('Could not submit: ' + e.message, 'error'); }
+    setBizSubmitting(false);
+  };
 
   const save = async () => {
     if (!name.trim()) return toast('Enter a business name', 'error');
@@ -3942,7 +4002,7 @@ function BusinessScreen({ onBack }) {
       h('p', { className: 'font-semibold' }, 'Business account')
     ),
     h('div', { className: 'flex gap-1 px-4 py-3 overflow-x-auto no-scrollbar' },
-      ['profile', 'catalog', 'analytics', 'verification'].map(t => h('button', { key: t, onClick: () => setTab(t), className: 'px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ' + (tab === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-ink-700') }, t[0].toUpperCase() + t.slice(1)))
+      ['profile', 'catalog', 'analytics', 'premium', 'verification'].map(t => h('button', { key: t, onClick: () => setTab(t), className: 'px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ' + (tab === t ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-ink-700') }, t === 'premium' ? 'Premium' : t[0].toUpperCase() + t.slice(1)))
     ),
     h('div', { className: 'px-4 pb-8' },
       tab === 'profile' && h('div', null,
@@ -3984,6 +4044,44 @@ function BusinessScreen({ onBack }) {
         h(StatCard, { label: 'Messages received', value: counts.messages }),
         h(StatCard, { label: 'Catalog items', value: catalog.length }),
         h(StatCard, { label: 'Status', value: vStatus === 'approved' ? 'Verified' : vStatus.charAt(0).toUpperCase() + vStatus.slice(1) })
+      ),
+      tab === 'premium' && h('div', { className: 'mt-2' },
+        h('div', { className: 'rounded-2xl p-4 mb-4 ' + (bizPremiumActive ? 'bg-sky-50 border border-sky-200' : 'bg-slate-50 dark:bg-ink-800') },
+          h('div', { className: 'flex items-center gap-2' }, h('i', { className: 'fa-solid fa-gem text-sky-500 text-lg' }), h('p', { className: 'font-bold' }, bizPremiumActive ? 'Business Premium active' : 'Not subscribed')),
+          bizPremiumActive && h('p', { className: 'text-xs text-slate-500 mt-1' }, 'Valid until ' + fmtDay(profile.businessPremiumExpiresAt)),
+          !bizPremiumActive && profile.businessPremiumExpiresAt && h('p', { className: 'text-xs text-red-500 mt-1' }, 'Your Business Premium expired on ' + fmtDay(profile.businessPremiumExpiresAt))
+        ),
+        h('p', { className: 'font-semibold text-sm mb-2' }, 'Benefits'),
+        h('ul', { className: 'text-sm text-slate-600 dark:text-slate-300 space-y-1 mb-5 list-disc pl-5' },
+          ['Business Premium badge on your profile', 'Priority placement in search & discover', 'Unlimited catalog items', 'Advanced analytics', 'Priority support'].map(b => h('li', { key: b }, b))
+        ),
+        h('p', { className: 'font-semibold text-sm mb-2' }, 'Choose a plan'),
+        h('div', { className: 'flex gap-2 mb-4' },
+          ['monthly', 'yearly'].map(p => h('button', {
+            key: p, onClick: () => setBizPlan(p),
+            className: 'flex-1 rounded-xl border py-3 text-sm font-semibold ' + (bizPlan === p ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-slate-200 dark:border-ink-600')
+          }, p === 'monthly' ? 'Monthly' : 'Yearly', h('p', { className: 'text-xs font-normal mt-0.5' }, (bizPricing.currency || '₦') + (p === 'monthly' ? bizPricing.businessPremiumMonthly : bizPricing.businessPremiumYearly))))
+        ),
+        bizAccount && h('div', { className: 'bg-slate-50 dark:bg-ink-800 rounded-xl p-3 mb-4 text-sm' },
+          h('p', { className: 'font-semibold mb-1' }, 'Pay by bank transfer'),
+          h('p', null, 'Bank: ', bizAccount.bankName),
+          h('p', null, 'Account number: ', bizAccount.accountNumber),
+          h('p', null, 'Account name: ', bizAccount.accountName),
+          bizAccount.instructions && h('p', { className: 'text-xs text-slate-400 mt-1' }, bizAccount.instructions),
+          h('p', { className: 'text-xs text-slate-400 mt-2' }, 'Transfer ' + (bizPricing.currency || '₦') + bizPrice + ' then submit your reference below.')
+        ),
+        !bizAccount && h('p', { className: 'text-xs text-red-500 mb-4' }, 'Payment account not set up yet — contact the admin.'),
+        h('input', { className: inputCls, placeholder: 'Payment reference / teller number', value: bizReference, onChange: e => setBizReference(e.target.value) }),
+        h('input', { type: 'file', accept: 'image/*', ref: bizFileRef, className: 'hidden', onChange: e => setBizProofFile(e.target.files[0]) }),
+        h('button', { className: 'w-full mb-3 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-600 text-sm text-left', onClick: () => bizFileRef.current.click() }, bizProofFile ? bizProofFile.name : h('span', { className: 'text-slate-400' }, 'Attach payment screenshot (optional)')),
+        h('button', { onClick: submitBizPremium, disabled: bizSubmitting, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm' }, bizSubmitting ? 'Submitting…' : 'I have paid — submit for review'),
+        myBizRequests.length > 0 && h('div', { className: 'mt-6' },
+          h('p', { className: 'font-semibold text-sm mb-2' }, 'Your payment history'),
+          myBizRequests.map(r => h('div', { key: r.id, className: 'flex items-center justify-between py-2 border-b border-slate-100 dark:border-ink-800 text-sm' },
+            h('div', null, h('p', null, (r.plan === 'monthly' ? 'Monthly' : 'Yearly') + ' · ' + (r.currency || '₦') + r.amount), h('p', { className: 'text-xs text-slate-400' }, timeAgo(r.createdAt))),
+            h('span', { className: 'text-xs font-semibold px-2 py-1 rounded-full ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700') }, r.status)
+          ))
+        )
       ),
       tab === 'verification' && h('div', { className: 'mt-2' },
         h('p', { className: 'text-sm mb-3' }, 'Verification status: ',
@@ -4171,14 +4269,14 @@ function AdminPanel() {
   const { profile } = useAuth();
   const toast = useToast();
   const [tab, setTab] = useState('dashboard');
-  const [stats, setStats] = useState({ users: null, online: null, reports: null, suspended: null, premium: null, revenue: null });
+  const [stats, setStats] = useState({ users: null, online: null, reports: null, suspended: null, premium: null, businessPremium: null, revenue: null });
   const [users, setUsers] = useState([]);
   const [reports, setReports] = useState([]);
   const [search, setSearch] = useState('');
   const [paymentReqs, setPaymentReqs] = useState([]);
   const [bizReqs, setBizReqs] = useState([]);
   const [ads, setAds] = useState([]);
-  const [settingsForm, setSettingsForm] = useState({ bankName: '', accountNumber: '', accountName: '', instructions: '', premiumMonthly: 1000, premiumYearly: 10000, currency: '₦' });
+  const [settingsForm, setSettingsForm] = useState({ bankName: '', accountNumber: '', accountName: '', instructions: '', premiumMonthly: 1000, premiumYearly: 10000, businessPremiumMonthly: 3000, businessPremiumYearly: 30000, currency: '₦' });
 
   useEffect(() => {
     db.collection('smiletak_users').get().then(s => {
@@ -4187,7 +4285,8 @@ function AdminPanel() {
         users: docs.length,
         online: docs.filter(d => d.data().online).length,
         suspended: docs.filter(d => d.data().isSuspended).length,
-        premium: docs.filter(d => isPremiumActive(d.data())).length
+        premium: docs.filter(d => isPremiumActive(d.data())).length,
+        businessPremium: docs.filter(d => isBusinessPremiumActive(d.data())).length
       }));
     });
     db.collection('smiletak_reports').where('status', '==', 'pending').get().then(s => setStats(st => Object.assign({}, st, { reports: s.size })));
@@ -4209,9 +4308,15 @@ function AdminPanel() {
     return unsub;
   }, [tab]);
 
+  const [paymentsError, setPaymentsError] = useState(null);
   useEffect(() => {
     if (tab !== 'payments') return;
-    const unsub = db.collection('smiletak_paymentRequests').orderBy('createdAt', 'desc').limit(200).onSnapshot(s => setPaymentReqs(s.docs.map(d => Object.assign({ id: d.id }, d.data()))));
+    setPaymentsError(null);
+    const unsub = db.collection('smiletak_paymentRequests').orderBy('createdAt', 'desc').limit(200)
+      .onSnapshot(
+        s => setPaymentReqs(s.docs.map(d => Object.assign({ id: d.id }, d.data()))),
+        e => setPaymentsError(e.code + ': ' + e.message)
+      );
     return unsub;
   }, [tab]);
 
@@ -4243,9 +4348,13 @@ function AdminPanel() {
     try {
       const days = r.plan === 'yearly' ? 365 : 30;
       const expires = Timestamp.fromMillis(Date.now() + days * 24 * 3600 * 1000);
-      await db.collection('smiletak_users').doc(r.uid).update({ isPremium: true, premiumPlan: r.plan, premiumExpiresAt: expires, premiumSince: FieldValue.serverTimestamp() });
+      if (r.type === 'business') {
+        await db.collection('smiletak_users').doc(r.uid).update({ isBusinessPremium: true, businessPremiumPlan: r.plan, businessPremiumExpiresAt: expires, businessPremiumSince: FieldValue.serverTimestamp() });
+      } else {
+        await db.collection('smiletak_users').doc(r.uid).update({ isPremium: true, premiumPlan: r.plan, premiumExpiresAt: expires, premiumSince: FieldValue.serverTimestamp() });
+      }
       await db.collection('smiletak_paymentRequests').doc(r.id).update({ status: 'approved', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: profile.id });
-      toast('Approved — user is now Premium', 'success');
+      toast('Approved — user is now ' + (r.type === 'business' ? 'Business Premium' : 'Premium'), 'success');
     } catch (e) { toast(e.message, 'error'); }
   };
   const rejectPayment = (r) => db.collection('smiletak_paymentRequests').doc(r.id).update({ status: 'rejected', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: profile.id }).then(() => toast('Rejected', 'info'));
@@ -4271,7 +4380,7 @@ function AdminPanel() {
   const saveSettings = async () => {
     try {
       await db.collection('smiletak_settings').doc('paymentAccount').set({ bankName: settingsForm.bankName || '', accountNumber: settingsForm.accountNumber || '', accountName: settingsForm.accountName || '', instructions: settingsForm.instructions || '' });
-      await db.collection('smiletak_settings').doc('pricing').set({ premiumMonthly: Number(settingsForm.premiumMonthly) || 0, premiumYearly: Number(settingsForm.premiumYearly) || 0, currency: settingsForm.currency || '₦' });
+      await db.collection('smiletak_settings').doc('pricing').set({ premiumMonthly: Number(settingsForm.premiumMonthly) || 0, premiumYearly: Number(settingsForm.premiumYearly) || 0, businessPremiumMonthly: Number(settingsForm.businessPremiumMonthly) || 0, businessPremiumYearly: Number(settingsForm.businessPremiumYearly) || 0, currency: settingsForm.currency || '₦' });
       toast('Settings saved', 'success');
     } catch (e) { toast(e.message, 'error'); }
   };
@@ -4290,13 +4399,14 @@ function AdminPanel() {
         h(StatCard, { label: 'Pending reports', value: stats.reports }),
         h(StatCard, { label: 'Suspended', value: stats.suspended }),
         h(StatCard, { label: 'Premium members', value: stats.premium }),
-        h(StatCard, { label: 'Premium revenue', value: stats.revenue === null ? null : '₦' + stats.revenue })
+        h(StatCard, { label: 'Business Premium', value: stats.businessPremium }),
+        h(StatCard, { label: 'Total revenue', value: stats.revenue === null ? null : '₦' + stats.revenue })
       ),
       tab === 'users' && h('div', null,
         h('input', { className: inputCls, placeholder: 'Search users…', value: search, onChange: e => setSearch(e.target.value) }),
         filteredUsers.map(u => h('div', { key: u.id, className: 'flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
           h(Avatar, { url: u.photoURL, name: u.fullName, size: 36 }),
-          h('div', { className: 'flex-1 min-w-0' }, h('p', { className: 'text-sm font-semibold truncate' }, u.fullName, u.isAdmin && h('span', { className: 'ml-1 text-[10px] bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full' }, 'admin'), u.isSuspended && h('span', { className: 'ml-1 text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full' }, 'suspended'), isPremiumActive(u) && h('span', { className: 'ml-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full' }, 'premium'), u.businessVerified && h('span', { className: 'ml-1 text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full' }, 'verified biz')),
+          h('div', { className: 'flex-1 min-w-0' }, h('p', { className: 'text-sm font-semibold truncate' }, u.fullName, u.isAdmin && h('span', { className: 'ml-1 text-[10px] bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full' }, 'admin'), u.isSuspended && h('span', { className: 'ml-1 text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full' }, 'suspended'), isPremiumActive(u) && h('span', { className: 'ml-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full' }, 'premium'), isBusinessPremiumActive(u) && h('span', { className: 'ml-1 text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full' }, 'biz premium'), u.businessVerified && h('span', { className: 'ml-1 text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full' }, 'verified biz')),
             h('p', { className: 'text-xs text-slate-400' }, '@' + u.username, ' · +', u.phone)),
           h('div', { className: 'flex gap-1' },
             h('button', { className: 'text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-ink-600', onClick: () => toggleSuspend(u) }, u.isSuspended ? 'Unsuspend' : 'Suspend'),
@@ -4313,7 +4423,8 @@ function AdminPanel() {
         ))
       ),
       tab === 'payments' && h('div', null,
-        paymentReqs.length === 0 && h('p', { className: 'text-sm text-slate-400 mt-4' }, 'No payment requests yet'),
+        paymentsError && h('p', { className: 'text-sm text-red-500 mt-4' }, 'Could not load payments: ' + paymentsError),
+        !paymentsError && paymentReqs.length === 0 && h('p', { className: 'text-sm text-slate-400 mt-4' }, 'No payment requests yet'),
         paymentReqs.map(r => h(PaymentRequestRow, { key: r.id, r, onApprove: () => approvePayment(r), onReject: () => rejectPayment(r) }))
       ),
       tab === 'business' && h('div', null,
@@ -4338,6 +4449,9 @@ function AdminPanel() {
         h('input', { className: inputCls, placeholder: 'Currency symbol (e.g. ₦)', value: settingsForm.currency, onChange: e => setSettingsForm(f => Object.assign({}, f, { currency: e.target.value })) }),
         h('input', { className: inputCls, type: 'number', placeholder: 'Monthly price', value: settingsForm.premiumMonthly, onChange: e => setSettingsForm(f => Object.assign({}, f, { premiumMonthly: e.target.value })) }),
         h('input', { className: inputCls, type: 'number', placeholder: 'Yearly price', value: settingsForm.premiumYearly, onChange: e => setSettingsForm(f => Object.assign({}, f, { premiumYearly: e.target.value })) }),
+        h('p', { className: 'font-semibold text-sm mt-4 mb-1' }, 'Business Premium pricing'),
+        h('input', { className: inputCls, type: 'number', placeholder: 'Monthly price', value: settingsForm.businessPremiumMonthly, onChange: e => setSettingsForm(f => Object.assign({}, f, { businessPremiumMonthly: e.target.value })) }),
+        h('input', { className: inputCls, type: 'number', placeholder: 'Yearly price', value: settingsForm.businessPremiumYearly, onChange: e => setSettingsForm(f => Object.assign({}, f, { businessPremiumYearly: e.target.value })) }),
         h('button', { onClick: saveSettings, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm mt-2' }, 'Save settings')
       )
     )
@@ -4347,7 +4461,9 @@ function PaymentRequestRow({ r, onApprove, onReject }) {
   const [user, setUser] = useState(null);
   useEffect(() => { db.collection('smiletak_users').doc(r.uid).get().then(s => setUser(s.exists ? s.data() : null)); }, [r.uid]);
   return h('div', { className: 'py-2.5 border-b border-slate-100 dark:border-ink-800' },
-    h('p', { className: 'text-sm font-semibold' }, (user ? user.fullName : r.uid), ' · ', r.plan === 'yearly' ? 'Yearly' : 'Monthly', ' · ', (r.currency || '₦') + r.amount,
+    h('p', { className: 'text-sm font-semibold' },
+      h('span', { className: 'mr-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ' + (r.type === 'business' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700') }, r.type === 'business' ? 'Business Premium' : 'Premium'),
+      (user ? user.fullName : r.uid), r.businessName ? ' (' + r.businessName + ')' : '', ' · ', r.plan === 'yearly' ? 'Yearly' : 'Monthly', ' · ', (r.currency || '₦') + r.amount,
       h('span', { className: 'ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700') }, r.status)),
     h('p', { className: 'text-xs text-slate-400' }, 'Ref: ', r.reference, ' · ', timeAgo(r.createdAt)),
     r.proofURL && h('a', { href: r.proofURL, target: '_blank', rel: 'noreferrer', className: 'text-xs text-brand-600 underline' }, 'View proof'),
