@@ -119,6 +119,9 @@
   .dark ::-webkit-scrollbar-thumb{background:#354254;}
   @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   .fade-in{animation:fadein .2s ease-out;}
+  html.st-high-contrast{filter:contrast(1.18) saturate(1.1);}
+  html.st-high-contrast body{text-shadow:0 0 0.2px currentColor;}
+  html.st-reduce-motion *,html.st-reduce-motion *::before,html.st-reduce-motion *::after{animation-duration:0.001ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important;}
   @keyframes msgin{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
   .msg-in{animation:msgin .15s ease-out;}
   @keyframes pulse-dot{0%,100%{opacity:.3}50%{opacity:1}}
@@ -466,6 +469,11 @@ function AuthProvider({ children }) {
       db.collection('smiletak_users').doc(user.uid).update({ online: false, lastSeen: FieldValue.serverTimestamp() }).catch(() => {});
     };
   }, [user]);
+  // accessibility preferences (apply app-wide, independent of which screen is open)
+  useEffect(() => {
+    document.documentElement.classList.toggle('st-high-contrast', !!(profile && profile.highContrast));
+    document.documentElement.classList.toggle('st-reduce-motion', !!(profile && profile.reduceMotion));
+  }, [profile && profile.highContrast, profile && profile.reduceMotion]);
   return h(AuthCtx.Provider, { value: { user, profile, loading } }, children);
 }
 function useAuth() { return useContext(AuthCtx); }
@@ -744,6 +752,15 @@ function AppShell() {
   const openAccount = () => { const v = { screen: 'account' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openAppearanceSettings = () => { const v = { screen: 'appearanceSettings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openNotificationSettings = () => { const v = { screen: 'notificationSettings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openPrivacySettings = () => { const v = { screen: 'privacySettings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openListsSettings = () => { const v = { screen: 'listsSettings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openChatsSettings = () => { const v = { screen: 'chatsSettings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openStorageSettings = () => { const v = { screen: 'storageSettings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openParentalControls = () => { const v = { screen: 'parentalControls' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openAccessibilitySettings = () => { const v = { screen: 'accessibilitySettings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openLanguageSettings = () => { const v = { screen: 'languageSettings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openHelpFeedback = () => { const v = { screen: 'helpFeedback' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openMyQrCode = () => { const v = { screen: 'myQrCode' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const goBack = () => window.history.back();
 
   if (view.screen === 'chat') {
@@ -801,7 +818,16 @@ function AppShell() {
       onOpenAccount: openAccount,
       onOpenLinkedDevices: openLinkedDevices,
       onOpenAppearance: openAppearanceSettings,
-      onOpenNotifications: openNotificationSettings
+      onOpenNotifications: openNotificationSettings,
+      onOpenPrivacy: openPrivacySettings,
+      onOpenLists: openListsSettings,
+      onOpenChats: openChatsSettings,
+      onOpenStorage: openStorageSettings,
+      onOpenParentalControls: openParentalControls,
+      onOpenAccessibility: openAccessibilitySettings,
+      onOpenLanguage: openLanguageSettings,
+      onOpenHelp: openHelpFeedback,
+      onOpenQrCode: openMyQrCode
     });
   }
   if (view.screen === 'account') {
@@ -812,6 +838,33 @@ function AppShell() {
   }
   if (view.screen === 'notificationSettings') {
     return h(NotificationSettingsScreen, { onBack: goBack });
+  }
+  if (view.screen === 'privacySettings') {
+    return h(PrivacySettingsScreen, { onBack: goBack });
+  }
+  if (view.screen === 'listsSettings') {
+    return h(ListsSettingsScreen, { onBack: goBack, onOpenGroup: openGroup });
+  }
+  if (view.screen === 'chatsSettings') {
+    return h(ChatsSettingsScreen, { onBack: goBack });
+  }
+  if (view.screen === 'storageSettings') {
+    return h(StorageSettingsScreen, { onBack: goBack });
+  }
+  if (view.screen === 'parentalControls') {
+    return h(ParentalControlsScreen, { onBack: goBack });
+  }
+  if (view.screen === 'accessibilitySettings') {
+    return h(AccessibilitySettingsScreen, { onBack: goBack });
+  }
+  if (view.screen === 'languageSettings') {
+    return h(LanguageSettingsScreen, { onBack: goBack });
+  }
+  if (view.screen === 'helpFeedback') {
+    return h(HelpFeedbackScreen, { onBack: goBack });
+  }
+  if (view.screen === 'myQrCode') {
+    return h(MyQrCodeScreen, { onBack: goBack });
   }
 
   const tab = view.tab || 'chats';
@@ -1956,7 +2009,7 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
           const m = d.data();
           if (m.senderId !== profile.id) {
             if (!(m.deliveredTo || []).includes(profile.id)) { batch.update(d.ref, { deliveredTo: FieldValue.arrayUnion(profile.id) }); any = true; }
-            if (!(m.readBy || []).includes(profile.id)) { batch.update(d.ref, { readBy: FieldValue.arrayUnion(profile.id) }); any = true; }
+            if (profile.readReceipts !== false && !(m.readBy || []).includes(profile.id)) { batch.update(d.ref, { readBy: FieldValue.arrayUnion(profile.id) }); any = true; }
           }
         });
         if (any) batch.commit().catch(() => {});
@@ -2108,7 +2161,7 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
         h(Avatar, { url: otherLive.photoURL, name: otherLive.fullName, size: 36, online: otherLive.online }),
         h('div', { className: 'min-w-0' },
           h('p', { className: 'font-semibold text-sm truncate' }, h(NameWithBadges, { name: otherLive.fullName, user: otherLive })),
-          h('p', { className: 'text-[11px] text-slate-400' }, typingNow ? h('span', { className: 'text-brand-600' }, 'typing…') : (otherLive.online ? 'Online' : otherLive.lastSeen ? 'last seen ' + timeAgo(otherLive.lastSeen) : ''))
+          h('p', { className: 'text-[11px] text-slate-400' }, typingNow ? h('span', { className: 'text-brand-600' }, 'typing…') : (otherLive.showLastSeen === false ? '' : (otherLive.online ? 'Online' : otherLive.lastSeen ? 'last seen ' + timeAgo(otherLive.lastSeen) : '')))
         )
       ),
       h('button', { className: 'text-slate-400 px-2', onClick: () => call.startCall(otherLive, 'audio') }, h('i', { className: 'fa-solid fa-phone' })),
@@ -3274,37 +3327,44 @@ function SettingsRow({ icon, title, subtitle, onClick }) {
     )
   );
 }
-function SettingsScreen({ onBack, onOpenPremium, onOpenBusiness, onOpenAccount, onOpenLinkedDevices, onOpenAppearance, onOpenNotifications }) {
+function SettingsScreen({ onBack, onOpenPremium, onOpenBusiness, onOpenAccount, onOpenLinkedDevices, onOpenAppearance, onOpenNotifications, onOpenPrivacy, onOpenLists, onOpenChats, onOpenStorage, onOpenParentalControls, onOpenAccessibility, onOpenLanguage, onOpenHelp, onOpenQrCode }) {
   const { profile } = useAuth();
-  const toast = useToast();
-  const soon = () => toast('Coming soon', 'info');
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const closeLogoutConfirm = useBackClose(confirmingLogout, () => setConfirmingLogout(false));
+  const [searching, setSearching] = useState(false);
+  const [q, setQ] = useState('');
+  const closeSearch = useBackClose(searching, () => { setSearching(false); setQ(''); });
 
   const rows = [
     { icon: 'fa-gem', title: 'Subscriptions', subtitle: 'Explore premium benefits', onClick: onOpenPremium },
     { icon: 'fa-laptop-mobile', title: 'Linked devices', subtitle: 'Use SmileTak on other devices', onClick: onOpenLinkedDevices },
     { icon: 'fa-key', title: 'Account', subtitle: 'Security notifications, change number', onClick: onOpenAccount },
-    { icon: 'fa-lock', title: 'Privacy', subtitle: 'Blocked accounts, disappearing messages', onClick: soon },
-    { icon: 'fa-image', title: 'Lists', subtitle: 'Manage people and groups', onClick: soon },
-    { icon: 'fa-comment-dots', title: 'Chats', subtitle: 'Chat history, backup', onClick: soon },
+    { icon: 'fa-lock', title: 'Privacy', subtitle: 'Blocked accounts, disappearing messages', onClick: onOpenPrivacy },
+    { icon: 'fa-image', title: 'Lists', subtitle: 'Manage people and groups', onClick: onOpenLists },
+    { icon: 'fa-comment-dots', title: 'Chats', subtitle: 'Chat history, backup', onClick: onOpenChats },
     { icon: 'fa-palette', title: 'Appearance', subtitle: 'Chat theme, app icon, app theme', onClick: onOpenAppearance },
     { icon: 'fa-bell', title: 'Notifications', subtitle: 'Message, group & call tones', onClick: onOpenNotifications },
-    { icon: 'fa-arrows-rotate', title: 'Storage and data', subtitle: 'Network usage, auto-download', onClick: soon },
-    { icon: 'fa-shield-halved', title: 'Parental controls', subtitle: 'Settings for your family', onClick: soon },
-    { icon: 'fa-universal-access', title: 'Accessibility', subtitle: 'Increase contrast, animation', onClick: soon },
-    { icon: 'fa-globe', title: 'App language', subtitle: "English (device's language)", onClick: soon },
-    { icon: 'fa-circle-question', title: 'Help and feedback', subtitle: 'Help center, contact us, privacy policy', onClick: soon }
+    { icon: 'fa-arrows-rotate', title: 'Storage and data', subtitle: 'Network usage, auto-download', onClick: onOpenStorage },
+    { icon: 'fa-shield-halved', title: 'Parental controls', subtitle: 'Settings for your family', onClick: onOpenParentalControls },
+    { icon: 'fa-universal-access', title: 'Accessibility', subtitle: 'Increase contrast, animation', onClick: onOpenAccessibility },
+    { icon: 'fa-globe', title: 'App language', subtitle: "English (device's language)", onClick: onOpenLanguage },
+    { icon: 'fa-circle-question', title: 'Help and feedback', subtitle: 'Help center, contact us, privacy policy', onClick: onOpenHelp }
   ];
+  const filtered = q.trim() ? rows.filter(r => (r.title + ' ' + r.subtitle).toLowerCase().includes(q.trim().toLowerCase())) : rows;
 
   return h('div', { className: 'h-full overflow-y-auto no-scrollbar bg-white dark:bg-ink-900' },
     h('div', { className: 'px-4 pt-4 pb-3 flex items-center justify-between' },
       h('button', { onClick: onBack, className: 'text-lg' }, h('i', { className: 'fa-solid fa-arrow-left' })),
       h('div', { className: 'flex items-center gap-5 text-base text-slate-500 dark:text-slate-300' },
-        h('button', { onClick: soon, title: 'Search' }, h('i', { className: 'fa-solid fa-magnifying-glass' })),
-        h('button', { onClick: soon, title: 'QR code' }, h('i', { className: 'fa-solid fa-qrcode' })),
+        h('button', { onClick: () => setSearching(true), title: 'Search' }, h('i', { className: 'fa-solid fa-magnifying-glass' })),
+        h('button', { onClick: onOpenQrCode, title: 'QR code' }, h('i', { className: 'fa-solid fa-qrcode' })),
         h('button', { onClick: onOpenAccount, title: 'Edit profile' }, h('i', { className: 'fa-solid fa-pen' }))
       )
     ),
-    h('div', { className: 'flex flex-col items-center pb-4' },
+    searching && h('div', { className: 'px-4 pb-2' },
+      h('input', { autoFocus: true, className: inputCls + ' mb-0', placeholder: 'Search settings', value: q, onChange: e => setQ(e.target.value) })
+    ),
+    !searching && h('div', { className: 'flex flex-col items-center pb-4' },
       h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 88 }),
       h('div', { className: 'flex items-center gap-2 mt-3' },
         h('h1', { className: 'text-xl font-extrabold' }, profile.fullName),
@@ -3312,8 +3372,22 @@ function SettingsScreen({ onBack, onOpenPremium, onOpenBusiness, onOpenAccount, 
       ),
       h('p', { className: 'text-slate-400 text-sm mt-0.5' }, '@' + profile.username)
     ),
-    h('div', { className: 'divide-y divide-slate-100 dark:divide-ink-800 pb-8' },
-      rows.map((r, i) => h(SettingsRow, { key: i, icon: r.icon, title: r.title, subtitle: r.subtitle, onClick: r.onClick }))
+    h('div', { className: 'divide-y divide-slate-100 dark:divide-ink-800' },
+      filtered.map((r, i) => h(SettingsRow, { key: i, icon: r.icon, title: r.title, subtitle: r.subtitle, onClick: r.onClick })),
+      filtered.length === 0 && h('p', { className: 'px-4 py-6 text-sm text-slate-400 text-center' }, 'No settings match "' + q + '"')
+    ),
+    !searching && h('div', { className: 'px-4 pt-4 pb-8' },
+      h('button', { onClick: () => setConfirmingLogout(true), className: 'w-full text-red-500 border border-red-200 rounded-xl py-2.5 font-semibold text-sm' }, h('i', { className: 'fa-solid fa-arrow-right-from-bracket mr-2' }), 'Log out')
+    ),
+    confirmingLogout && h('div', { className: 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4', onClick: closeLogoutConfirm },
+      h('div', { className: 'bg-white dark:bg-ink-800 rounded-2xl p-4 w-full max-w-sm', onClick: e => e.stopPropagation() },
+        h('p', { className: 'font-semibold mb-1' }, 'Log out?'),
+        h('p', { className: 'text-sm text-slate-400 mb-4' }, "You'll need to sign back in to use SmileTak again on this device."),
+        h('div', { className: 'flex gap-2' },
+          h('button', { onClick: closeLogoutConfirm, className: 'flex-1 border border-slate-200 dark:border-ink-600 rounded-xl py-2.5 font-semibold text-sm' }, 'Cancel'),
+          h('button', { onClick: () => auth.signOut(), className: 'flex-1 bg-red-500 text-white rounded-xl py-2.5 font-semibold text-sm' }, 'Log out')
+        )
+      )
     )
   );
 }
@@ -3351,6 +3425,356 @@ function NotificationSettingsScreen({ onBack }) {
           h('p', { className: 'text-xs text-slate-400' }, 'Allow SmileTak to notify you of new activity')
         ),
         h('button', { className: 'text-brand-600 text-sm font-semibold shrink-0', onClick: enable }, 'Enable')
+      )
+    )
+  );
+}
+
+function SettingsSubHeader({ onBack, title }) {
+  return h('div', { className: 'px-4 pt-4 pb-3 flex items-center gap-3' },
+    h('button', { onClick: onBack, className: 'text-lg text-slate-500 dark:text-slate-300' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+    h('h1', { className: 'text-xl font-extrabold' }, title)
+  );
+}
+function ToggleRow({ title, subtitle, checked, onToggle }) {
+  return h('div', { className: 'flex items-center justify-between py-3 border-t border-slate-100 dark:border-ink-800' },
+    h('div', { className: 'pr-3' },
+      h('p', { className: 'font-medium text-sm' }, title),
+      subtitle && h('p', { className: 'text-xs text-slate-400 mt-0.5' }, subtitle)
+    ),
+    h('button', { onClick: onToggle, className: 'w-11 h-6 rounded-full relative shrink-0 ' + (checked ? 'bg-brand-600' : 'bg-slate-200 dark:bg-ink-600') },
+      h('span', { className: 'absolute top-0.5 w-5 h-5 bg-white rounded-full transition ' + (checked ? 'left-[22px]' : 'left-0.5') }))
+  );
+}
+
+/* ============================== PRIVACY ============================== */
+function PrivacySettingsScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [blocked, setBlocked] = useState([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(true);
+
+  useEffect(() => {
+    const unsub = db.collection('smiletak_blockedUsers').where('blockerUid', '==', profile.id).onSnapshot(async snap => {
+      const rows = await Promise.all(snap.docs.map(async d => {
+        const u = await db.collection('smiletak_users').doc(d.data().blockedUid).get();
+        return { id: d.id, blockedUid: d.data().blockedUid, user: u.exists ? u.data() : null };
+      }));
+      setBlocked(rows.filter(r => r.user));
+      setLoadingBlocked(false);
+    });
+    return unsub;
+  }, [profile.id]);
+
+  const set = (key, val) => db.collection('smiletak_users').doc(profile.id).update({ [key]: val }).catch(e => toast(e.message, 'error'));
+  const unblock = async (row) => {
+    await db.collection('smiletak_blockedUsers').doc(row.id).delete();
+    toast('Unblocked ' + row.user.fullName, 'success');
+  };
+
+  const timerLabel = { off: 'Off', '24h': '24 hours', '7d': '7 days', '90d': '90 days' }[profile.disappearingDefault || 'off'];
+
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h(SettingsSubHeader, { onBack, title: 'Privacy' }),
+    h('div', { className: 'px-4' },
+      h(ToggleRow, {
+        title: 'Last seen & online', subtitle: 'Show others when you were last online',
+        checked: profile.showLastSeen !== false, onToggle: () => set('showLastSeen', profile.showLastSeen === false)
+      }),
+      h(ToggleRow, {
+        title: 'Read receipts', subtitle: 'Let others see blue ticks when you read their messages',
+        checked: profile.readReceipts !== false, onToggle: () => set('readReceipts', profile.readReceipts === false)
+      })
+    ),
+    h('div', { className: 'px-4 py-3 border-t border-slate-100 dark:border-ink-800' },
+      h('p', { className: 'font-medium text-sm mb-1' }, 'Default disappearing messages'),
+      h('p', { className: 'text-xs text-slate-400 mb-2' }, 'Saved as your personal default'),
+      h('div', { className: 'flex gap-2 flex-wrap' },
+        ['off', '24h', '7d', '90d'].map(v => h('button', {
+          key: v,
+          onClick: () => set('disappearingDefault', v),
+          className: 'px-3 py-1.5 rounded-full text-xs font-semibold ' + ((profile.disappearingDefault || 'off') === v ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-ink-700')
+        }, { off: 'Off', '24h': '24 hours', '7d': '7 days', '90d': '90 days' }[v]))
+      )
+    ),
+    h('div', { className: 'px-4 py-3 border-t border-slate-100 dark:border-ink-800' },
+      h('p', { className: 'font-medium text-sm mb-2' }, 'Blocked accounts'),
+      loadingBlocked && h('p', { className: 'text-xs text-slate-400' }, 'Loading…'),
+      !loadingBlocked && blocked.length === 0 && h('p', { className: 'text-xs text-slate-400' }, "You haven't blocked anyone"),
+      blocked.map(row => h('div', { key: row.id, className: 'flex items-center gap-3 py-2' },
+        h(Avatar, { url: row.user.photoURL, name: row.user.fullName, size: 40 }),
+        h('p', { className: 'flex-1 text-sm font-medium truncate' }, row.user.fullName),
+        h('button', { onClick: () => unblock(row), className: 'text-brand-600 text-xs font-semibold shrink-0' }, 'Unblock')
+      ))
+    )
+  );
+}
+
+/* ============================== LISTS ============================== */
+function ListsSettingsScreen({ onBack, onOpenGroup }) {
+  const { profile } = useAuth();
+  const [groups, setGroups] = useState([]);
+  useEffect(() => {
+    const unsub = db.collection('smiletak_groups').where('members', 'array-contains', profile.id).onSnapshot(snap => {
+      setGroups(snap.docs.map(d => Object.assign({ id: d.id }, d.data())));
+    });
+    return unsub;
+  }, [profile.id]);
+
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h(SettingsSubHeader, { onBack, title: 'Lists' }),
+    h('p', { className: 'px-4 text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1' }, 'Groups you\u2019re in'),
+    groups.length === 0 && h('p', { className: 'px-4 text-sm text-slate-400' }, 'You are not a member of any group yet'),
+    groups.map(g => h('button', { key: g.id, onClick: () => onOpenGroup(g.id, g), className: 'w-full flex items-center gap-3 px-4 py-2.5 text-left active:bg-slate-50 dark:active:bg-ink-800' },
+      h(Avatar, { url: g.photoURL, name: g.name, size: 44 }),
+      h('div', { className: 'min-w-0' },
+        h('p', { className: 'text-sm font-semibold truncate' }, g.name),
+        h('p', { className: 'text-xs text-slate-400' }, (g.members || []).length + ' members')
+      )
+    ))
+  );
+}
+
+/* ============================== CHATS ============================== */
+function ChatsSettingsScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [stats, setStats] = useState({ active: 0, archived: 0 });
+  const [archiving, setArchiving] = useState(false);
+
+  useEffect(() => {
+    const unsub = db.collection('smiletak_chatMembers').where('uid', '==', profile.id).onSnapshot(snap => {
+      const docs = snap.docs.map(d => d.data());
+      setStats({ active: docs.filter(d => !d.archived).length, archived: docs.filter(d => d.archived).length });
+    });
+    return unsub;
+  }, [profile.id]);
+
+  const archiveAll = async () => {
+    setArchiving(true);
+    try {
+      const snap = await db.collection('smiletak_chatMembers').where('uid', '==', profile.id).where('archived', '==', false).get();
+      const batch = db.batch();
+      snap.docs.forEach(d => batch.update(d.ref, { archived: true }));
+      await batch.commit();
+      toast('All chats archived', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+    setArchiving(false);
+  };
+
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h(SettingsSubHeader, { onBack, title: 'Chats' }),
+    h('div', { className: 'px-4' },
+      h('div', { className: 'flex gap-3 py-2' },
+        h(StatCard, { label: 'Active chats', value: stats.active }),
+        h(StatCard, { label: 'Archived chats', value: stats.archived })
+      ),
+      h('div', { className: 'flex items-center justify-between py-3 border-t border-slate-100 dark:border-ink-800' },
+        h('div', null,
+          h('p', { className: 'font-medium text-sm' }, 'Chat backup'),
+          h('p', { className: 'text-xs text-slate-400' }, 'Your chats are saved to your SmileTak account automatically')
+        )
+      ),
+      h('button', { onClick: archiveAll, disabled: archiving || stats.active === 0, className: 'w-full mt-3 border border-slate-200 dark:border-ink-600 rounded-xl py-2.5 font-semibold text-sm disabled:opacity-50' }, archiving ? 'Archiving…' : 'Archive all chats')
+    )
+  );
+}
+
+/* ============================== STORAGE AND DATA ============================== */
+function StorageSettingsScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [counts, setCounts] = useState({ chats: 0, groups: 0 });
+  useEffect(() => {
+    Promise.all([
+      db.collection('smiletak_chatMembers').where('uid', '==', profile.id).get(),
+      db.collection('smiletak_groups').where('members', 'array-contains', profile.id).get()
+    ]).then(([c, g]) => setCounts({ chats: c.size, groups: g.size })).catch(() => {});
+  }, [profile.id]);
+  const set = (key, val) => db.collection('smiletak_users').doc(profile.id).update({ [key]: val }).catch(e => toast(e.message, 'error'));
+
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h(SettingsSubHeader, { onBack, title: 'Storage and data' }),
+    h('div', { className: 'px-4' },
+      h('div', { className: 'flex gap-3 py-2' },
+        h(StatCard, { label: 'Chats', value: counts.chats }),
+        h(StatCard, { label: 'Groups', value: counts.groups })
+      ),
+      h(ToggleRow, {
+        title: 'Auto-download media', subtitle: 'Automatically load photos and videos in chats',
+        checked: profile.autoDownloadMedia !== false, onToggle: () => set('autoDownloadMedia', profile.autoDownloadMedia === false)
+      }),
+      h(ToggleRow, {
+        title: 'Data saver', subtitle: 'Reduce data usage for calls and media previews',
+        checked: !!profile.dataSaver, onToggle: () => set('dataSaver', !profile.dataSaver)
+      })
+    )
+  );
+}
+
+/* ============================== PARENTAL CONTROLS ============================== */
+function ParentalControlsScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const set = (key, val) => db.collection('smiletak_users').doc(profile.id).update({ [key]: val }).catch(e => toast(e.message, 'error'));
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h(SettingsSubHeader, { onBack, title: 'Parental controls' }),
+    h('div', { className: 'px-4' },
+      h(ToggleRow, {
+        title: 'Restricted mode', subtitle: 'Hide sponsored content and the Discover tab\u2019s suggestions',
+        checked: !!profile.restrictedMode,
+        onToggle: () => { const next = !profile.restrictedMode; set('restrictedMode', next); set('adOptOut', next || !!profile.adOptOut); }
+      }),
+      h('p', { className: 'text-xs text-slate-400 mt-3' }, 'More family-safety controls are on the way.')
+    )
+  );
+}
+
+/* ============================== ACCESSIBILITY ============================== */
+function AccessibilitySettingsScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const set = (key, val) => db.collection('smiletak_users').doc(profile.id).update({ [key]: val }).catch(e => toast(e.message, 'error'));
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h(SettingsSubHeader, { onBack, title: 'Accessibility' }),
+    h('div', { className: 'px-4' },
+      h(ToggleRow, {
+        title: 'Increase contrast', subtitle: 'Stronger borders and text contrast throughout the app',
+        checked: !!profile.highContrast, onToggle: () => set('highContrast', !profile.highContrast)
+      }),
+      h(ToggleRow, {
+        title: 'Reduce animation', subtitle: 'Turn off transitions and motion effects',
+        checked: !!profile.reduceMotion, onToggle: () => set('reduceMotion', !profile.reduceMotion)
+      })
+    )
+  );
+}
+
+/* ============================== APP LANGUAGE ============================== */
+function LanguageSettingsScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const lang = profile.language || 'en';
+  const set = (code) => {
+    if (code !== 'en') { toast('This language isn\u2019t available yet \u2014 more are on the way', 'info'); return; }
+    db.collection('smiletak_users').doc(profile.id).update({ language: code }).catch(e => toast(e.message, 'error'));
+  };
+  const langs = [
+    { code: 'en', label: "English (device's language)" },
+    { code: 'fr', label: 'Fran\u00e7ais' },
+    { code: 'es', label: 'Espa\u00f1ol' },
+    { code: 'pt', label: 'Portugu\u00eas' },
+    { code: 'ar', label: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629' },
+    { code: 'ha', label: 'Hausa' },
+    { code: 'yo', label: 'Yor\u00f9b\u00e1' },
+    { code: 'ig', label: 'Igbo' }
+  ];
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h(SettingsSubHeader, { onBack, title: 'App language' }),
+    h('div', { className: 'px-4 divide-y divide-slate-100 dark:divide-ink-800' },
+      langs.map(l => h('button', { key: l.code, onClick: () => set(l.code), className: 'w-full flex items-center justify-between py-3 text-left' },
+        h('span', { className: 'text-sm' }, l.label),
+        lang === l.code && h('i', { className: 'fa-solid fa-check text-brand-600' })
+      ))
+    )
+  );
+}
+
+/* ============================== HELP AND FEEDBACK ============================== */
+function HelpFeedbackScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [openFaq, setOpenFaq] = useState(null);
+  const [msg, setMsg] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const faqs = [
+    { q: 'How do I start a new chat?', a: 'Go to the Chats tab and tap the pencil / new-chat button, then pick someone from your contacts.' },
+    { q: 'How do I block or report someone?', a: 'Open their profile, then use the Block or Report buttons near the bottom.' },
+    { q: 'How do I set up a business account?', a: 'Go to Settings \u2192 Account \u2192 Business account to add your business details, catalog, and auto-replies.' },
+    { q: 'How do I change my number or delete my account?', a: 'Go to Settings \u2192 Account for security and account options.' }
+  ];
+
+  const send = async () => {
+    if (!msg.trim()) return toast('Write a message first', 'error');
+    setSending(true);
+    try {
+      await db.collection('smiletak_feedback').add({ uid: profile.id, message: msg.trim(), createdAt: FieldValue.serverTimestamp(), status: 'open' });
+      toast('Thanks! Your feedback was sent', 'success');
+      setMsg('');
+    } catch (e) { toast(e.message, 'error'); }
+    setSending(false);
+  };
+
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h(SettingsSubHeader, { onBack, title: 'Help and feedback' }),
+    h('div', { className: 'px-4' },
+      h('p', { className: 'text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1' }, 'Help center'),
+      faqs.map((f, i) => h('div', { key: i, className: 'border-b border-slate-100 dark:border-ink-800' },
+        h('button', { onClick: () => setOpenFaq(openFaq === i ? null : i), className: 'w-full flex items-center justify-between py-3 text-left' },
+          h('span', { className: 'text-sm font-medium pr-3' }, f.q),
+          h('i', { className: 'fa-solid ' + (openFaq === i ? 'fa-chevron-up' : 'fa-chevron-down') + ' text-xs text-slate-400' })
+        ),
+        openFaq === i && h('p', { className: 'text-xs text-slate-400 pb-3' }, f.a)
+      )),
+      h('p', { className: 'text-xs font-semibold uppercase tracking-wide text-slate-400 mt-5 mb-1' }, 'Contact us'),
+      h('a', { href: 'mailto:support@smiletak.app', className: 'flex items-center gap-3 py-2.5 text-sm text-brand-600' }, h('i', { className: 'fa-solid fa-envelope w-5' }), 'support@smiletak.app'),
+      h('p', { className: 'text-xs font-semibold uppercase tracking-wide text-slate-400 mt-5 mb-1' }, 'Send feedback or report a problem'),
+      h('textarea', { className: inputCls, rows: 3, placeholder: 'Tell us what\u2019s going on\u2026', value: msg, onChange: e => setMsg(e.target.value) }),
+      h('button', { onClick: send, disabled: sending, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm mt-2 mb-2' }, sending ? 'Sending\u2026' : 'Send'),
+      h('p', { className: 'text-xs font-semibold uppercase tracking-wide text-slate-400 mt-5 mb-1' }, 'Privacy policy'),
+      h('p', { className: 'text-xs text-slate-400 pb-8' }, 'SmileTak only uses your data to provide messaging, status, and business features within the app. We never sell your personal data. Blocked, reported, and deleted content is handled according to the safety rules described throughout Settings.')
+    )
+  );
+}
+
+/* ============================== MY QR CODE ============================== */
+function MyQrCodeScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const link = window.location.origin + window.location.pathname + '#u/' + profile.username;
+  const cells = useMemo(() => {
+    // Deterministic pseudo-QR mosaic derived from the profile link — a
+    // lightweight visual identifier without pulling in an external QR lib.
+    let seed = 0;
+    for (let i = 0; i < link.length; i++) seed = (seed * 31 + link.charCodeAt(i)) >>> 0;
+    const rand = () => { seed = (seed * 1103515245 + 12345) >>> 0; return (seed >>> 16) % 100; };
+    const n = 21;
+    const grid = [];
+    for (let r = 0; r < n; r++) { const row = []; for (let c = 0; c < n; c++) row.push(rand() < 46); grid.push(row); }
+    const stampFinder = (r0, c0) => {
+      for (let r = 0; r < 7; r++) for (let c = 0; c < 7; c++) {
+        const onBorder = r === 0 || r === 6 || c === 0 || c === 6;
+        const inCore = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+        grid[r0 + r][c0 + c] = onBorder || inCore;
+      }
+    };
+    stampFinder(0, 0); stampFinder(0, n - 7); stampFinder(n - 7, 0);
+    return grid;
+  }, [link]);
+
+  const copyLink = async () => { await navigator.clipboard.writeText(link); toast('Profile link copied', 'success'); };
+  const share = async () => {
+    try {
+      if (navigator.share) await navigator.share({ title: profile.fullName, text: 'Add me on SmileTak', url: link });
+      else copyLink();
+    } catch (e) {}
+  };
+
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h(SettingsSubHeader, { onBack, title: 'My QR code' }),
+    h('div', { className: 'flex flex-col items-center px-6 pb-8' },
+      h('div', { className: 'bg-white p-4 rounded-2xl shadow-sm border border-slate-100' },
+        h('div', { className: 'grid', style: { gridTemplateColumns: 'repeat(21, 8px)', gridTemplateRows: 'repeat(21, 8px)' } },
+          cells.flatMap((row, r) => row.map((on, c) => h('div', { key: r + '_' + c, style: { width: 8, height: 8, background: on ? '#0b1220' : 'transparent' } })))
+        )
+      ),
+      h('p', { className: 'font-bold text-lg mt-4' }, profile.fullName),
+      h('p', { className: 'text-slate-400 text-sm' }, '@' + profile.username),
+      h('p', { className: 'text-xs text-slate-400 mt-3 text-center' }, 'Others can scan this code or use your link to open your profile and start a chat.'),
+      h('div', { className: 'flex gap-2 w-full mt-5' },
+        h('button', { onClick: copyLink, className: 'flex-1 border border-slate-200 dark:border-ink-600 rounded-xl py-2.5 font-semibold text-sm' }, 'Copy link'),
+        h('button', { onClick: share, className: 'flex-1 bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm' }, 'Share')
       )
     )
   );
@@ -3722,7 +4146,7 @@ function UserProfileScreen({ uid, onBack, onMessage }) {
       h(Avatar, { url: user.photoURL, name: user.fullName, size: 96, online: user.online }),
       h('h2', { className: 'font-extrabold text-lg mt-3' }, h(NameWithBadges, { name: user.fullName, user })),
       h('p', { className: 'text-sm text-slate-400' }, '@' + user.username),
-      h('p', { className: 'text-xs text-slate-400 mt-1' }, user.online ? 'Online' : user.lastSeen ? 'Last seen ' + timeAgo(user.lastSeen) : '')
+      h('p', { className: 'text-xs text-slate-400 mt-1' }, user.showLastSeen === false ? '' : (user.online ? 'Online' : user.lastSeen ? 'Last seen ' + timeAgo(user.lastSeen) : ''))
     ),
     h('div', { className: 'px-4' },
       h(FieldBlock, { label: 'Bio', value: user.bio || 'No bio yet' }),
