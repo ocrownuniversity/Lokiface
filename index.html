@@ -740,6 +740,10 @@ function AppShell() {
   const openChannel = (channelId) => { const v = { screen: 'channel', channelId }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openNewChannel = () => { const v = { screen: 'newChannel' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openExploreChannels = () => { const v = { screen: 'exploreChannels' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openSettings = () => { const v = { screen: 'settings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openAccount = () => { const v = { screen: 'account' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openAppearanceSettings = () => { const v = { screen: 'appearanceSettings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openNotificationSettings = () => { const v = { screen: 'notificationSettings' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const goBack = () => window.history.back();
 
   if (view.screen === 'chat') {
@@ -789,6 +793,26 @@ function AppShell() {
   if (view.screen === 'exploreChannels') {
     return h(ExploreChannelsScreen, { onBack: goBack, onOpenChannel: openChannel });
   }
+  if (view.screen === 'settings') {
+    return h(SettingsScreen, {
+      onBack: goBack,
+      onOpenPremium: openPremium,
+      onOpenBusiness: openBusiness,
+      onOpenAccount: openAccount,
+      onOpenLinkedDevices: openLinkedDevices,
+      onOpenAppearance: openAppearanceSettings,
+      onOpenNotifications: openNotificationSettings
+    });
+  }
+  if (view.screen === 'account') {
+    return h(MyProfileScreen, { onBack: goBack, onOpenPremium: openPremium, onOpenBusiness: openBusiness });
+  }
+  if (view.screen === 'appearanceSettings') {
+    return h(AppearanceSettingsScreen, { onBack: goBack });
+  }
+  if (view.screen === 'notificationSettings') {
+    return h(NotificationSettingsScreen, { onBack: goBack });
+  }
 
   const tab = view.tab || 'chats';
   const tabs = [
@@ -801,8 +825,8 @@ function AppShell() {
 
   return h('div', { className: 'h-full flex flex-col' },
     h('div', { className: 'flex-1 overflow-hidden' },
-      tab === 'chats' && h(ChatsListScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onOpenGroup: openGroup, onNewGroup: openNewGroup, onNewChat: openNewChat, onNewBroadcast: openNewBroadcast, onLinkedDevices: openLinkedDevices, onStarred: openStarred, onViewProfile: openProfile, onNavigate: goToTab }),
-      tab === 'status' && h(StatusScreen, { onViewProfile: openProfile, onOpenChannel: openChannel, onNewChannel: openNewChannel, onExploreChannels: openExploreChannels, onStarred: openStarred, onNavigate: goToTab }),
+      tab === 'chats' && h(ChatsListScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onOpenGroup: openGroup, onNewGroup: openNewGroup, onNewChat: openNewChat, onNewBroadcast: openNewBroadcast, onLinkedDevices: openLinkedDevices, onStarred: openStarred, onViewProfile: openProfile, onNavigate: goToTab, onSettings: openSettings }),
+      tab === 'status' && h(StatusScreen, { onViewProfile: openProfile, onOpenChannel: openChannel, onNewChannel: openNewChannel, onExploreChannels: openExploreChannels, onStarred: openStarred, onNavigate: goToTab, onSettings: openSettings }),
       tab === 'search' && h(DiscoverScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onViewProfile: openProfile }),
       tab === 'profile' && h(MyProfileScreen, { onOpenPremium: openPremium, onOpenBusiness: openBusiness }),
       tab === 'calls' && h(CallsScreen, { onOpenChat: (other) => openChat(chatIdFor(profile.id, other.id), other) }),
@@ -819,7 +843,7 @@ function AppShell() {
 }
 
 /* ============================== CHATS LIST ============================== */
-function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNewBroadcast, onLinkedDevices, onStarred, onViewProfile, onNavigate }) {
+function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNewBroadcast, onLinkedDevices, onStarred, onViewProfile, onNavigate, onSettings }) {
   const { profile } = useAuth();
   const [memberDocs, setMemberDocs] = useState([]);
   const [myChatIds, setMyChatIds] = useState([]);
@@ -1059,7 +1083,7 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
                 h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onStarred && onStarred(); } }, h('i', { className: 'fa-solid fa-star mr-2' }), 'Starred'),
                 h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); readAllChats(); } }, h('i', { className: 'fa-solid fa-check-double mr-2' }), 'Read all'),
                 h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); setFilter('archived'); } }, h('i', { className: 'fa-solid fa-box-archive mr-2' }), 'Archived'),
-                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNavigate && onNavigate('profile'); } }, h('i', { className: 'fa-solid fa-gear mr-2' }), 'Settings')
+                h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onSettings && onSettings(); } }, h('i', { className: 'fa-solid fa-gear mr-2' }), 'Settings')
               )
             )
           )
@@ -2238,7 +2262,7 @@ function ForwardPicker({ onClose, onPick }) {
 }
 
 /* ============================== STATUS ============================== */
-function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreChannels, onStarred, onNavigate }) {
+function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreChannels, onStarred, onNavigate, onSettings }) {
   const { profile } = useAuth();
   const toast = useToast();
   const [statuses, setStatuses] = useState([]);
@@ -2318,7 +2342,7 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
             h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); setPrivacyOpen(true); } }, 'Status privacy'),
             h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onStarred && onStarred(); } }, 'Starred'),
             h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); setAdPrefOpen(true); } }, 'Ad preferences'),
-            h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onNavigate && onNavigate('profile'); } }, 'Settings')
+            h('button', { className: 'w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-ink-600', onClick: () => { setMenuOpen(false); onSettings && onSettings(); } }, 'Settings')
           )
         )
       )
@@ -2332,8 +2356,6 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
           style: myStatuses.length ? (cardBg({ items: myStatuses }) || {}) : { background: '#1a2230' },
           onClick: () => myStatuses.length ? setMyListOpen(true) : setCreating(true)
         },
-          myStatuses.length > 0 && cardFirstItem({ items: myStatuses }).type === 'video' &&
-            h('video', { src: cardFirstItem({ items: myStatuses }).mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, playsInline: true, preload: 'metadata' }),
           myStatuses.length > 0 && cardFirstItem({ items: myStatuses }).type === 'video' &&
             h('video', { src: cardFirstItem({ items: myStatuses }).mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, playsInline: true, preload: 'metadata' }),
           !myStatuses.length && h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 104 }),
@@ -3110,7 +3132,7 @@ function CallsScreen({ onOpenChat }) {
 }
 
 /* ============================== PROFILE SCREENS ============================== */
-function MyProfileScreen({ onOpenPremium, onOpenBusiness }) {
+function MyProfileScreen({ onOpenPremium, onOpenBusiness, onBack }) {
   const { profile } = useAuth();
   const [theme, setTheme] = useContext(ThemeCtx);
   const toast = useToast();
@@ -3177,7 +3199,10 @@ function MyProfileScreen({ onOpenPremium, onOpenBusiness }) {
 
   return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
     h('div', { className: 'px-4 pt-4 pb-2 flex items-center justify-between' },
-      h('h1', { className: 'text-xl font-extrabold' }, 'Profile'),
+      h('div', { className: 'flex items-center gap-3' },
+        onBack && h('button', { onClick: onBack, className: 'text-slate-500 dark:text-slate-300' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+        h('h1', { className: 'text-xl font-extrabold' }, onBack ? 'Account' : 'Profile')
+      ),
       h('button', { className: 'text-brand-600 text-sm font-semibold', onClick: () => editing ? save() : setEditing(true) }, editing ? 'Save' : 'Edit')
     ),
     h('div', { className: 'flex flex-col items-center py-4' },
@@ -3236,6 +3261,98 @@ function FieldBlock({ label, value }) {
   return h('div', { className: 'border-t border-slate-100 dark:border-ink-800 pt-3' },
     h('p', { className: 'text-[11px] uppercase tracking-wide text-slate-400 font-semibold mb-1' }, label),
     typeof value === 'string' ? h('p', { className: 'text-sm' }, value) : value
+  );
+}
+
+/* ============================== SETTINGS ============================== */
+function SettingsRow({ icon, title, subtitle, onClick }) {
+  return h('button', { onClick, className: 'w-full flex items-center gap-4 px-4 py-3 text-left active:bg-slate-50 dark:active:bg-ink-800' },
+    h('div', { className: 'w-7 flex items-center justify-center text-slate-400 dark:text-slate-300 text-lg shrink-0' }, h('i', { className: 'fa-solid ' + icon })),
+    h('div', { className: 'min-w-0' },
+      h('p', { className: 'font-medium text-sm' }, title),
+      subtitle && h('p', { className: 'text-xs text-slate-400 truncate' }, subtitle)
+    )
+  );
+}
+function SettingsScreen({ onBack, onOpenPremium, onOpenBusiness, onOpenAccount, onOpenLinkedDevices, onOpenAppearance, onOpenNotifications }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const soon = () => toast('Coming soon', 'info');
+
+  const rows = [
+    { icon: 'fa-gem', title: 'Subscriptions', subtitle: 'Explore premium benefits', onClick: onOpenPremium },
+    { icon: 'fa-laptop-mobile', title: 'Linked devices', subtitle: 'Use SmileTak on other devices', onClick: onOpenLinkedDevices },
+    { icon: 'fa-key', title: 'Account', subtitle: 'Security notifications, change number', onClick: onOpenAccount },
+    { icon: 'fa-lock', title: 'Privacy', subtitle: 'Blocked accounts, disappearing messages', onClick: soon },
+    { icon: 'fa-image', title: 'Lists', subtitle: 'Manage people and groups', onClick: soon },
+    { icon: 'fa-comment-dots', title: 'Chats', subtitle: 'Chat history, backup', onClick: soon },
+    { icon: 'fa-palette', title: 'Appearance', subtitle: 'Chat theme, app icon, app theme', onClick: onOpenAppearance },
+    { icon: 'fa-bell', title: 'Notifications', subtitle: 'Message, group & call tones', onClick: onOpenNotifications },
+    { icon: 'fa-arrows-rotate', title: 'Storage and data', subtitle: 'Network usage, auto-download', onClick: soon },
+    { icon: 'fa-shield-halved', title: 'Parental controls', subtitle: 'Settings for your family', onClick: soon },
+    { icon: 'fa-universal-access', title: 'Accessibility', subtitle: 'Increase contrast, animation', onClick: soon },
+    { icon: 'fa-globe', title: 'App language', subtitle: "English (device's language)", onClick: soon },
+    { icon: 'fa-circle-question', title: 'Help and feedback', subtitle: 'Help center, contact us, privacy policy', onClick: soon }
+  ];
+
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar bg-white dark:bg-ink-900' },
+    h('div', { className: 'px-4 pt-4 pb-3 flex items-center justify-between' },
+      h('button', { onClick: onBack, className: 'text-lg' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('div', { className: 'flex items-center gap-5 text-base text-slate-500 dark:text-slate-300' },
+        h('button', { onClick: soon, title: 'Search' }, h('i', { className: 'fa-solid fa-magnifying-glass' })),
+        h('button', { onClick: soon, title: 'QR code' }, h('i', { className: 'fa-solid fa-qrcode' })),
+        h('button', { onClick: onOpenAccount, title: 'Edit profile' }, h('i', { className: 'fa-solid fa-pen' }))
+      )
+    ),
+    h('div', { className: 'flex flex-col items-center pb-4' },
+      h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 88 }),
+      h('div', { className: 'flex items-center gap-2 mt-3' },
+        h('h1', { className: 'text-xl font-extrabold' }, profile.fullName),
+        h('button', { onClick: onOpenAccount, className: 'w-6 h-6 rounded-full border-2 border-brand-600 text-brand-600 flex items-center justify-center' }, h('i', { className: 'fa-solid fa-plus text-[10px]' }))
+      ),
+      h('p', { className: 'text-slate-400 text-sm mt-0.5' }, '@' + profile.username)
+    ),
+    h('div', { className: 'divide-y divide-slate-100 dark:divide-ink-800 pb-8' },
+      rows.map((r, i) => h(SettingsRow, { key: i, icon: r.icon, title: r.title, subtitle: r.subtitle, onClick: r.onClick }))
+    )
+  );
+}
+function AppearanceSettingsScreen({ onBack }) {
+  const [theme, setTheme] = useContext(ThemeCtx);
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h('div', { className: 'px-4 pt-4 pb-3 flex items-center gap-3' },
+      h('button', { onClick: onBack, className: 'text-lg text-slate-500 dark:text-slate-300' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('h1', { className: 'text-xl font-extrabold' }, 'Appearance')
+    ),
+    h('div', { className: 'px-4' },
+      h('div', { className: 'flex items-center justify-between py-3 border-t border-slate-100 dark:border-ink-800' },
+        h('div', null,
+          h('p', { className: 'font-medium text-sm' }, 'Dark mode'),
+          h('p', { className: 'text-xs text-slate-400' }, 'Switch between light and dark app theme')
+        ),
+        h('button', { onClick: () => setTheme(theme === 'dark' ? 'light' : 'dark'), className: 'w-11 h-6 rounded-full relative ' + (theme === 'dark' ? 'bg-brand-600' : 'bg-slate-200') },
+          h('span', { className: 'absolute top-0.5 w-5 h-5 bg-white rounded-full transition ' + (theme === 'dark' ? 'left-[22px]' : 'left-0.5') }))
+      )
+    )
+  );
+}
+function NotificationSettingsScreen({ onBack }) {
+  const toast = useToast();
+  const enable = () => { requestNotifyPermission(); toast('Notifications enabled', 'success'); };
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h('div', { className: 'px-4 pt-4 pb-3 flex items-center gap-3' },
+      h('button', { onClick: onBack, className: 'text-lg text-slate-500 dark:text-slate-300' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('h1', { className: 'text-xl font-extrabold' }, 'Notifications')
+    ),
+    h('div', { className: 'px-4' },
+      h('div', { className: 'flex items-center justify-between py-3 border-t border-slate-100 dark:border-ink-800' },
+        h('div', null,
+          h('p', { className: 'font-medium text-sm' }, 'Message, group & call tones'),
+          h('p', { className: 'text-xs text-slate-400' }, 'Allow SmileTak to notify you of new activity')
+        ),
+        h('button', { className: 'text-brand-600 text-sm font-semibold shrink-0', onClick: enable }, 'Enable')
+      )
+    )
   );
 }
 
@@ -3342,6 +3459,12 @@ function BusinessScreen({ onBack }) {
   const [phone, setPhone] = useState(bp.phone || '');
   const [email, setEmail] = useState(bp.email || '');
   const [address, setAddress] = useState(bp.address || '');
+  const [hours, setHours] = useState(bp.hours || '');
+  const [website, setWebsite] = useState(bp.website || '');
+  const [fbName, setFbName] = useState((bp.facebook && bp.facebook.name) || '');
+  const [fbLikes, setFbLikes] = useState((bp.facebook && bp.facebook.likes) || '');
+  const [igHandle, setIgHandle] = useState((bp.instagram && bp.instagram.handle) || '');
+  const [igFollowers, setIgFollowers] = useState((bp.instagram && bp.instagram.followers) || '');
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(!!bp.autoReplyEnabled);
   const [autoReplyMessage, setAutoReplyMessage] = useState(bp.autoReplyMessage || '');
   const [catalog, setCatalog] = useState(bp.catalog || []);
@@ -3365,7 +3488,7 @@ function BusinessScreen({ onBack }) {
     try {
       await db.collection('smiletak_users').doc(profile.id).update({
         isBusiness: true,
-        businessProfile: { name: name.trim(), category: category.trim(), description: description.trim(), phone: phone.trim(), email: email.trim(), address: address.trim(), autoReplyEnabled, autoReplyMessage: autoReplyMessage.trim(), catalog },
+        businessProfile: { name: name.trim(), category: category.trim(), description: description.trim(), phone: phone.trim(), email: email.trim(), address: address.trim(), hours: hours.trim(), website: website.trim(), facebook: (fbName.trim() || fbLikes) ? { name: fbName.trim(), likes: fbLikes } : null, instagram: (igHandle.trim() || igFollowers) ? { handle: igHandle.trim(), followers: igFollowers } : null, autoReplyEnabled, autoReplyMessage: autoReplyMessage.trim(), catalog },
         businessVerificationStatus: profile.businessVerificationStatus || 'none'
       });
       toast('Business profile saved', 'success');
@@ -3405,6 +3528,12 @@ function BusinessScreen({ onBack }) {
         h('input', { className: inputCls, placeholder: 'Contact phone', value: phone, onChange: e => setPhone(e.target.value) }),
         h('input', { className: inputCls, placeholder: 'Contact email', value: email, onChange: e => setEmail(e.target.value) }),
         h('input', { className: inputCls, placeholder: 'Address', value: address, onChange: e => setAddress(e.target.value) }),
+        h('input', { className: inputCls, placeholder: 'Business hours (e.g. Open 24 hours)', value: hours, onChange: e => setHours(e.target.value) }),
+        h('input', { className: inputCls, placeholder: 'Website (e.g. https://www.example.com)', value: website, onChange: e => setWebsite(e.target.value) }),
+        h('input', { className: inputCls, placeholder: 'Facebook page name', value: fbName, onChange: e => setFbName(e.target.value) }),
+        h('input', { className: inputCls, placeholder: 'Facebook likes (number, optional)', value: fbLikes, onChange: e => setFbLikes(e.target.value) }),
+        h('input', { className: inputCls, placeholder: 'Instagram handle (e.g. @yourbrand)', value: igHandle, onChange: e => setIgHandle(e.target.value) }),
+        h('input', { className: inputCls, placeholder: 'Instagram followers (number, optional)', value: igFollowers, onChange: e => setIgFollowers(e.target.value) }),
         h('div', { className: 'flex items-center justify-between py-3 border-t border-slate-100 dark:border-ink-800' },
           h('span', { className: 'font-medium text-sm' }, 'Auto-reply to new messages'),
           h('button', { onClick: () => setAutoReplyEnabled(v => !v), className: 'w-11 h-6 rounded-full relative ' + (autoReplyEnabled ? 'bg-brand-600' : 'bg-slate-200') },
@@ -3497,6 +3626,93 @@ function UserProfileScreen({ uid, onBack, onMessage }) {
     }
   };
 
+  const call = () => { const num = (user.businessProfile && user.businessProfile.phone) || user.phone; if (num) window.location.href = 'tel:' + num.replace(/[^\d+]/g, ''); };
+  const share = async () => {
+    const shareData = { title: user.fullName, text: 'Check out ' + user.fullName + ' on SmileTak', url: window.location.href };
+    try {
+      if (navigator.share) await navigator.share(shareData);
+      else { await navigator.clipboard.writeText(shareData.url); toast('Link copied', 'success'); }
+    } catch (e) {}
+  };
+
+  if (user.isBusiness && user.businessProfile) {
+    const bp = user.businessProfile;
+    const rows = [
+      bp.phone && { icon: 'fa-phone', node: h('span', null, bp.phone) },
+      bp.hours && { icon: 'fa-clock', node: h('span', { className: 'flex items-center gap-2' }, h('span', { className: 'text-green-600 font-medium' }, 'Open now'), h('span', null, bp.hours)) },
+      (bp.category) && { icon: 'fa-shapes', node: h('span', null, [bp.category, 'Other Business'].filter(Boolean).join(', ')) },
+      bp.email && { icon: 'fa-envelope', node: h('a', { href: 'mailto:' + bp.email, className: 'text-brand-500' }, bp.email) },
+      bp.website && { icon: 'fa-globe', node: h('a', { href: bp.website, target: '_blank', rel: 'noopener', className: 'text-brand-500' }, bp.website) }
+    ].filter(Boolean);
+
+    return h('div', { className: 'h-full overflow-y-auto no-scrollbar bg-white dark:bg-ink-900' },
+      h('div', { className: 'flex items-center justify-between px-3 py-2.5' },
+        h('button', { onClick: onBack, className: 'text-slate-500 dark:text-slate-300' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+        h('button', { onClick: () => setReporting(true), className: 'text-slate-500 dark:text-slate-300', title: 'More' }, h('i', { className: 'fa-solid fa-ellipsis-vertical' }))
+      ),
+      h('div', { className: 'flex flex-col items-center pb-5' },
+        h(Avatar, { url: user.photoURL, name: user.fullName, size: 110, online: user.online }),
+        h('h2', { className: 'font-extrabold text-xl mt-3 text-center px-6' }, h(NameWithBadges, { name: user.fullName, user })),
+        bp.name && h('p', { className: 'text-sm text-slate-400 text-center px-6 mt-0.5' }, '~' + bp.name),
+        h('div', { className: 'flex items-center gap-8 mt-4' },
+          h('div', { className: 'flex flex-col items-center gap-1.5' },
+            h('button', { onClick: call, className: 'w-12 h-12 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center text-lg' }, h('i', { className: 'fa-solid fa-phone' })),
+            h('span', { className: 'text-xs text-slate-500 dark:text-slate-300' }, 'Call')
+          ),
+          h('div', { className: 'flex flex-col items-center gap-1.5' },
+            h('button', { onClick: share, className: 'w-12 h-12 rounded-full bg-slate-100 dark:bg-ink-700 flex items-center justify-center text-lg' }, h('i', { className: 'fa-solid fa-arrow-turn-up fa-rotate-90' })),
+            h('span', { className: 'text-xs text-slate-500 dark:text-slate-300' }, 'Share')
+          )
+        )
+      ),
+      h('div', { className: 'border-t border-slate-100 dark:border-ink-800' },
+        rows.map((r, i) => h('div', { key: i, className: 'flex items-center gap-4 px-4 py-3.5 border-b border-slate-100 dark:border-ink-800' },
+          h('div', { className: 'w-6 text-slate-400 dark:text-slate-300 text-center' }, h('i', { className: 'fa-solid ' + r.icon })),
+          h('div', { className: 'text-sm' }, r.node)
+        ))
+      ),
+      (bp.facebook && (bp.facebook.name || bp.facebook.likes)) && h('div', { className: 'flex items-center gap-4 px-4 py-3.5 border-b border-slate-100 dark:border-ink-800' },
+        h('div', { className: 'w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm shrink-0' }, h('i', { className: 'fa-brands fa-facebook-f' })),
+        h('div', null,
+          h('p', { className: 'text-sm text-green-600 font-medium' }, bp.facebook.name),
+          h('p', { className: 'text-xs text-slate-400' }, 'Facebook' + (bp.facebook.likes ? ' \u00b7 ' + bp.facebook.likes + ' Likes' : ''))
+        )
+      ),
+      (bp.instagram && (bp.instagram.handle || bp.instagram.followers)) && h('div', { className: 'flex items-center gap-4 px-4 py-3.5 border-b border-slate-100 dark:border-ink-800' },
+        h('div', { className: 'w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 text-white flex items-center justify-center text-sm shrink-0' }, h('i', { className: 'fa-brands fa-instagram' })),
+        h('div', null,
+          h('p', { className: 'text-sm text-green-600 font-medium' }, bp.instagram.handle),
+          h('p', { className: 'text-xs text-slate-400' }, 'Instagram' + (bp.instagram.followers ? ' \u00b7 ' + bp.instagram.followers + ' Followers' : ''))
+        )
+      ),
+      h('div', { className: 'flex items-center gap-4 px-4 py-3.5 mt-2' },
+        h('div', { className: 'w-6 text-slate-400 dark:text-slate-300 text-center' }, h('i', { className: 'fa-solid fa-circle-info' })),
+        h('div', null,
+          h('p', { className: 'text-sm font-medium' }, 'Business Account'),
+          h('p', { className: 'text-xs text-slate-400' }, 'This account uses SmileTak Business')
+        )
+      ),
+      (bp.catalog || []).length > 0 && h('div', { className: 'px-4 mt-4' },
+        h('p', { className: 'text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1' }, 'Products & services'),
+        bp.catalog.map(item => h('div', { key: item.id, className: 'flex items-center justify-between py-2 border-b border-slate-100 dark:border-ink-800' },
+          h('div', null, h('p', { className: 'text-sm font-semibold' }, item.name), item.desc && h('p', { className: 'text-xs text-slate-400' }, item.desc)),
+          item.price && h('p', { className: 'text-sm font-semibold' }, item.price)
+        ))
+      ),
+      h('div', { className: 'px-4 mt-4 space-y-2 pb-8' },
+        h('button', { onClick: message, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm' }, h('i', { className: 'fa-solid fa-message mr-2' }), 'Message'),
+        h('button', { onClick: toggleBlock, className: 'w-full border border-slate-200 dark:border-ink-600 rounded-xl py-2.5 font-semibold text-sm' }, blocked ? 'Unblock user' : 'Block user'),
+        h('button', { onClick: () => setReporting(true), className: 'w-full border border-red-200 text-red-500 rounded-xl py-2.5 font-semibold text-sm' }, 'Report user')
+      ),
+      reporting && h('div', { className: 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4', onClick: () => setReporting(false) },
+        h('div', { className: 'bg-white dark:bg-ink-800 rounded-2xl p-4 w-full max-w-sm', onClick: e => e.stopPropagation() },
+          h('p', { className: 'font-semibold mb-3' }, 'Report this user'),
+          ['Spam', 'Harassment', 'Inappropriate content', 'Impersonation', 'Other'].map(r => h('button', { key: r, className: 'w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-ink-700 text-sm', onClick: () => submitReport(r) }, r))
+        )
+      )
+    );
+  }
+
   return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
     h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
       h('button', { onClick: onBack, className: 'text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
@@ -3507,22 +3723,6 @@ function UserProfileScreen({ uid, onBack, onMessage }) {
       h('h2', { className: 'font-extrabold text-lg mt-3' }, h(NameWithBadges, { name: user.fullName, user })),
       h('p', { className: 'text-sm text-slate-400' }, '@' + user.username),
       h('p', { className: 'text-xs text-slate-400 mt-1' }, user.online ? 'Online' : user.lastSeen ? 'Last seen ' + timeAgo(user.lastSeen) : '')
-    ),
-    user.isBusiness && user.businessProfile && h('div', { className: 'px-4 mb-2' },
-      h('div', { className: 'bg-slate-50 dark:bg-ink-800 rounded-xl p-3' },
-        h('p', { className: 'font-semibold text-sm' }, user.businessProfile.category || 'Business'),
-        user.businessProfile.description && h('p', { className: 'text-xs text-slate-500 mt-1' }, user.businessProfile.description),
-        user.businessProfile.phone && h('p', { className: 'text-xs text-slate-500 mt-1' }, h('i', { className: 'fa-solid fa-phone mr-1' }), user.businessProfile.phone),
-        user.businessProfile.email && h('p', { className: 'text-xs text-slate-500' }, h('i', { className: 'fa-solid fa-envelope mr-1' }), user.businessProfile.email),
-        user.businessProfile.address && h('p', { className: 'text-xs text-slate-500' }, h('i', { className: 'fa-solid fa-location-dot mr-1' }), user.businessProfile.address)
-      ),
-      (user.businessProfile.catalog || []).length > 0 && h('div', { className: 'mt-2' },
-        h('p', { className: 'text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1' }, 'Products & services'),
-        user.businessProfile.catalog.map(item => h('div', { key: item.id, className: 'flex items-center justify-between py-2 border-b border-slate-100 dark:border-ink-800' },
-          h('div', null, h('p', { className: 'text-sm font-semibold' }, item.name), item.desc && h('p', { className: 'text-xs text-slate-400' }, item.desc)),
-          item.price && h('p', { className: 'text-sm font-semibold' }, item.price)
-        ))
-      )
     ),
     h('div', { className: 'px-4' },
       h(FieldBlock, { label: 'Bio', value: user.bio || 'No bio yet' }),
