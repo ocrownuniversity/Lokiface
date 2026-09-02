@@ -319,10 +319,21 @@ function logAdImpression(ad) {
   loggedAdImpressions.add(ad.id);
   db.collection('smiletak_adCampaigns').doc(ad.id).update({ impressions: FieldValue.increment(1) }).catch(() => {});
 }
+// Ad link URLs are free-text fields advertisers/admins type in. Without a
+// scheme (e.g. "zmonie.com" instead of "https://zmonie.com"), window.open
+// treats it as a path relative to the current page — so it would open
+// https://lokiface.com/zmonie.com, a dead route inside this app, instead of
+// the advertiser's actual site. This normalizes it before ever opening it.
+function normalizeExternalUrl(url) {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (/^(https?:|mailto:|tel:)/i.test(trimmed)) return trimmed;
+  return 'https://' + trimmed;
+}
 function logAdClick(ad) {
   if (!ad) return;
   db.collection('smiletak_adCampaigns').doc(ad.id).update({ clicks: FieldValue.increment(1) }).catch(() => {});
-  if (ad.targetURL) window.open(ad.targetURL, '_blank');
+  if (ad.targetURL) window.open(normalizeExternalUrl(ad.targetURL), '_blank');
 }
 function useAd(type) {
   const [ad, setAd] = useState(null);
@@ -2221,17 +2232,23 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS });
+      // Pick the best-quality Opus container this browser actually supports
+      // instead of leaving MediaRecorder's format/bitrate to chance, which is
+      // where a lot of "voice notes sound garbled" reports come from.
+      const preferredTypes = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/mp4'];
+      const mimeType = preferredTypes.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
+      const rec = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 96000 } : undefined);
       mediaRecorder.current = rec;
       audioChunks.current = [];
       rec.ondataavailable = e => audioChunks.current.push(e.data);
       rec.onstop = async () => {
-        const blob = new Blob(audioChunks.current, { type: 'audio/webm' });
+        const blob = new Blob(audioChunks.current, { type: rec.mimeType || 'audio/webm' });
         stream.getTracks().forEach(t => t.stop());
         setUploadPct(0);
         try {
-          const url = await uploadFile('smiletak/voiceNotes/' + chatId + '/' + Date.now() + '.webm', blob, p => setUploadPct(p));
+          const ext = (rec.mimeType || '').includes('mp4') ? 'm4a' : (rec.mimeType || '').includes('ogg') ? 'ogg' : 'webm';
+          const url = await uploadFile('smiletak/voiceNotes/' + chatId + '/' + Date.now() + '.' + ext, blob, p => setUploadPct(p));
           await sendMessage({ type: 'voice', mediaURL: url, text: '' });
         } catch (err) { toast('Voice note failed: ' + err.message, 'error'); }
         setUploadPct(null);
@@ -4178,7 +4195,7 @@ function AdvertiseScreen({ onBack }) {
       if (proofFile) proofURL = await uploadFile('smiletak/payment-proofs/' + profile.id + '/' + Date.now() + '_' + proofFile.name, proofFile);
       await db.collection('smiletak_paymentRequests').add({
         uid: profile.id, type: 'ad', advertiserName: advertiserName.trim(), placements, mediaType,
-        mediaURL, headline: headline.trim(), body: body.trim(), targetURL: targetURL.trim(), days: Number(days),
+        mediaURL, headline: headline.trim(), body: body.trim(), targetURL: normalizeExternalUrl(targetURL), days: Number(days),
         amount: price, currency: pricing.currency || '₦',
         reference: reference.trim(), proofURL, status: 'pending', createdAt: FieldValue.serverTimestamp()
       });
@@ -4896,7 +4913,7 @@ function AdCampaignsAdmin({ ads, onToggle, onDelete }) {
       }
       await db.collection('smiletak_adCampaigns').add({
         advertiserName: form.advertiserName.trim(), type: form.type, mediaType: form.mediaType,
-        mediaURL, headline: form.headline.trim(), body: form.body.trim(), targetURL: form.targetURL.trim(),
+        mediaURL, headline: form.headline.trim(), body: form.body.trim(), targetURL: normalizeExternalUrl(form.targetURL),
         startAt: form.startAt ? Timestamp.fromDate(new Date(form.startAt)) : Timestamp.now(),
         endAt: form.endAt ? Timestamp.fromDate(new Date(form.endAt)) : Timestamp.fromMillis(Date.now() + 30 * 24 * 3600 * 1000),
         enabled: true, impressions: 0, clicks: 0, amountPaid: Number(form.amountPaid) || 0,
@@ -4973,11 +4990,20 @@ function StatCard({ label, value }) {
 const RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
     { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
     { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
     { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
   ]
 };
+// Applied to every microphone getUserMedia() call (calls, group calls, voice
+// notes) so the browser actively cancels echo/feedback and normalizes mic
+// gain instead of leaving that entirely to device defaults, which is where
+// most of the "garbled / hearing myself" complaints on calls come from.
+const MIC_CONSTRAINTS = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
 const CallCtx = createContext(null);
 function useCall() { return useContext(CallCtx); }
 
@@ -5185,7 +5211,7 @@ function CallProvider({ children }) {
   const startCall = async (other, type) => {
     if (!other || callStatus !== 'idle') return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS, video: type === 'video' });
       localStreamRef.current = stream; setLocalStream(stream);
       const callRef = db.collection('smiletak_calls').doc();
       const callInfo = { id: callRef.id, callerId: profile.id, calleeId: other.id, type };
@@ -5230,7 +5256,7 @@ function CallProvider({ children }) {
   const acceptCall = async () => {
     if (!call) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: call.type === 'video' });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS, video: call.type === 'video' });
       localStreamRef.current = stream; setLocalStream(stream);
       const pc = setupPeer(call.id, false);
       stream.getTracks().forEach(t => pc.addTrack(t, stream));
@@ -5418,7 +5444,7 @@ function CallProvider({ children }) {
 
   const startGroupCall = async (otherUids, type, groupId, groupName) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS, video: type === 'video' });
       groupLocalStream.current = stream;
       const ref = db.collection('smiletak_groupCalls').doc();
       const participantIds = [profile.id].concat(otherUids);
@@ -5433,7 +5459,7 @@ function CallProvider({ children }) {
     if (!incomingGroupCall) return;
     const { id: callId, type, groupName } = incomingGroupCall;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS, video: type === 'video' });
       groupLocalStream.current = stream;
       const patch = {}; patch['responses.' + profile.id] = 'joined';
       await db.collection('smiletak_groupCalls').doc(callId).update(patch);
