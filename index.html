@@ -71,6 +71,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fix-webm-duration@1.0.6/fix-webm-duration.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -2107,12 +2108,16 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
   }, [chatId, profile.id]);
   const [forwardMsg, setForwardMsg] = useState(null);
   const [recording, setRecording] = useState(false);
+  const [recordSecs, setRecordSecs] = useState(0);
   const [uploadPct, setUploadPct] = useState(null);
   const bottomRef = useRef(null);
   const fileRef = useRef(null);
   const typingTimeout = useRef(null);
   const mediaRecorder = useRef(null);
   const audioChunks = useRef([]);
+  const recordStartedAt = useRef(null);
+  const recordTimerId = useRef(null);
+  const recordingStream = useRef(null);
 
   useEffect(() => {
     const unsub = db.collection('smiletak_chats').doc(chatId).onSnapshot(s => setChat(s.exists ? s.data() : null));
@@ -2233,6 +2238,7 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS });
+      recordingStream.current = stream;
       // Pick the best-quality Opus container this browser actually supports
       // instead of leaving MediaRecorder's format/bitrate to chance, which is
       // where a lot of "voice notes sound garbled" reports come from.
@@ -2241,23 +2247,55 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
       const rec = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 96000 } : undefined);
       mediaRecorder.current = rec;
       audioChunks.current = [];
-      rec.ondataavailable = e => audioChunks.current.push(e.data);
+      rec.ondataavailable = e => { if (e.data && e.data.size > 0) audioChunks.current.push(e.data); };
       rec.onstop = async () => {
-        const blob = new Blob(audioChunks.current, { type: rec.mimeType || 'audio/webm' });
         stream.getTracks().forEach(t => t.stop());
+        recordingStream.current = null;
+        if (rec.__cancelled) { audioChunks.current = []; return; }
+        const durationMs = Date.now() - recordStartedAt.current;
+        // Sub-second taps are almost always an accidental tap, not a real note.
+        if (durationMs < 800) { audioChunks.current = []; toast('Recording too short', 'info'); return; }
+        const rawType = rec.mimeType || 'audio/webm';
+        let blob = new Blob(audioChunks.current, { type: rawType });
+        // Chrome's webm muxer omits the file's Duration header for
+        // MediaRecorder output, which is why played-back voice notes were
+        // showing "0:00 / 0:00" and couldn't be seeked/stopped by their own
+        // scrubber. This patches the correct duration into the file so
+        // playback controls work properly.
+        if (typeof ysFixWebmDuration === 'function' && rawType.includes('webm')) {
+          try { blob = await new Promise(res => ysFixWebmDuration(blob, durationMs, res)); } catch (e) { /* ship the unpatched blob rather than fail the whole send */ }
+        }
         setUploadPct(0);
         try {
-          const ext = (rec.mimeType || '').includes('mp4') ? 'm4a' : (rec.mimeType || '').includes('ogg') ? 'ogg' : 'webm';
+          const ext = rawType.includes('mp4') ? 'm4a' : rawType.includes('ogg') ? 'ogg' : 'webm';
           const url = await uploadFile('smiletak/voiceNotes/' + chatId + '/' + Date.now() + '.' + ext, blob, p => setUploadPct(p));
-          await sendMessage({ type: 'voice', mediaURL: url, text: '' });
+          await sendMessage({ type: 'voice', mediaURL: url, durationSecs: Math.round(durationMs / 1000), text: '' });
         } catch (err) { toast('Voice note failed: ' + err.message, 'error'); }
         setUploadPct(null);
       };
       rec.start();
+      recordStartedAt.current = Date.now();
+      setRecordSecs(0);
+      recordTimerId.current = setInterval(() => setRecordSecs(s => s + 1), 1000);
       setRecording(true);
     } catch (e) { toast('Microphone permission denied', 'error'); }
   };
-  const stopRecording = () => { mediaRecorder.current && mediaRecorder.current.stop(); setRecording(false); };
+  const stopAndSendRecording = () => {
+    if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') mediaRecorder.current.stop();
+    if (recordTimerId.current) { clearInterval(recordTimerId.current); recordTimerId.current = null; }
+    setRecording(false);
+  };
+  const cancelRecording = () => {
+    if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+      mediaRecorder.current.__cancelled = true;
+      mediaRecorder.current.stop();
+    } else if (recordingStream.current) {
+      recordingStream.current.getTracks().forEach(t => t.stop());
+    }
+    if (recordTimerId.current) { clearInterval(recordTimerId.current); recordTimerId.current = null; }
+    setRecording(false);
+  };
+  useEffect(() => () => { if (recordTimerId.current) clearInterval(recordTimerId.current); }, []);
 
   const deleteForMe = (m) => db.collection('smiletak_chats').doc(chatId).collection('messages').doc(m.id).update({ deletedFor: FieldValue.arrayUnion(profile.id) });
   const deleteForEveryone = (m) => db.collection('smiletak_chats').doc(chatId).collection('messages').doc(m.id).update({ deletedForEveryone: true, text: '', mediaURL: null });
@@ -2398,14 +2436,19 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
       h('input', { type: 'file', ref: fileRef, className: 'hidden', onChange: onPickFile }),
       h('button', { className: 'text-slate-400 px-1', onClick: () => fileRef.current.click() }, h('i', { className: 'fa-solid fa-paperclip text-lg' })),
       recording
-        ? h('div', { className: 'flex-1 flex items-center gap-2 text-red-500 text-sm px-2' }, h('i', { className: 'fa-solid fa-microphone animate-pulse' }), 'Recording…')
+        ? h('div', { className: 'flex-1 flex items-center gap-2 text-red-500 text-sm px-2' },
+            h('button', { onClick: cancelRecording, className: 'text-slate-400 px-1', title: 'Cancel' }, h('i', { className: 'fa-solid fa-trash' })),
+            h('i', { className: 'fa-solid fa-microphone animate-pulse' }),
+            h('span', null, 'Recording… ', Math.floor(recordSecs / 60) + ':' + String(recordSecs % 60).padStart(2, '0'))
+          )
         : h('input', { className: 'flex-1 px-3 py-2 rounded-full bg-slate-100 dark:bg-ink-700 text-sm focus:outline-none', placeholder: 'Type a message', value: text, onChange: onTextChange, onKeyDown: e => e.key === 'Enter' && onSend() }),
       text.trim()
         ? h('button', { onClick: onSend, className: 'w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center' }, h('i', { className: 'fa-solid fa-paper-plane text-sm' }))
         : h('button', {
-            onMouseDown: startRecording, onMouseUp: stopRecording, onTouchStart: startRecording, onTouchEnd: stopRecording,
+            onClick: recording ? stopAndSendRecording : startRecording,
+            title: recording ? 'Stop and send' : 'Record a voice note',
             className: 'w-9 h-9 rounded-full flex items-center justify-center ' + (recording ? 'bg-red-500 text-white' : 'bg-slate-100 dark:bg-ink-700 text-slate-500')
-          }, h('i', { className: 'fa-solid fa-microphone text-sm' }))
+          }, h('i', { className: 'fa-solid ' + (recording ? 'fa-paper-plane' : 'fa-microphone') + ' text-sm' }))
     ),
     menuMsg && h(MessageMenu, {
       m: menuMsg, mine: menuMsg.senderId === profile.id && !menuMsg.isAutoReply, starred: isStarred(menuMsg),
