@@ -762,6 +762,7 @@ function AppShell() {
   const openProfile = (uid) => { const v = { screen: 'profile', uid }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openPremium = () => { const v = { screen: 'premium' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openBusiness = () => { const v = { screen: 'business' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
+  const openAdvertise = () => { const v = { screen: 'advertise' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openGroup = (groupId, group) => { const v = { screen: 'group', groupId, group }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openNewGroup = () => { const v = { screen: 'newGroup' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openNewChat = () => { const v = { screen: 'newChat' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
@@ -834,11 +835,15 @@ function AppShell() {
   if (view.screen === 'exploreChannels') {
     return h(ExploreChannelsScreen, { onBack: goBack, onOpenChannel: openChannel });
   }
+  if (view.screen === 'advertise') {
+    return h(AdvertiseScreen, { onBack: goBack });
+  }
   if (view.screen === 'settings') {
     return h(SettingsScreen, {
       onBack: goBack,
       onOpenPremium: openPremium,
       onOpenBusiness: openBusiness,
+      onOpenAdvertise: openAdvertise,
       onOpenAccount: openAccount,
       onOpenLinkedDevices: openLinkedDevices,
       onOpenAppearance: openAppearanceSettings,
@@ -1513,6 +1518,7 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
       h('button', { className: 'text-slate-400 px-2', onClick: () => callGroup('audio') }, h('i', { className: 'fa-solid fa-phone' })),
       h('button', { className: 'text-slate-400 px-2', onClick: () => callGroup('video') }, h('i', { className: 'fa-solid fa-video' }))
     ),
+    h(AdBanner, { type: 'chat_window_banner' }),
     h('div', { ref: scrollRef, className: 'flex-1 overflow-y-auto no-scrollbar px-3 py-3' },
       messages.map(m => m.type === 'call'
         ? h(CallLogRow, { key: m.id, m })
@@ -2341,6 +2347,7 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
     search !== null && h('div', { className: 'px-3 py-2 bg-white dark:bg-ink-800 border-b border-slate-100 dark:border-ink-700' },
       h('input', { autoFocus: true, className: 'w-full px-3 py-1.5 rounded-full bg-slate-100 dark:bg-ink-700 text-sm focus:outline-none', placeholder: 'Search in this chat', value: search, onChange: e => setSearch(e.target.value) })
     ),
+    h(AdBanner, { type: 'chat_window_banner' }),
     h('div', { className: 'flex-1 overflow-y-auto no-scrollbar px-3 py-2' },
       !messagesLoaded && h(MessageListSkeleton, {}),
       messagesLoaded && visible.length === 0 && !search && h('div', { className: 'h-full flex flex-col items-center justify-center text-center px-8' },
@@ -3560,7 +3567,7 @@ function SettingsRow({ icon, title, subtitle, onClick }) {
     )
   );
 }
-function SettingsScreen({ onBack, onOpenPremium, onOpenBusiness, onOpenAccount, onOpenLinkedDevices, onOpenAppearance, onOpenNotifications, onOpenPrivacy, onOpenLists, onOpenChats, onOpenStorage, onOpenParentalControls, onOpenAccessibility, onOpenLanguage, onOpenHelp, onOpenQrCode }) {
+function SettingsScreen({ onBack, onOpenPremium, onOpenBusiness, onOpenAdvertise, onOpenAccount, onOpenLinkedDevices, onOpenAppearance, onOpenNotifications, onOpenPrivacy, onOpenLists, onOpenChats, onOpenStorage, onOpenParentalControls, onOpenAccessibility, onOpenLanguage, onOpenHelp, onOpenQrCode }) {
   const { profile } = useAuth();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const closeLogoutConfirm = useBackClose(confirmingLogout, () => setConfirmingLogout(false));
@@ -3570,6 +3577,7 @@ function SettingsScreen({ onBack, onOpenPremium, onOpenBusiness, onOpenAccount, 
 
   const rows = [
     { icon: 'fa-gem', title: 'Subscriptions', subtitle: 'Explore premium benefits', onClick: onOpenPremium },
+    { icon: 'fa-bullhorn', title: 'Advertise on SmileTak', subtitle: 'Promote your business in Status or Chats', onClick: onOpenAdvertise },
     { icon: 'fa-laptop-mobile', title: 'Linked devices', subtitle: 'Use SmileTak on other devices', onClick: onOpenLinkedDevices },
     { icon: 'fa-key', title: 'Account', subtitle: 'Security notifications, change number', onClick: onOpenAccount },
     { icon: 'fa-lock', title: 'Privacy', subtitle: 'Blocked accounts, disappearing messages', onClick: onOpenPrivacy },
@@ -4105,6 +4113,151 @@ function PremiumScreen({ onBack }) {
   );
 }
 
+/* ============================== SELF-SERVE ADVERTISING ==============================
+   Any user can submit an ad here and choose exactly where it should show:
+   Status, Chat list, Inside chats, or Discover. Same pay-by-transfer + admin
+   review flow as Premium. On approval, the admin action creates one
+   smiletak_adCampaigns doc per chosen placement (see AdminPanel.approvePayment). */
+const AD_PLACEMENTS = [
+  { value: 'sponsored_status', label: 'Status', hint: 'Shown as a card in the Updates/Status feed' },
+  { value: 'chatlist_banner', label: 'Chats list', hint: 'Banner at the top of the Chats tab' },
+  { value: 'chat_window_banner', label: 'Inside chats', hint: 'Banner inside open 1:1 and group chats' },
+  { value: 'in_app_banner', label: 'Discover', hint: 'Banner on the Discover / search screen' }
+];
+function AdvertiseScreen({ onBack }) {
+  const { profile } = useAuth();
+  const toast = useToast();
+  const [pricing, setPricing] = useState({ adPricePerDay: 200, currency: '₦' });
+  const [account, setAccount] = useState(null);
+  const [myRequests, setMyRequests] = useState([]);
+  const [placements, setPlacements] = useState([]);
+  const [advertiserName, setAdvertiserName] = useState(profile.fullName || '');
+  const [mediaType, setMediaType] = useState('text');
+  const [file, setFile] = useState(null);
+  const [headline, setHeadline] = useState('');
+  const [body, setBody] = useState('');
+  const [targetURL, setTargetURL] = useState('');
+  const [days, setDays] = useState(7);
+  const [reference, setReference] = useState('');
+  const [proofFile, setProofFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const fileRef = useRef(null);
+  const proofRef = useRef(null);
+
+  useEffect(() => {
+    db.collection('smiletak_settings').doc('pricing').get().then(s => { if (s.exists) setPricing(p => Object.assign({}, p, s.data())); }).catch(() => {});
+    db.collection('smiletak_settings').doc('paymentAccount').get().then(s => setAccount(s.exists ? s.data() : null)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const unsub = db.collection('smiletak_paymentRequests').where('uid', '==', profile.id).where('type', '==', 'ad').onSnapshot(snap => {
+      const rows = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+      rows.sort((a, b) => (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0));
+      setMyRequests(rows);
+    });
+    return unsub;
+  }, [profile.id]);
+
+  const togglePlacement = (val) => setPlacements(p => p.includes(val) ? p.filter(x => x !== val) : p.concat(val));
+  const price = pricing.adPricePerDay * placements.length * (Number(days) || 0);
+
+  const submit = async () => {
+    if (!placements.length) return toast('Choose at least one placement', 'error');
+    if (!advertiserName.trim()) return toast('Enter a business/advertiser name', 'error');
+    if (mediaType === 'text' && !headline.trim()) return toast('Enter a headline for a text ad', 'error');
+    if ((mediaType === 'image' || mediaType === 'video') && !file) return toast('Attach your ad image/video', 'error');
+    if (!Number(days) || Number(days) < 1) return toast('Enter how many days to run the ad', 'error');
+    if (!reference.trim()) return toast('Enter your payment reference / teller number', 'error');
+    setSubmitting(true);
+    try {
+      let mediaURL = null;
+      if (file) mediaURL = await uploadFile('smiletak/ad-requests/' + profile.id + '/' + Date.now() + '_' + file.name, file);
+      let proofURL = null;
+      if (proofFile) proofURL = await uploadFile('smiletak/payment-proofs/' + profile.id + '/' + Date.now() + '_' + proofFile.name, proofFile);
+      await db.collection('smiletak_paymentRequests').add({
+        uid: profile.id, type: 'ad', advertiserName: advertiserName.trim(), placements, mediaType,
+        mediaURL, headline: headline.trim(), body: body.trim(), targetURL: targetURL.trim(), days: Number(days),
+        amount: price, currency: pricing.currency || '₦',
+        reference: reference.trim(), proofURL, status: 'pending', createdAt: FieldValue.serverTimestamp()
+      });
+      toast('Submitted — an admin will review and activate your ad', 'success');
+      setHeadline(''); setBody(''); setTargetURL(''); setReference(''); setFile(null); setProofFile(null); setPlacements([]);
+    } catch (e) { toast('Could not submit: ' + e.message, 'error'); }
+    setSubmitting(false);
+  };
+
+  return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
+    h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+      h('button', { onClick: onBack, className: 'text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('p', { className: 'font-semibold' }, 'Advertise on SmileTak')
+    ),
+    h('div', { className: 'p-4' },
+      h('p', { className: 'text-sm text-slate-500 dark:text-slate-400 mb-4' }, 'Promote your business to SmileTak users. Pick where your ad should appear, submit payment, and an admin will activate it.'),
+
+      h('p', { className: 'font-semibold text-sm mb-2' }, 'Where should it show?'),
+      h('div', { className: 'space-y-2 mb-4' },
+        AD_PLACEMENTS.map(pl => h('label', {
+          key: pl.value,
+          className: 'flex items-center gap-3 rounded-xl border p-3 cursor-pointer ' + (placements.includes(pl.value) ? 'border-brand-600 bg-brand-50 dark:bg-brand-500/10' : 'border-slate-200 dark:border-ink-600')
+        },
+          h('input', { type: 'checkbox', checked: placements.includes(pl.value), onChange: () => togglePlacement(pl.value), className: 'w-4 h-4 accent-brand-600' }),
+          h('div', { className: 'min-w-0' },
+            h('p', { className: 'text-sm font-semibold' }, pl.label),
+            h('p', { className: 'text-xs text-slate-400' }, pl.hint)
+          )
+        ))
+      ),
+
+      h('p', { className: 'font-semibold text-sm mb-2' }, 'How many days should it run?'),
+      h('input', { className: inputCls, type: 'number', min: 1, value: days, onChange: e => setDays(e.target.value) }),
+
+      h('p', { className: 'font-semibold text-sm mt-4 mb-2' }, 'Your ad')	,
+      h('input', { className: inputCls, placeholder: 'Business / advertiser name', value: advertiserName, onChange: e => setAdvertiserName(e.target.value) }),
+      h('select', { className: inputCls, value: mediaType, onChange: e => { setMediaType(e.target.value); setFile(null); } },
+        h('option', { value: 'text' }, 'Text only'),
+        h('option', { value: 'image' }, 'Image'),
+        h('option', { value: 'video' }, 'Video')
+      ),
+      (mediaType === 'image' || mediaType === 'video') && h(React.Fragment, null,
+        h('input', { type: 'file', accept: mediaType + '/*', ref: fileRef, className: 'hidden', onChange: e => setFile(e.target.files[0]) }),
+        h('button', { className: 'w-full mb-3 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-600 text-sm text-left', onClick: () => fileRef.current.click() }, file ? file.name : h('span', { className: 'text-slate-400' }, 'Attach ' + mediaType))
+      ),
+      h('input', { className: inputCls, placeholder: 'Headline', value: headline, onChange: e => setHeadline(e.target.value) }),
+      h('textarea', { className: inputCls, rows: 2, placeholder: 'Body text (optional)', value: body, onChange: e => setBody(e.target.value) }),
+      h('input', { className: inputCls, placeholder: 'Link to open when tapped (optional)', value: targetURL, onChange: e => setTargetURL(e.target.value) }),
+
+      h('div', { className: 'bg-slate-50 dark:bg-ink-800 rounded-xl p-3 my-4 text-sm' },
+        h('p', { className: 'flex items-center justify-between' }, h('span', null, placements.length + ' placement' + (placements.length === 1 ? '' : 's') + ' × ' + (Number(days) || 0) + ' day' + (Number(days) === 1 ? '' : 's')), h('span', { className: 'font-bold' }, (pricing.currency || '₦') + price))
+      ),
+
+      account && h('div', { className: 'bg-slate-50 dark:bg-ink-800 rounded-xl p-3 mb-4 text-sm' },
+        h('p', { className: 'font-semibold mb-1' }, 'Pay by bank transfer'),
+        h('p', null, 'Bank: ', account.bankName),
+        h('p', null, 'Account number: ', account.accountNumber),
+        h('p', null, 'Account name: ', account.accountName),
+        account.instructions && h('p', { className: 'text-xs text-slate-400 mt-1' }, account.instructions),
+        h('p', { className: 'text-xs text-slate-400 mt-2' }, 'Transfer ' + (pricing.currency || '₦') + price + ' then submit your reference below.')
+      ),
+      !account && h('p', { className: 'text-xs text-red-500 mb-4' }, 'Payment account not set up yet — contact the admin.'),
+      h('input', { className: inputCls, placeholder: 'Payment reference / teller number', value: reference, onChange: e => setReference(e.target.value) }),
+      h('input', { type: 'file', accept: 'image/*', ref: proofRef, className: 'hidden', onChange: e => setProofFile(e.target.files[0]) }),
+      h('button', { className: 'w-full mb-3 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-600 text-sm text-left', onClick: () => proofRef.current.click() }, proofFile ? proofFile.name : h('span', { className: 'text-slate-400' }, 'Attach payment screenshot (optional)')),
+      h('button', { onClick: submit, disabled: submitting, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm' }, submitting ? 'Submitting…' : 'I have paid — submit for review'),
+
+      myRequests.length > 0 && h('div', { className: 'mt-6' },
+        h('p', { className: 'font-semibold text-sm mb-2' }, 'Your ad submissions'),
+        myRequests.map(r => h('div', { key: r.id, className: 'py-2.5 border-b border-slate-100 dark:border-ink-800 text-sm' },
+          h('p', { className: 'flex items-center justify-between' },
+            h('span', { className: 'font-semibold' }, r.headline || r.advertiserName),
+            h('span', { className: 'text-xs font-semibold px-2 py-1 rounded-full ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700') }, r.status)
+          ),
+          h('p', { className: 'text-xs text-slate-400' }, (r.placements || []).map(p => (AD_PLACEMENTS.find(a => a.value === p) || {}).label || p).join(', '), ' · ', r.days, ' days · ', (r.currency || '₦') + r.amount, ' · ', timeAgo(r.createdAt))
+        ))
+      )
+    )
+  );
+}
+
 /* ============================== BUSINESS ACCOUNT ============================== */
 function BusinessScreen({ onBack }) {
   const { profile } = useAuth();
@@ -4494,7 +4647,7 @@ function AdminPanel() {
   const [paymentReqs, setPaymentReqs] = useState([]);
   const [bizReqs, setBizReqs] = useState([]);
   const [ads, setAds] = useState([]);
-  const [settingsForm, setSettingsForm] = useState({ bankName: '', accountNumber: '', accountName: '', instructions: '', premiumMonthly: 1000, premiumYearly: 10000, businessPremiumMonthly: 3000, businessPremiumYearly: 30000, currency: '₦' });
+  const [settingsForm, setSettingsForm] = useState({ bankName: '', accountNumber: '', accountName: '', instructions: '', premiumMonthly: 1000, premiumYearly: 10000, businessPremiumMonthly: 3000, businessPremiumYearly: 30000, adPricePerDay: 200, currency: '₦' });
 
   useEffect(() => {
     db.collection('smiletak_users').get().then(s => {
@@ -4564,6 +4717,25 @@ function AdminPanel() {
 
   const approvePayment = async (r) => {
     try {
+      if (r.type === 'ad') {
+        // Self-serve ad request: create one live campaign per placement the
+        // user picked, all sharing the same creative. Revenue is recorded
+        // once (on the first campaign) so the admin's totals aren't inflated
+        // by having multiple placements from a single payment.
+        const startAt = Timestamp.now();
+        const endAt = Timestamp.fromMillis(Date.now() + (Number(r.days) || 1) * 24 * 3600 * 1000);
+        const placements = r.placements && r.placements.length ? r.placements : ['chatlist_banner'];
+        await Promise.all(placements.map((type, i) => db.collection('smiletak_adCampaigns').add({
+          advertiserName: r.advertiserName || 'Advertiser', type, mediaType: r.mediaType || 'text',
+          mediaURL: r.mediaURL || null, headline: r.headline || '', body: r.body || '', targetURL: r.targetURL || '',
+          startAt, endAt, enabled: true, impressions: 0, clicks: 0,
+          amountPaid: i === 0 ? (Number(r.amount) || 0) : 0,
+          ownerUid: r.uid, requestId: r.id, createdAt: FieldValue.serverTimestamp()
+        })));
+        await db.collection('smiletak_paymentRequests').doc(r.id).update({ status: 'approved', reviewedAt: FieldValue.serverTimestamp(), reviewedBy: profile.id });
+        toast('Approved — ad campaign is now live', 'success');
+        return;
+      }
       const days = r.plan === 'yearly' ? 365 : 30;
       const expires = Timestamp.fromMillis(Date.now() + days * 24 * 3600 * 1000);
       if (r.type === 'business') {
@@ -4598,7 +4770,7 @@ function AdminPanel() {
   const saveSettings = async () => {
     try {
       await db.collection('smiletak_settings').doc('paymentAccount').set({ bankName: settingsForm.bankName || '', accountNumber: settingsForm.accountNumber || '', accountName: settingsForm.accountName || '', instructions: settingsForm.instructions || '' });
-      await db.collection('smiletak_settings').doc('pricing').set({ premiumMonthly: Number(settingsForm.premiumMonthly) || 0, premiumYearly: Number(settingsForm.premiumYearly) || 0, businessPremiumMonthly: Number(settingsForm.businessPremiumMonthly) || 0, businessPremiumYearly: Number(settingsForm.businessPremiumYearly) || 0, currency: settingsForm.currency || '₦' });
+      await db.collection('smiletak_settings').doc('pricing').set({ premiumMonthly: Number(settingsForm.premiumMonthly) || 0, premiumYearly: Number(settingsForm.premiumYearly) || 0, businessPremiumMonthly: Number(settingsForm.businessPremiumMonthly) || 0, businessPremiumYearly: Number(settingsForm.businessPremiumYearly) || 0, adPricePerDay: Number(settingsForm.adPricePerDay) || 0, currency: settingsForm.currency || '₦' });
       toast('Settings saved', 'success');
     } catch (e) { toast(e.message, 'error'); }
   };
@@ -4670,6 +4842,9 @@ function AdminPanel() {
         h('p', { className: 'font-semibold text-sm mt-4 mb-1' }, 'Business Premium pricing'),
         h('input', { className: inputCls, type: 'number', placeholder: 'Monthly price', value: settingsForm.businessPremiumMonthly, onChange: e => setSettingsForm(f => Object.assign({}, f, { businessPremiumMonthly: e.target.value })) }),
         h('input', { className: inputCls, type: 'number', placeholder: 'Yearly price', value: settingsForm.businessPremiumYearly, onChange: e => setSettingsForm(f => Object.assign({}, f, { businessPremiumYearly: e.target.value })) }),
+        h('p', { className: 'font-semibold text-sm mt-4 mb-1' }, 'Self-serve ad pricing'),
+        h('input', { className: inputCls, type: 'number', placeholder: 'Price per placement per day', value: settingsForm.adPricePerDay, onChange: e => setSettingsForm(f => Object.assign({}, f, { adPricePerDay: e.target.value })) }),
+        h('p', { className: 'text-xs text-slate-400 -mt-1 mb-2' }, 'Charged per placement the user selects (e.g. Status + Chats = 2x this) × number of days.'),
         h('button', { onClick: saveSettings, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm mt-2' }, 'Save settings')
       )
     )
@@ -4678,11 +4853,22 @@ function AdminPanel() {
 function PaymentRequestRow({ r, onApprove, onReject }) {
   const [user, setUser] = useState(null);
   useEffect(() => { db.collection('smiletak_users').doc(r.uid).get().then(s => setUser(s.exists ? s.data() : null)); }, [r.uid]);
+  const badgeLabel = r.type === 'ad' ? 'Ad' : r.type === 'business' ? 'Business Premium' : 'Premium';
+  const badgeClass = r.type === 'ad' ? 'bg-violet-100 text-violet-700' : r.type === 'business' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700';
   return h('div', { className: 'py-2.5 border-b border-slate-100 dark:border-ink-800' },
     h('p', { className: 'text-sm font-semibold' },
-      h('span', { className: 'mr-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ' + (r.type === 'business' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700') }, r.type === 'business' ? 'Business Premium' : 'Premium'),
-      (user ? user.fullName : r.uid), r.businessName ? ' (' + r.businessName + ')' : '', ' · ', r.plan === 'yearly' ? 'Yearly' : 'Monthly', ' · ', (r.currency || '₦') + r.amount,
+      h('span', { className: 'mr-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ' + badgeClass }, badgeLabel),
+      (user ? user.fullName : r.uid),
+      r.type === 'ad' ? (r.advertiserName ? ' (' + r.advertiserName + ')' : '') : (r.businessName ? ' (' + r.businessName + ')' : ''),
+      ' · ',
+      r.type === 'ad' ? (r.days + ' day' + (r.days === 1 ? '' : 's')) : (r.plan === 'yearly' ? 'Yearly' : 'Monthly'),
+      ' · ', (r.currency || '₦') + r.amount,
       h('span', { className: 'ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700') }, r.status)),
+    r.type === 'ad' && h('p', { className: 'text-xs text-slate-500 mt-0.5' },
+      (r.placements || []).map(p => (AD_PLACEMENTS.find(a => a.value === p) || {}).label || p).join(', '),
+      r.headline ? ' · "' + r.headline + '"' : ''
+    ),
+    r.type === 'ad' && r.mediaURL && h('a', { href: r.mediaURL, target: '_blank', rel: 'noreferrer', className: 'text-xs text-brand-600 underline mr-3' }, 'View ad media'),
     h('p', { className: 'text-xs text-slate-400' }, 'Ref: ', r.reference, ' · ', timeAgo(r.createdAt)),
     r.proofURL && h('a', { href: r.proofURL, target: '_blank', rel: 'noreferrer', className: 'text-xs text-brand-600 underline' }, 'View proof'),
     r.status === 'pending' && h('div', { className: 'flex gap-2 mt-1' },
@@ -4737,7 +4923,8 @@ function AdCampaignsAdmin({ ads, onToggle, onDelete }) {
       h('option', { value: 'sponsored_status' }, 'Sponsored status'),
       h('option', { value: 'sponsored_post' }, 'Sponsored post'),
       h('option', { value: 'chatlist_banner' }, 'Chat list banner'),
-      h('option', { value: 'in_app_banner' }, 'In-app banner')
+      h('option', { value: 'chat_window_banner' }, 'Inside chat banner'),
+      h('option', { value: 'in_app_banner' }, 'In-app banner (Discover)')
     ),
     h('select', { className: inputCls, value: form.mediaType, onChange: e => setForm(f => Object.assign({}, f, { mediaType: e.target.value })) },
       h('option', { value: 'text' }, 'Text only'),
