@@ -129,6 +129,13 @@
   .no-scrollbar::-webkit-scrollbar{display:none;}
   @keyframes spin{to{transform:rotate(360deg)}}
   .spinner{animation:spin .7s linear infinite;}
+  @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+  .skel{background:linear-gradient(90deg,#e5e9ef 25%,#f1f4f8 37%,#e5e9ef 63%);background-size:800px 100%;animation:shimmer 1.4s ease-in-out infinite;border-radius:8px;}
+  @keyframes pinflash{0%,100%{background-color:transparent}30%{background-color:rgba(245,158,11,.28)}}
+  .flash-highlight{animation:pinflash 1.1s ease-out;border-radius:14px;}
+  .dark .skel{background:linear-gradient(90deg,#1c2532 25%,#26313f 37%,#1c2532 63%);background-size:800px 100%;}
+  html.st-reduce-motion .skel{animation:none;background:#e5e9ef;}
+  html.st-reduce-motion.dark .skel{background:#1c2532;}
 </style>
 </head>
 <body class="bg-slate-100 dark:bg-ink-900 text-slate-900 dark:text-slate-100">
@@ -259,6 +266,16 @@ function initials(name) {
   return (name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 function chatIdFor(a, b) { return [a, b].sort().join('_'); }
+// Used to match a phone-book contact's number against a registered user's
+// stored phone (country code + digits, no "+"). We compare on the last 9
+// digits rather than the full string because phones save numbers in all
+// kinds of formats — with/without country code, leading 0, spaces, dashes —
+// and the last 9 digits are enough to uniquely identify a local number
+// without needing a full phone-number-parsing library.
+function phoneMatchKey(raw) {
+  const digits = (raw || '').replace(/\D/g, '').replace(/^0+/, '');
+  return digits.slice(-9);
+}
 function fmtDuration(secs) {
   const s = Math.max(0, Math.round(secs || 0));
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
@@ -916,6 +933,8 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
   const [q, setQ] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [selected, setSelected] = useState([]); // array of "type_id" keys, e.g. "dm_abc123"
+  const [dmsLoaded, setDmsLoaded] = useState(false);
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
   const camRef = useRef(null);
   const toast = useToast();
 
@@ -923,6 +942,7 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
     if (!profile) return;
     const unsub = db.collection('smiletak_chatMembers').where('uid', '==', profile.id).onSnapshot(snap => {
       setMemberDocs(snap.docs.map(d => Object.assign({ id: d.id }, d.data())));
+      setDmsLoaded(true);
     });
     return unsub;
   }, [profile]);
@@ -981,6 +1001,7 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
     if (!profile) return;
     const unsub = db.collection('smiletak_groupMembers').where('uid', '==', profile.id).onSnapshot(snap => {
       setGroupMemberDocs(snap.docs.map(d => Object.assign({ id: d.id }, d.data())));
+      setGroupsLoaded(true);
     });
     return unsub;
   }, [profile]);
@@ -1173,12 +1194,25 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
       h('span', { className: 'ml-auto text-xs text-slate-400' }, counts.archived)
     ),
     h('div', { className: 'flex-1 overflow-y-auto no-scrollbar' },
-      rows.length === 0 && h('div', { className: 'text-center text-sm text-slate-400 mt-12 px-8' },
-        filter === 'archived' ? 'No archived chats' :
-        filter === 'unread' ? 'No unread chats' :
-        filter === 'pinned' ? 'No pinned chats' :
-        filter === 'muted' ? 'No muted chats' :
-        'No chats yet — tap the menu above to start one'
+      !(dmsLoaded && groupsLoaded) && Array.from({ length: 7 }).map((_, i) => h(ChatRowSkeleton, { key: 'skel' + i })),
+      (dmsLoaded && groupsLoaded) && rows.length === 0 && h('div', { className: 'text-center mt-14 px-8' },
+        h('div', { className: 'w-16 h-16 rounded-full bg-brand-50 dark:bg-ink-800 text-brand-500 flex items-center justify-center mx-auto mb-3' },
+          h('i', { className: 'fa-solid fa-comment-dots text-2xl' })
+        ),
+        h('p', { className: 'font-semibold text-sm text-slate-600 dark:text-slate-200 mb-1' },
+          filter === 'archived' ? 'No archived chats' :
+          filter === 'unread' ? 'No unread chats' :
+          filter === 'pinned' ? 'No pinned chats' :
+          filter === 'muted' ? 'No muted chats' :
+          'No chats yet'
+        ),
+        h('p', { className: 'text-xs text-slate-400 mb-4' },
+          filter === 'all' ? 'Start a conversation and it will show up here.' : 'Chats matching this filter will show up here.'
+        ),
+        filter === 'all' && h('button', {
+          onClick: onNewChat,
+          className: 'px-4 py-2 rounded-full bg-brand-600 text-white text-sm font-semibold'
+        }, 'Start a new chat')
       ),
       rows.map(r => h(ChatRow, {
         key: r.type + '_' + r.id,
@@ -1205,6 +1239,18 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
   );
 }
 
+function ChatRowSkeleton() {
+  return h('div', { className: 'flex items-center gap-3 px-4 py-3' },
+    h('div', { className: 'skel shrink-0', style: { width: 48, height: 48, borderRadius: 9999 } }),
+    h('div', { className: 'flex-1 min-w-0 border-b border-slate-100 dark:border-ink-800 pb-3 -mb-3' },
+      h('div', { className: 'flex justify-between items-baseline mb-2' },
+        h('div', { className: 'skel', style: { width: '40%', height: 12 } }),
+        h('div', { className: 'skel', style: { width: 30, height: 10 } })
+      ),
+      h('div', { className: 'skel', style: { width: '65%', height: 11 } })
+    )
+  );
+}
 function ChatRow({ row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile }) {
   if (row.type === 'group') return h(GroupChatRow, { row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive });
   return h(DmChatRow, { row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile });
@@ -1452,7 +1498,7 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
     call.startGroupCall(others, type, groupId, group.name);
   };
 
-  if (!group) return h('div', { className: 'p-6 text-center text-sm text-slate-400' }, 'Loading…');
+  if (!group) return h('div', { className: 'p-6 flex items-center justify-center' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' }));
 
   return h('div', { className: 'h-full flex flex-col bg-slate-50 dark:bg-ink-900' },
     h('div', { className: 'flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-ink-800 border-b border-slate-100 dark:border-ink-700' },
@@ -1533,7 +1579,7 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
     db.collection('smiletak_groupMembers').doc(groupId + '_' + profile.id).get().then(s => setMuted(s.exists && !!s.data().muted));
   }, [groupId, profile.id]);
 
-  if (!group) return h('div', { className: 'p-6 text-center text-sm text-slate-400' }, 'Loading…');
+  if (!group) return h('div', { className: 'p-6 flex items-center justify-center' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' }));
   const isAdmin = (group.admins || []).includes(profile.id);
 
   const runSearch = async () => {
@@ -1683,7 +1729,7 @@ function GroupMediaGrid({ groupId, onClose }) {
       h('p', { className: 'font-semibold' }, 'Media, links, and docs')
     ),
     h('div', { className: 'flex-1 overflow-y-auto no-scrollbar p-1' },
-      items === null && h('p', { className: 'text-center text-sm text-slate-400 mt-8' }, 'Loading…'),
+      items === null && h('div', { className: 'flex justify-center mt-8' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' })),
       items && items.length === 0 && h('p', { className: 'text-center text-sm text-slate-400 mt-8' }, 'No media shared yet'),
       h('div', { className: 'grid grid-cols-3 gap-1' },
         (items || []).map(m => h('div', { key: m.id, className: 'aspect-square bg-slate-100 dark:bg-ink-800 overflow-hidden' },
@@ -1809,7 +1855,7 @@ function StarredMessagesScreen({ onBack }) {
       h('p', { className: 'font-semibold' }, 'Starred messages')
     ),
     h('div', { className: 'flex-1 overflow-y-auto no-scrollbar' },
-      items === null && h('p', { className: 'text-center text-sm text-slate-400 mt-8' }, 'Loading…'),
+      items === null && h('div', { className: 'flex justify-center mt-8' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' })),
       items && items.length === 0 && h('p', { className: 'text-center text-sm text-slate-400 mt-8 px-8' }, 'Tap and hold a message, then choose Star, to save it here'),
       (items || []).map(item => h('div', { key: item.id, className: 'flex items-start gap-3 px-4 py-3 border-b border-slate-100 dark:border-ink-800' },
         h('div', { className: 'flex-1 min-w-0' },
@@ -1828,6 +1874,9 @@ function SelectContactScreen({ onBack, onOpenChat, onNewGroup, onNewChannel }) {
   const toast = useToast();
   const [all, setAll] = useState(null); // null = loading
   const [q, setQ] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [contactMatches, setContactMatches] = useState(null); // null = not synced yet
+  const contactSyncSupported = typeof navigator !== 'undefined' && !!(navigator.contacts && navigator.contacts.select);
 
   useEffect(() => {
     db.collection('smiletak_users').orderBy('fullName').limit(300).get()
@@ -1858,7 +1907,41 @@ function SelectContactScreen({ onBack, onOpenChat, onNewGroup, onNewChannel }) {
     }
   };
 
-  const filtered = (all || []).filter(u => !q.trim() || (u.fullName || '').toLowerCase().includes(q.toLowerCase()) || (u.username || '').toLowerCase().includes(q.toLowerCase()));
+  // Opens the phone's own native contact picker (Chrome on Android only —
+  // no website can read your address book without this kind of explicit,
+  // one-time OS-level picker; there's no silent/background way to do it).
+  // Whatever numbers come back get matched against everyone already loaded
+  // in `all`, exactly like WhatsApp's "Contacts on WhatsApp" list.
+  const syncContacts = async () => {
+    if (!contactSyncSupported) {
+      toast('Contact sync needs Chrome on Android. Use "Invite a friend" to share your number instead.', 'info');
+      return;
+    }
+    setSyncing(true);
+    try {
+      const picked = await navigator.contacts.select(['name', 'tel'], { multiple: true });
+      const nameByKey = {};
+      picked.forEach(c => {
+        const name = (c.name && c.name[0]) || null;
+        (c.tel || []).forEach(t => {
+          const key = phoneMatchKey(t);
+          if (key.length >= 7 && !nameByKey[key]) nameByKey[key] = name;
+        });
+      });
+      const matched = (all || [])
+        .filter(u => u.phone && nameByKey[phoneMatchKey(u.phone)])
+        .map(u => Object.assign({}, u, { contactName: nameByKey[phoneMatchKey(u.phone)] }));
+      setContactMatches(matched);
+      toast((matched.length ? matched.length : 'None of') + ' of your contacts ' + (matched.length === 1 ? 'is' : 'are') + ' on SmileTak', matched.length ? 'success' : 'info');
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('Could not read contacts: ' + e.message, 'error');
+    }
+    setSyncing(false);
+  };
+
+  const matchedIds = new Set((contactMatches || []).map(u => u.id));
+  const filtered = (all || []).filter(u => !matchedIds.has(u.id) && (!q.trim() || (u.fullName || '').toLowerCase().includes(q.toLowerCase()) || (u.username || '').toLowerCase().includes(q.toLowerCase())));
+  const filteredMatches = (contactMatches || []).filter(u => !q.trim() || (u.fullName || '').toLowerCase().includes(q.toLowerCase()) || (u.contactName || '').toLowerCase().includes(q.toLowerCase()) || (u.username || '').toLowerCase().includes(q.toLowerCase()));
 
   return h('div', { className: 'h-full flex flex-col' },
     h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
@@ -1878,13 +1961,31 @@ function SelectContactScreen({ onBack, onOpenChat, onNewGroup, onNewChannel }) {
           h('div', { className: 'w-11 h-11 rounded-full bg-brand-100 dark:bg-ink-700 text-brand-600 flex items-center justify-center' }, h('i', { className: 'fa-solid fa-bullhorn' })),
           h('p', { className: 'font-semibold text-sm' }, 'New channel')
         ),
+        h('button', { className: 'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-ink-800', onClick: syncContacts, disabled: syncing },
+          h('div', { className: 'w-11 h-11 rounded-full bg-brand-100 dark:bg-ink-700 text-brand-600 flex items-center justify-center' },
+            syncing ? h('div', { className: 'w-4 h-4 border-2 border-brand-600 border-t-transparent rounded-full spinner' }) : h('i', { className: 'fa-solid fa-address-book' })
+          ),
+          h('div', { className: 'text-left' },
+            h('p', { className: 'font-semibold text-sm' }, syncing ? 'Syncing…' : contactMatches === null ? 'Sync contacts' : 'Sync contacts again'),
+            !contactSyncSupported && h('p', { className: 'text-[11px] text-slate-400' }, 'Needs Chrome on Android')
+          )
+        ),
         h('button', { className: 'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-ink-800', onClick: inviteFriend },
           h('div', { className: 'w-11 h-11 rounded-full bg-brand-100 dark:bg-ink-700 text-brand-600 flex items-center justify-center' }, h('i', { className: 'fa-solid fa-user-plus' })),
           h('p', { className: 'font-semibold text-sm' }, 'Invite a friend')
         )
       ),
-      h('p', { className: 'px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400' }, 'Contacts on SmileTak'),
-      all === null && h('p', { className: 'text-center text-sm text-slate-400 mt-8' }, 'Loading…'),
+      contactMatches !== null && h(React.Fragment, null,
+        h('p', { className: 'px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400' }, filteredMatches.length + ' of your contacts on SmileTak'),
+        filteredMatches.length === 0 && h('p', { className: 'px-4 pb-2 text-xs text-slate-400' }, 'None of your synced contacts have joined SmileTak yet'),
+        filteredMatches.map(u => h('div', { key: u.id, className: 'flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-ink-800 cursor-pointer', onClick: () => startChat(u) },
+          h(Avatar, { url: u.photoURL, name: u.fullName, size: 44, online: u.online }),
+          h('div', { className: 'min-w-0 flex-1' }, h('p', { className: 'font-semibold text-sm truncate' }, h(NameWithBadges, { name: u.contactName || u.fullName, user: u })), h('p', { className: 'text-xs text-slate-400 truncate' }, u.fullName + ' · @' + u.username)),
+          h('i', { className: 'fa-solid fa-address-book text-[11px] text-brand-500', title: 'In your phone contacts' })
+        ))
+      ),
+      h('p', { className: 'px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400' }, contactMatches !== null ? 'Everyone else on SmileTak' : 'Contacts on SmileTak'),
+      all === null && h('div', { className: 'flex justify-center mt-8' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' })),
       all && filtered.length === 0 && h('p', { className: 'text-center text-sm text-slate-400 mt-8' }, 'No one found'),
       filtered.map(u => h('div', { key: u.id, className: 'flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-ink-800 cursor-pointer', onClick: () => startChat(u) },
         h(Avatar, { url: u.photoURL, name: u.fullName, size: 44, online: u.online }),
@@ -1972,12 +2073,14 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
   const toast = useToast();
   const call = useCall();
   const [messages, setMessages] = useState([]);
+  const [messagesLoaded, setMessagesLoaded] = useState(false);
   const [chat, setChat] = useState(null);
   const [otherLive, setOtherLive] = useState(other);
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState(null);
   const [search, setSearch] = useState(null);
   const [menuMsg, setMenuMsg] = useState(null);
+  const [pinPickerMsg, setPinPickerMsg] = useState(null);
   const [starredIds, setStarredIds] = useState({});
   useEffect(() => {
     const unsub = db.collection('smiletak_starredMessages').where('uid', '==', profile.id).where('chatId', '==', chatId).onSnapshot(snap => {
@@ -2005,10 +2108,12 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
   }, [other.id]);
 
   useEffect(() => {
+    setMessagesLoaded(false);
     const unsub = db.collection('smiletak_chats').doc(chatId).collection('messages').orderBy('createdAt', 'asc').limit(500)
       .onSnapshot(snap => {
         const msgs = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
         setMessages(msgs);
+        setMessagesLoaded(true);
         // mark delivered + read for messages from the other person
         const batch = db.batch();
         let any = false;
@@ -2149,6 +2254,45 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
       }
     } catch (e) { toast(e.message, 'error'); }
   };
+  // Chat-wide pin (like WhatsApp): stored on the chat doc itself so either
+  // person sees the same pinned banner, not just a personal bookmark.
+  // durationMs mirrors WhatsApp's 24h/7d/30d choices; null means "keep
+  // pinned until manually unpinned".
+  const pinMessage = async (m, durationMs, durationLabel) => {
+    const preview = m.deletedForEveryone ? 'This message was deleted' : m.type === 'text' ? (m.text || '') : ('📎 ' + m.type);
+    try {
+      await db.collection('smiletak_chats').doc(chatId).set({
+        pinnedMessageId: m.id, pinnedMessageText: preview.slice(0, 100),
+        pinnedMessageSenderId: m.senderId, pinnedAt: FieldValue.serverTimestamp(), pinnedBy: profile.id,
+        pinnedDurationLabel: durationLabel || null,
+        pinnedExpiresAt: durationMs ? Timestamp.fromMillis(Date.now() + durationMs) : FieldValue.delete()
+      }, { merge: true });
+      toast('Message pinned', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  };
+  const unpinMessage = async () => {
+    try {
+      await db.collection('smiletak_chats').doc(chatId).update({
+        pinnedMessageId: FieldValue.delete(), pinnedMessageText: FieldValue.delete(),
+        pinnedMessageSenderId: FieldValue.delete(), pinnedAt: FieldValue.delete(), pinnedBy: FieldValue.delete(),
+        pinnedExpiresAt: FieldValue.delete(), pinnedDurationLabel: FieldValue.delete()
+      });
+    } catch (e) { toast(e.message, 'error'); }
+  };
+  // Nothing runs on a schedule (no Cloud Functions in this app), so an
+  // expired pin is cleared out the same way a stale value ever gets fixed
+  // here: whichever client next has the chat open notices and self-heals it.
+  const pinExpired = !!(chat && chat.pinnedMessageId && chat.pinnedExpiresAt && chat.pinnedExpiresAt.toMillis() < Date.now());
+  useEffect(() => { if (pinExpired) unpinMessage(); }, [pinExpired]);
+  const scrollToPinned = () => {
+    if (!chat || !chat.pinnedMessageId) return;
+    const el = document.getElementById('msg-' + chat.pinnedMessageId);
+    if (!el) { toast('Scroll up to find the pinned message', 'info'); return; }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('flash-highlight');
+    setTimeout(() => el.classList.remove('flash-highlight'), 1100);
+  };
+
   const doForward = async (targetChatId, targetOtherId) => {
     await db.collection('smiletak_chats').doc(targetChatId).collection('messages').add({
       senderId: profile.id, createdAt: FieldValue.serverTimestamp(), readBy: [], deliveredTo: [], deletedFor: [], deletedForEveryone: false,
@@ -2183,11 +2327,28 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
       h('button', { className: 'text-slate-400 px-2', onClick: () => call.startCall(otherLive, 'video') }, h('i', { className: 'fa-solid fa-video' })),
       h('button', { className: 'text-slate-400 px-1', onClick: () => setSearch(search === null ? '' : null) }, h('i', { className: 'fa-solid fa-magnifying-glass' }))
     ),
+    chat && chat.pinnedMessageId && !pinExpired && h('div', {
+      className: 'flex items-center gap-2 px-3 py-2 bg-white dark:bg-ink-800 border-b border-slate-100 dark:border-ink-700 shrink-0 cursor-pointer',
+      onClick: scrollToPinned
+    },
+      h('i', { className: 'fa-solid fa-thumbtack text-slate-400 text-xs' }),
+      h('div', { className: 'flex-1 min-w-0' },
+        h('p', { className: 'text-sm truncate' }, chat.pinnedMessageText || 'Pinned message'),
+        chat.pinnedDurationLabel && h('p', { className: 'text-[10px] text-slate-400' }, 'Pinned for ' + chat.pinnedDurationLabel)
+      ),
+      h('button', { onClick: (e) => { e.stopPropagation(); unpinMessage(); }, className: 'text-slate-400 px-1', title: 'Unpin' }, h('i', { className: 'fa-solid fa-xmark text-xs' }))
+    ),
     search !== null && h('div', { className: 'px-3 py-2 bg-white dark:bg-ink-800 border-b border-slate-100 dark:border-ink-700' },
       h('input', { autoFocus: true, className: 'w-full px-3 py-1.5 rounded-full bg-slate-100 dark:bg-ink-700 text-sm focus:outline-none', placeholder: 'Search in this chat', value: search, onChange: e => setSearch(e.target.value) })
     ),
     h('div', { className: 'flex-1 overflow-y-auto no-scrollbar px-3 py-2' },
-      visible.map((m) => {
+      !messagesLoaded && h(MessageListSkeleton, {}),
+      messagesLoaded && visible.length === 0 && !search && h('div', { className: 'h-full flex flex-col items-center justify-center text-center px-8' },
+        h(Avatar, { url: otherLive.photoURL, name: otherLive.fullName, size: 64, online: otherLive.online }),
+        h('p', { className: 'font-semibold text-sm mt-3 text-slate-600 dark:text-slate-300' }, otherLive.fullName),
+        h('p', { className: 'text-xs text-slate-400 mt-1' }, 'No messages yet — say hi 👋')
+      ),
+      messagesLoaded && visible.map((m) => {
         const showDay = fmtDay(m.createdAt) !== lastDay;
         lastDay = fmtDay(m.createdAt);
         const mine = m.senderId === profile.id && !m.isAutoReply;
@@ -2224,13 +2385,19 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
     ),
     menuMsg && h(MessageMenu, {
       m: menuMsg, mine: menuMsg.senderId === profile.id && !menuMsg.isAutoReply, starred: isStarred(menuMsg),
+      pinned: !!(chat && chat.pinnedMessageId === menuMsg.id),
       onClose: () => setMenuMsg(null),
       onReply: () => { setReplyTo(menuMsg); setMenuMsg(null); },
       onCopy: () => { copyText(menuMsg); setMenuMsg(null); },
       onForward: () => { setForwardMsg(menuMsg); setMenuMsg(null); },
       onStar: () => { toggleStar(menuMsg); setMenuMsg(null); },
+      onPin: () => { (chat && chat.pinnedMessageId === menuMsg.id) ? unpinMessage() : setPinPickerMsg(menuMsg); setMenuMsg(null); },
       onDeleteMe: () => { deleteForMe(menuMsg); setMenuMsg(null); },
       onDeleteEveryone: () => { deleteForEveryone(menuMsg); setMenuMsg(null); }
+    }),
+    pinPickerMsg && h(PinDurationModal, {
+      onClose: () => setPinPickerMsg(null),
+      onPick: (ms, label) => { pinMessage(pinPickerMsg, ms, label); setPinPickerMsg(null); }
     }),
     forwardMsg && h(ForwardPicker, { onClose: () => setForwardMsg(null), onPick: doForward })
   );
@@ -2254,14 +2421,26 @@ function CallLogRow({ m }) {
   );
 }
 
+function MessageListSkeleton() {
+  const rows = [
+    { mine: false, w: '55%' }, { mine: false, w: '35%' },
+    { mine: true, w: '45%' }, { mine: false, w: '60%' },
+    { mine: true, w: '30%' }
+  ];
+  return h('div', { className: 'flex flex-col gap-2 py-1' },
+    rows.map((r, i) => h('div', { key: i, className: 'flex ' + (r.mine ? 'justify-end' : 'justify-start') },
+      h('div', { className: 'skel', style: { width: r.w, height: 34, borderRadius: 14, maxWidth: '75%' } })
+    ))
+  );
+}
 function MessageBubble({ m, mine, onMenu, onReply }) {
   if (m.deletedForEveryone) {
-    return h('div', { className: 'flex ' + (mine ? 'justify-end' : 'justify-start') + ' mb-1.5' },
+    return h('div', { id: 'msg-' + m.id, className: 'flex ' + (mine ? 'justify-end' : 'justify-start') + ' mb-1.5' },
       h('div', { className: 'italic text-xs text-slate-400 bg-white dark:bg-ink-800 px-3 py-2 rounded-2xl' }, h('i', { className: 'fa-solid fa-ban mr-1' }), 'This message was deleted')
     );
   }
   const status = mine ? (m.readBy && m.readBy.length ? 'read' : (m.deliveredTo && m.deliveredTo.length ? 'delivered' : 'sent')) : null;
-  return h('div', { className: 'flex ' + (mine ? 'justify-end' : 'justify-start') + ' mb-1.5 group' },
+  return h('div', { id: 'msg-' + m.id, className: 'flex ' + (mine ? 'justify-end' : 'justify-start') + ' mb-1.5 group' },
     h('div', { className: 'flex items-end gap-1 max-w-[78%] ' + (mine ? 'flex-row-reverse' : '') },
       h('div', {
         className: 'msg-in px-3 py-2 rounded-2xl text-sm shadow-sm ' + (mine ? 'bg-brand-600 text-white rounded-br-md' : 'bg-white dark:bg-ink-800 rounded-bl-md')
@@ -2284,12 +2463,13 @@ function MessageBubble({ m, mine, onMenu, onReply }) {
   );
 }
 
-function MessageMenu({ m, mine, starred, onClose, onReply, onCopy, onForward, onStar, onDeleteMe, onDeleteEveryone }) {
+function MessageMenu({ m, mine, starred, pinned, onClose, onReply, onCopy, onForward, onStar, onPin, onDeleteMe, onDeleteEveryone }) {
   return h('div', { className: 'fixed inset-0 z-50 flex items-end justify-center bg-black/30', onClick: onClose },
     h('div', { className: 'bg-white dark:bg-ink-800 w-full max-w-sm rounded-t-2xl p-2 pb-4', onClick: e => e.stopPropagation() },
       h(MenuBtn, { icon: 'fa-reply', label: 'Reply', onClick: onReply }),
       m.type === 'text' && h(MenuBtn, { icon: 'fa-copy', label: 'Copy', onClick: onCopy }),
       h(MenuBtn, { icon: 'fa-share', label: 'Forward', onClick: onForward }),
+      h(MenuBtn, { icon: 'fa-thumbtack', label: pinned ? 'Unpin' : 'Pin', onClick: onPin }),
       h(MenuBtn, { icon: starred ? 'fa-star' : 'fa-star', label: starred ? 'Unstar' : 'Star', onClick: onStar }),
       h(MenuBtn, { icon: 'fa-trash', label: 'Delete for me', onClick: onDeleteMe }),
       mine && h(MenuBtn, { icon: 'fa-trash-can', label: 'Delete for everyone', danger: true, onClick: onDeleteEveryone })
@@ -2298,6 +2478,26 @@ function MessageMenu({ m, mine, starred, onClose, onReply, onCopy, onForward, on
 }
 function MenuBtn({ icon, label, onClick, danger }) {
   return h('button', { className: 'w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-slate-50 dark:hover:bg-ink-700 rounded-xl ' + (danger ? 'text-red-500' : ''), onClick }, h('i', { className: 'fa-solid ' + icon + ' w-4' }), label);
+}
+
+function PinDurationModal({ onClose, onPick }) {
+  const DAY = 24 * 3600 * 1000;
+  const options = [
+    { label: '24 hours', ms: DAY },
+    { label: '7 days', ms: 7 * DAY },
+    { label: '30 days', ms: 30 * DAY },
+    { label: 'Keep pinned until I unpin it', ms: null }
+  ];
+  return h('div', { className: 'fixed inset-0 z-50 flex items-end justify-center bg-black/30', onClick: onClose },
+    h('div', { className: 'bg-white dark:bg-ink-800 w-full max-w-sm rounded-t-2xl p-2 pb-4', onClick: e => e.stopPropagation() },
+      h('p', { className: 'px-4 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400' }, 'Pin message'),
+      options.map(o => h('button', {
+        key: o.label,
+        className: 'w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-slate-50 dark:hover:bg-ink-700 rounded-xl',
+        onClick: () => onPick(o.ms, o.ms ? o.label : null)
+      }, h('i', { className: 'fa-solid fa-thumbtack w-4' }), o.label))
+    )
+  );
 }
 
 function ForwardPicker({ onClose, onPick }) {
@@ -2349,7 +2549,9 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
     const unsub = db.collection('smiletak_channelSubs').where('uid', '==', profile.id).onSnapshot(async snap => {
       const ids = snap.docs.map(d => d.data().channelId);
       const chans = await Promise.all(ids.map(id => db.collection('smiletak_channels').doc(id).get()));
-      setMyChannels(chans.filter(c => c.exists).map(c => Object.assign({ id: c.id }, c.data())));
+      const list = chans.filter(c => c.exists).map(c => Object.assign({ id: c.id }, c.data()));
+      const owners = await Promise.all(list.map(c => c.ownerId ? db.collection('smiletak_users').doc(c.ownerId).get() : Promise.resolve(null)));
+      setMyChannels(list.map((c, i) => Object.assign({}, c, { owner: owners[i] && owners[i].exists ? owners[i].data() : null })));
     });
     return unsub;
   }, [profile.id]);
@@ -2420,42 +2622,42 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
       h('div', { className: 'flex gap-3 px-4 pb-2 overflow-x-auto no-scrollbar' },
         // Add status / my status card
         h('div', {
-          className: 'shrink-0 w-[104px] h-[150px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
+          className: 'shrink-0 w-[132px] h-[210px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
           style: myStatuses.length ? (cardBg({ items: myStatuses }) || {}) : { background: '#1a2230' },
           onClick: () => myStatuses.length ? setMyListOpen(true) : setCreating(true)
         },
           myStatuses.length > 0 && cardFirstItem({ items: myStatuses }).type === 'video' &&
             h('video', { src: cardFirstItem({ items: myStatuses }).mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, playsInline: true, preload: 'metadata' }),
-          !myStatuses.length && h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 104 }),
+          !myStatuses.length && h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 132 }),
           myStatuses.length > 0 && h('div', { className: 'absolute inset-0 bg-black/25' }),
-          h('div', { className: 'absolute top-2 left-2' },
+          h('div', { className: 'absolute top-3 left-3' },
             h('div', { className: 'relative' },
-              h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 28 }),
-              h('button', { onClick: (e) => { e.stopPropagation(); setCreating(true); }, className: 'absolute -bottom-1 -right-1 w-4 h-4 bg-brand-600 text-white rounded-full flex items-center justify-center text-[9px] border-2 border-white' }, h('i', { className: 'fa-solid fa-plus' }))
+              h(Avatar, { url: profile.photoURL, name: profile.fullName, size: 56 }),
+              h('button', { onClick: (e) => { e.stopPropagation(); setCreating(true); }, className: 'absolute -bottom-1 -right-1 w-6 h-6 bg-brand-600 text-white rounded-full flex items-center justify-center text-xs border-2 border-white' }, h('i', { className: 'fa-solid fa-plus' }))
             )
           ),
-          h('p', { className: 'relative text-white text-[11px] font-semibold px-2 pb-2 truncate w-full' }, myStatuses.length ? 'My status' : 'Add status')
+          h('p', { className: 'relative text-white text-sm font-semibold px-2.5 pb-3 truncate w-full' }, myStatuses.length ? 'My status' : 'Add status')
         ),
         statuses.map((s, i) => h('div', {
           key: s.uid,
-          className: 'shrink-0 w-[104px] h-[150px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
+          className: 'shrink-0 w-[132px] h-[210px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
           style: cardBg(s) || { background: '#222' },
           onClick: () => setViewing({ groups: allGroups, groupIndex: allGroups.findIndex(g => g.uid === s.uid) })
         },
           cardFirstItem(s).type === 'video' && h('video', { src: cardFirstItem(s).mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, playsInline: true, preload: 'metadata' }),
           h('div', { className: 'absolute inset-0 bg-black/20' }),
-          h('div', { className: 'absolute top-2 left-2 rounded-full ring-2 ring-brand-500' }, h(Avatar, { url: s.user.photoURL, name: s.user.fullName, size: 28 })),
-          h('p', { className: 'relative text-white text-[11px] font-semibold px-2 pb-2 truncate w-full' }, s.user.fullName)
+          h('div', { className: 'absolute top-3 left-3 rounded-full ring-[3px] ring-brand-500' }, h(Avatar, { url: s.user.photoURL, name: s.user.fullName, size: 56 })),
+          h('p', { className: 'relative text-white text-sm font-semibold px-2.5 pb-3 truncate w-full' }, s.user.fullName)
         )),
         statusAd && !isPremiumActive(profile) && !profile.adOptOut && h('div', {
           key: 'ad',
-          className: 'shrink-0 w-[104px] h-[150px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
+          className: 'shrink-0 w-[132px] h-[210px] rounded-2xl relative cursor-pointer overflow-hidden flex items-end',
           style: statusAd.mediaType === 'image' && statusAd.mediaURL ? { backgroundImage: 'url(' + statusAd.mediaURL + ')', backgroundSize: 'cover', backgroundPosition: 'center' } : { background: '#2b2b2b' },
           onClick: () => logAdClick(statusAd)
         },
           h('div', { className: 'absolute inset-0 bg-black/25' }),
-          h('span', { className: 'absolute top-2 left-2 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded-full' }, 'Sponsored'),
-          h('p', { className: 'relative text-white text-[11px] font-semibold px-2 pb-2 truncate w-full' }, statusAd.headline || statusAd.advertiserName || 'Ad')
+          h('span', { className: 'absolute top-3 left-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full' }, 'Sponsored'),
+          h('p', { className: 'relative text-white text-sm font-semibold px-2.5 pb-3 truncate w-full' }, statusAd.headline || statusAd.advertiserName || 'Ad')
         )
       ),
       statuses.length === 0 && h('p', { className: 'px-4 text-xs text-slate-400 mt-1' }, 'No one else has posted a status in the last 24 hours'),
@@ -2656,13 +2858,21 @@ function ChannelRow({ c, onOpen }) {
     }).catch(() => {});
   }, [c.id, c.lastPostAt, profile.id]);
   const icon = c.lastPostType === 'video' ? 'fa-video' : c.lastPostType === 'image' ? 'fa-image' : c.lastPostType === 'link' ? 'fa-link' : null;
-  return h('div', { className: 'flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-ink-800', onClick: onOpen },
-    h(Avatar, { url: c.photoURL, name: c.name, size: 48 }),
+  // Premium businesses get a visibly different row — gold avatar ring,
+  // a subtle amber tint, and their premium/verified badges next to the
+  // name — so they stand out from regular channels in the same list.
+  const bizPremium = isBusinessPremiumActive(c.owner);
+  return h('div', {
+    className: 'flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-ink-800' + (bizPremium ? ' bg-amber-50/60 dark:bg-amber-400/[0.06]' : ''),
+    onClick: onOpen
+  },
+    h('div', { className: bizPremium ? 'rounded-full ring-2 ring-amber-400' : '' }, h(Avatar, { url: c.photoURL, name: c.name, size: 48 })),
     h('div', { className: 'flex-1 min-w-0' },
-      h('p', { className: 'text-[15px] font-bold truncate' }, c.name),
+      h(NameWithBadges, { name: c.name, user: c.owner, className: 'text-[15px] font-bold' }),
       h('p', { className: 'text-[13px] text-slate-400 truncate flex items-center gap-1' }, icon && h('i', { className: 'fa-solid ' + icon + ' text-[11px]' }), c.lastPost || 'No posts yet')
     ),
     h('div', { className: 'flex flex-col items-end gap-1' },
+      bizPremium && h('span', { className: 'text-[9px] font-bold text-amber-600 bg-amber-100 dark:bg-amber-400/20 dark:text-amber-300 px-1.5 py-0.5 rounded-full' }, 'PREMIUM'),
       h('span', { className: 'text-[11px] ' + (unread ? 'text-brand-500 font-semibold' : 'text-slate-400') }, c.lastPostAt ? timeAgo(c.lastPostAt) : ''),
       unread && h('span', { className: 'w-2.5 h-2.5 rounded-full bg-brand-500' })
     )
@@ -2788,7 +2998,7 @@ function ChannelViewScreen({ channelId, onBack }) {
     } catch (e) { toast(e.message, 'error'); }
   };
 
-  if (!channel) return h('div', { className: 'p-6 text-center text-sm text-slate-400' }, 'Loading…');
+  if (!channel) return h('div', { className: 'p-6 flex items-center justify-center' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' }));
   const canPost = channel.ownerId === profile.id || (channel.admins || []).includes(profile.id);
 
   const post = async () => {
@@ -3522,7 +3732,7 @@ function PrivacySettingsScreen({ onBack }) {
     ),
     h('div', { className: 'px-4 py-3 border-t border-slate-100 dark:border-ink-800' },
       h('p', { className: 'font-medium text-sm mb-2' }, 'Blocked accounts'),
-      loadingBlocked && h('p', { className: 'text-xs text-slate-400' }, 'Loading…'),
+      loadingBlocked && h('div', { className: 'flex items-center gap-2 text-xs text-slate-400' }, h('div', { className: 'w-3.5 h-3.5 border-2 border-brand-500 border-t-transparent rounded-full spinner' }), 'Loading…'),
       !loadingBlocked && blocked.length === 0 && h('p', { className: 'text-xs text-slate-400' }, "You haven't blocked anyone"),
       blocked.map(row => h('div', { key: row.id, className: 'flex items-center gap-3 py-2' },
         h(Avatar, { url: row.user.photoURL, name: row.user.fullName, size: 40 }),
@@ -4127,7 +4337,7 @@ function UserProfileScreen({ uid, onBack, onMessage }) {
     });
   }, [uid, profile.id]);
 
-  if (!user) return h('div', { className: 'p-6 text-center text-sm text-slate-400' }, 'Loading…');
+  if (!user) return h('div', { className: 'p-6 flex items-center justify-center' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' }));
 
   const toggleBlock = async () => {
     if (blocked) { await db.collection('smiletak_blockedUsers').doc(profile.id + '_' + uid).delete(); setBlocked(false); toast('Unblocked', 'success'); }
@@ -4727,6 +4937,7 @@ function CallProvider({ children }) {
         if (data.status === 'accepted') { clearTimeout(ringTimeout.current); connectedAt.current = Date.now(); setCallStatus('connected'); }
         if (data.status === 'declined') { toast('Call declined', 'info'); cleanup(); }
         if (data.status === 'ended' || data.status === 'missed') cleanup();
+        if (data.upgradeToGroupCallId) handleUpgrade(data.upgradeToGroupCallId, other.id, type);
       });
       const candUnsub = db.collection('smiletak_calls').doc(callRef.id).collection('calleeCandidates').onSnapshot(snap => {
         snap.docChanges().forEach(c => { if (c.type === 'added') pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {}); });
@@ -4756,7 +4967,10 @@ function CallProvider({ children }) {
       setCallStatus('connected');
 
       unsubCallDoc.current = db.collection('smiletak_calls').doc(call.id).onSnapshot(snap => {
-        if (!snap.exists || snap.data().status === 'ended') cleanup();
+        if (!snap.exists) return;
+        const data = snap.data();
+        if (data.status === 'ended') { cleanup(); return; }
+        if (data.upgradeToGroupCallId) handleUpgrade(data.upgradeToGroupCallId, call.callerId, call.type);
       });
       const candUnsub = db.collection('smiletak_calls').doc(call.id).collection('callerCandidates').onSnapshot(snap => {
         snap.docChanges().forEach(c => { if (c.type === 'added') pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {}); });
@@ -4887,6 +5101,45 @@ function CallProvider({ children }) {
     groupUnsubs.current.push(unsub);
   };
 
+  /* ---- UPGRADING A NORMAL 1:1 CALL TO A GROUP CALL ----
+     Lets either person on an ordinary call add a third (or more) people
+     without hanging up. The person who taps "Add" creates a real
+     smiletak_groupCalls doc (pre-marking both existing participants as
+     'joined' so neither of them has to re-answer) and drops a pointer to it
+     on the old 1:1 call doc. The OTHER original participant's 1:1 listener
+     (above, in startCall/acceptCall) picks that pointer up and calls
+     handleUpgrade too — so both sides swap their single peer connection for
+     a mesh connection at the same time, reusing the mic/camera stream
+     that's already flowing so nothing drops. The new person is rung the
+     normal way, through the existing incoming-group-call listener. */
+  const handleUpgrade = (groupCallId, otherUid, type) => {
+    if (pcRef.current) { try { pcRef.current.close(); } catch (e) {} pcRef.current = null; }
+    if (unsubCallDoc.current) { unsubCallDoc.current(); unsubCallDoc.current = null; }
+    unsubCandidates.current.forEach(u => u()); unsubCandidates.current = [];
+    if (ringTimeout.current) { clearTimeout(ringTimeout.current); ringTimeout.current = null; }
+    connectedAt.current = null;
+    groupLocalStream.current = localStreamRef.current;
+    setLocalStream(null); setRemoteStream(null); setCall(null); setRemoteUser(null); setCallStatus('idle');
+    setGroupCall(g => g && g.id === groupCallId ? g : { id: groupCallId, type, groupName: null, myStream: groupLocalStream.current, participants: {} });
+    watchGroupCallDoc(groupCallId);
+  };
+
+  const upgradeToGroupCall = async (newUid) => {
+    if (!call || callStatus !== 'connected' || groupCall) return;
+    try {
+      const otherUid = call.callerId === profile.id ? call.calleeId : call.callerId;
+      const ref = db.collection('smiletak_groupCalls').doc();
+      const responses = {}; responses[profile.id] = 'joined'; responses[otherUid] = 'joined';
+      await ref.set({
+        type: call.type, hostId: profile.id, groupId: null, groupName: null,
+        participantIds: [profile.id, otherUid, newUid], responses,
+        status: 'active', createdAt: FieldValue.serverTimestamp()
+      });
+      await db.collection('smiletak_calls').doc(call.id).update({ upgradeToGroupCallId: ref.id });
+      handleUpgrade(ref.id, otherUid, call.type);
+    } catch (e) { toast('Could not add to call: ' + e.message, 'error'); }
+  };
+
   const startGroupCall = async (otherUids, type, groupId, groupName) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
@@ -4939,10 +5192,10 @@ function CallProvider({ children }) {
     } catch (e) { toast(e.message, 'error'); }
   };
 
-  return h(CallCtx.Provider, { value: { callStatus, call, startCall, groupCall, incomingGroupCall, startGroupCall, joinGroupCall, declineGroupCall, leaveGroupCall, addToGroupCall } },
+  return h(CallCtx.Provider, { value: { callStatus, call, startCall, groupCall, incomingGroupCall, startGroupCall, joinGroupCall, declineGroupCall, leaveGroupCall, addToGroupCall, upgradeToGroupCall } },
     children,
     callStatus === 'incoming' && h(IncomingCallScreen, { call, remoteUser, onAccept: acceptCall, onDecline: declineCall }),
-    (callStatus === 'outgoing' || callStatus === 'connected') && h(ActiveCallScreen, { call, remoteUser, status: callStatus, localStream, remoteStream, onEnd: endCall }),
+    (callStatus === 'outgoing' || callStatus === 'connected') && h(ActiveCallScreen, { call, remoteUser, status: callStatus, localStream, remoteStream, onEnd: endCall, onAdd: upgradeToGroupCall }),
     incomingGroupCall && !groupCall && h(IncomingGroupCallScreen, { call: incomingGroupCall, onAccept: joinGroupCall, onDecline: declineGroupCall }),
     groupCall && h(GroupCallScreen, { call: groupCall, onLeave: leaveGroupCall, onAdd: addToGroupCall })
   );
@@ -4969,10 +5222,11 @@ function IncomingCallScreen({ remoteUser, call, onAccept, onDecline }) {
   );
 }
 
-function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream, onEnd }) {
+function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream, onEnd, onAdd }) {
   const [muted, setMuted] = useState(false);
   const [camOff, setCamOff] = useState(false);
   const [secs, setSecs] = useState(0);
+  const [adding, setAdding] = useState(false);
   const remoteVidRef = useRef(null);
   const localVidRef = useRef(null);
   const isVideo = call && call.type === 'video';
@@ -4999,11 +5253,13 @@ function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream,
       h('p', { className: 'text-xl font-bold mt-2' }, (remoteUser && remoteUser.fullName) || 'Unknown'),
       h('p', { className: 'text-sm opacity-70' }, status === 'connected' ? fmt(secs) : 'Calling…')
     ),
-    h('div', { className: 'relative z-10 flex items-center gap-8' },
+    h('div', { className: 'relative z-10 flex items-center gap-6' },
       h('button', { onClick: toggleMute, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (muted ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (muted ? 'fa-microphone-slash' : 'fa-microphone') })),
+      status === 'connected' && onAdd && h('button', { onClick: () => setAdding(true), className: 'w-14 h-14 rounded-full bg-white/20 flex items-center justify-center' }, h('i', { className: 'fa-solid fa-user-plus' })),
       h('button', { onClick: onEnd, className: 'w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-2xl' }, h('i', { className: 'fa-solid fa-phone-slash' })),
       isVideo && h('button', { onClick: toggleCam, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (camOff ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (camOff ? 'fa-video-slash' : 'fa-video') }))
-    )
+    ),
+    adding && h(AddToCallModal, { onClose: () => setAdding(false), onPick: (uid) => { onAdd(uid); setAdding(false); } })
   );
 }
 
