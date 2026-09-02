@@ -5376,7 +5376,25 @@ function CallProvider({ children }) {
             const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
             const track = camStream.getVideoTracks()[0];
             localStreamRef.current.addTrack(track);
-            pc.addTrack(track, localStreamRef.current);
+            // Attach the camera track to the transceiver the offer already
+            // created for video, explicitly, rather than calling
+            // pc.addTrack(track, stream) and relying on the browser to
+            // silently match it to the right transceiver. That implicit
+            // matching is the standard-conformant behavior, but it's a
+            // recognized source of inconsistent results across mobile
+            // browsers/webviews. Finding the video transceiver directly
+            // (it's the one the offer just created, receiving the caller's
+            // camera) and calling replaceTrack + setting direction is more
+            // deterministic and behaves the same everywhere.
+            const videoTransceiver = pc.getTransceivers().find(t =>
+              t.receiver && t.receiver.track && t.receiver.track.kind === 'video' && !t.sender.track
+            );
+            if (videoTransceiver) {
+              await videoTransceiver.sender.replaceTrack(track);
+              videoTransceiver.direction = 'sendrecv';
+            } else {
+              pc.addTrack(track, localStreamRef.current); // fallback if no matching transceiver was found
+            }
             const refreshed = new MediaStream(localStreamRef.current.getTracks());
             localStreamRef.current = refreshed; setLocalStream(refreshed);
           } catch (e) { /* camera denied on this side — call continues audio-only for them */ }
@@ -5774,8 +5792,8 @@ function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream,
     return () => clearInterval(t);
   }, [status]);
 
-  useEffect(() => { if (remoteVidRef.current && remoteStream) remoteVidRef.current.srcObject = remoteStream; }, [remoteStream, isVideo]);
-  useEffect(() => { if (remoteAudioRef.current && remoteStream) remoteAudioRef.current.srcObject = remoteStream; }, [remoteStream, isVideo]);
+  useEffect(() => { if (remoteVidRef.current && remoteStream) { remoteVidRef.current.srcObject = remoteStream; remoteVidRef.current.play().catch(() => {}); } }, [remoteStream, isVideo]);
+  useEffect(() => { if (remoteAudioRef.current && remoteStream) { remoteAudioRef.current.srcObject = remoteStream; remoteAudioRef.current.play().catch(() => {}); } }, [remoteStream, isVideo]);
   // Includes isVideo in the deps (matching the remoteStream effect above) so
   // that switching voice -> video re-runs this after the local <video> tag
   // actually mounts. isVideo only flips true once call.type updates, which
@@ -5783,7 +5801,13 @@ function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream,
   // gets updated with the new camera track. Without isVideo here, the local
   // preview element mounts with no srcObject ever assigned to it, so the
   // remote person shows up fine but you never see your own camera.
-  useEffect(() => { if (localVidRef.current && localStream) localVidRef.current.srcObject = localStream; }, [localStream, isVideo]);
+  // The explicit .play() call after assigning srcObject matters here too:
+  // some mobile browsers (notably iOS Safari) don't reliably auto-start
+  // playback when srcObject is set on a video element outside of a direct
+  // user-tap gesture, especially on a tag that just mounted moments ago —
+  // it can sit there silently showing nothing even though the stream is
+  // correctly attached. Calling .play() explicitly forces it to start.
+  useEffect(() => { if (localVidRef.current && localStream) { localVidRef.current.srcObject = localStream; localVidRef.current.play().catch(() => {}); } }, [localStream, isVideo]);
 
   const toggleMute = () => { if (localStream) { localStream.getAudioTracks().forEach(t => t.enabled = muted); setMuted(m => !m); } };
   const toggleCam = () => { if (localStream) { localStream.getVideoTracks().forEach(t => t.enabled = camOff); setCamOff(c => !c); } };
