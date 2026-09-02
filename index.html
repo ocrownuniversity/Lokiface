@@ -5776,7 +5776,14 @@ function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream,
 
   useEffect(() => { if (remoteVidRef.current && remoteStream) remoteVidRef.current.srcObject = remoteStream; }, [remoteStream, isVideo]);
   useEffect(() => { if (remoteAudioRef.current && remoteStream) remoteAudioRef.current.srcObject = remoteStream; }, [remoteStream, isVideo]);
-  useEffect(() => { if (localVidRef.current && localStream) localVidRef.current.srcObject = localStream; }, [localStream]);
+  // Includes isVideo in the deps (matching the remoteStream effect above) so
+  // that switching voice -> video re-runs this after the local <video> tag
+  // actually mounts. isVideo only flips true once call.type updates, which
+  // happens *after* a Firestore round-trip — later than localStream itself
+  // gets updated with the new camera track. Without isVideo here, the local
+  // preview element mounts with no srcObject ever assigned to it, so the
+  // remote person shows up fine but you never see your own camera.
+  useEffect(() => { if (localVidRef.current && localStream) localVidRef.current.srcObject = localStream; }, [localStream, isVideo]);
 
   const toggleMute = () => { if (localStream) { localStream.getAudioTracks().forEach(t => t.enabled = muted); setMuted(m => !m); } };
   const toggleCam = () => { if (localStream) { localStream.getVideoTracks().forEach(t => t.enabled = camOff); setCamOff(c => !c); } };
