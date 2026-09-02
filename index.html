@@ -4053,6 +4053,7 @@ function PremiumScreen({ onBack }) {
 
   const submit = async () => {
     if (!reference.trim()) return toast('Enter your payment reference / teller number', 'error');
+    if (!proofFile) return toast('Attach your payment receipt/screenshot to continue', 'error');
     setSubmitting(true);
     try {
       let proofURL = null;
@@ -4100,7 +4101,7 @@ function PremiumScreen({ onBack }) {
       !account && h('p', { className: 'text-xs text-red-500 mb-4' }, 'Payment account not set up yet — contact the admin.'),
       h('input', { className: inputCls, placeholder: 'Payment reference / teller number', value: reference, onChange: e => setReference(e.target.value) }),
       h('input', { type: 'file', accept: 'image/*', ref: fileRef, className: 'hidden', onChange: e => setProofFile(e.target.files[0]) }),
-      h('button', { className: 'w-full mb-3 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-600 text-sm text-left', onClick: () => fileRef.current.click() }, proofFile ? proofFile.name : h('span', { className: 'text-slate-400' }, 'Attach payment screenshot (optional)')),
+      h('button', { className: 'w-full mb-3 px-3 py-2.5 rounded-xl border ' + (proofFile ? 'border-slate-200 dark:border-ink-600' : 'border-red-300 dark:border-red-500/50') + ' text-sm text-left', onClick: () => fileRef.current.click() }, proofFile ? proofFile.name : h('span', { className: 'text-red-500' }, 'Attach payment receipt/screenshot (required)')),
       h('button', { onClick: submit, disabled: submitting, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm' }, submitting ? 'Submitting…' : 'I have paid — submit for review'),
       myRequests.length > 0 && h('div', { className: 'mt-6' },
         h('p', { className: 'font-semibold text-sm mb-2' }, 'Your payment history'),
@@ -4168,6 +4169,7 @@ function AdvertiseScreen({ onBack }) {
     if ((mediaType === 'image' || mediaType === 'video') && !file) return toast('Attach your ad image/video', 'error');
     if (!Number(days) || Number(days) < 1) return toast('Enter how many days to run the ad', 'error');
     if (!reference.trim()) return toast('Enter your payment reference / teller number', 'error');
+    if (!proofFile) return toast('Attach your payment receipt/screenshot to continue', 'error');
     setSubmitting(true);
     try {
       let mediaURL = null;
@@ -4241,7 +4243,7 @@ function AdvertiseScreen({ onBack }) {
       !account && h('p', { className: 'text-xs text-red-500 mb-4' }, 'Payment account not set up yet — contact the admin.'),
       h('input', { className: inputCls, placeholder: 'Payment reference / teller number', value: reference, onChange: e => setReference(e.target.value) }),
       h('input', { type: 'file', accept: 'image/*', ref: proofRef, className: 'hidden', onChange: e => setProofFile(e.target.files[0]) }),
-      h('button', { className: 'w-full mb-3 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-600 text-sm text-left', onClick: () => proofRef.current.click() }, proofFile ? proofFile.name : h('span', { className: 'text-slate-400' }, 'Attach payment screenshot (optional)')),
+      h('button', { className: 'w-full mb-3 px-3 py-2.5 rounded-xl border ' + (proofFile ? 'border-slate-200 dark:border-ink-600' : 'border-red-300 dark:border-red-500/50') + ' text-sm text-left', onClick: () => proofRef.current.click() }, proofFile ? proofFile.name : h('span', { className: 'text-red-500' }, 'Attach payment receipt/screenshot (required)')),
       h('button', { onClick: submit, disabled: submitting, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm' }, submitting ? 'Submitting…' : 'I have paid — submit for review'),
 
       myRequests.length > 0 && h('div', { className: 'mt-6' },
@@ -4323,6 +4325,7 @@ function BusinessScreen({ onBack }) {
   const submitBizPremium = async () => {
     if (!name.trim()) return toast('Save your business profile first', 'error');
     if (!bizReference.trim()) return toast('Enter your payment reference / teller number', 'error');
+    if (!bizProofFile) return toast('Attach your payment receipt/screenshot to continue', 'error');
     setBizSubmitting(true);
     try {
       let proofURL = null;
@@ -4444,7 +4447,7 @@ function BusinessScreen({ onBack }) {
         !bizAccount && h('p', { className: 'text-xs text-red-500 mb-4' }, 'Payment account not set up yet — contact the admin.'),
         h('input', { className: inputCls, placeholder: 'Payment reference / teller number', value: bizReference, onChange: e => setBizReference(e.target.value) }),
         h('input', { type: 'file', accept: 'image/*', ref: bizFileRef, className: 'hidden', onChange: e => setBizProofFile(e.target.files[0]) }),
-        h('button', { className: 'w-full mb-3 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-ink-600 text-sm text-left', onClick: () => bizFileRef.current.click() }, bizProofFile ? bizProofFile.name : h('span', { className: 'text-slate-400' }, 'Attach payment screenshot (optional)')),
+        h('button', { className: 'w-full mb-3 px-3 py-2.5 rounded-xl border ' + (bizProofFile ? 'border-slate-200 dark:border-ink-600' : 'border-red-300 dark:border-red-500/50') + ' text-sm text-left', onClick: () => bizFileRef.current.click() }, bizProofFile ? bizProofFile.name : h('span', { className: 'text-red-500' }, 'Attach payment receipt/screenshot (required)')),
         h('button', { onClick: submitBizPremium, disabled: bizSubmitting, className: 'w-full bg-brand-600 text-white rounded-xl py-2.5 font-semibold text-sm' }, bizSubmitting ? 'Submitting…' : 'I have paid — submit for review'),
         myBizRequests.length > 0 && h('div', { className: 'mt-6' },
           h('p', { className: 'font-semibold text-sm mb-2' }, 'Your payment history'),
@@ -5018,6 +5021,9 @@ function CallProvider({ children }) {
   const ringTimeout = useRef(null);
   const seenCalls = useRef(new Set());
   const connectedAt = useRef(null);
+  const lastHandledOfferSdp = useRef(null);
+  const lastHandledAnswerSdp = useRef(null);
+  const [switchingType, setSwitchingType] = useState(false);
 
   const logCallMessage = useCallback(async (theCall, status, durationSecs) => {
     if (!theCall) return;
@@ -5074,6 +5080,7 @@ function CallProvider({ children }) {
     unsubCandidates.current.forEach(u => u()); unsubCandidates.current = [];
     if (ringTimeout.current) { clearTimeout(ringTimeout.current); ringTimeout.current = null; }
     connectedAt.current = null;
+    lastHandledOfferSdp.current = null; lastHandledAnswerSdp.current = null; setSwitchingType(false);
     setLocalStream(null); setRemoteStream(null); setCall(null); setRemoteUser(null); setCallStatus('idle');
   }, []);
   const cleanupRef = useRef(cleanup);
@@ -5093,6 +5100,86 @@ function CallProvider({ children }) {
       }
     };
     return pc;
+  };
+
+  /* ---- MID-CALL AUDIO<->VIDEO SWITCH ----
+     Either side can call switchCallType('video'|'audio') at any point during
+     a connected 1:1 call. It renegotiates the existing RTCPeerConnection
+     (adds/removes the local camera track and exchanges a fresh offer/answer
+     through extra fields on the same call doc) rather than starting a new
+     call, so audio never drops and the call ID/duration stay continuous. */
+  const handleRenegotiation = async (data, pc, callId) => {
+    if (!pc || !callId) return;
+    // Someone (possibly us) sent a new offer for a type change.
+    if (data.renegotiateOffer && data.renegotiateOffer.from !== profile.id
+        && data.renegotiateOffer.offer.sdp !== lastHandledOfferSdp.current) {
+      lastHandledOfferSdp.current = data.renegotiateOffer.offer.sdp;
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.renegotiateOffer.offer));
+        if (data.type === 'video' && localStreamRef.current && localStreamRef.current.getVideoTracks().length === 0) {
+          try {
+            const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const track = camStream.getVideoTracks()[0];
+            localStreamRef.current.addTrack(track);
+            pc.addTrack(track, localStreamRef.current);
+            const refreshed = new MediaStream(localStreamRef.current.getTracks());
+            localStreamRef.current = refreshed; setLocalStream(refreshed);
+          } catch (e) { /* camera denied on this side — call continues audio-only for them */ }
+        }
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await db.collection('smiletak_calls').doc(callId).update({
+          renegotiateAnswer: { answer: { type: answer.type, sdp: answer.sdp }, from: profile.id }
+        });
+        setCall(c => c ? Object.assign({}, c, { type: data.type }) : c);
+      } catch (e) { /* renegotiation glitch — call stays on its current type */ }
+    }
+    // We sent the offer; this is the matching answer coming back.
+    if (data.renegotiateAnswer && data.renegotiateAnswer.from !== profile.id
+        && data.renegotiateAnswer.answer.sdp !== lastHandledAnswerSdp.current
+        && pc.signalingState === 'have-local-offer') {
+      lastHandledAnswerSdp.current = data.renegotiateAnswer.answer.sdp;
+      try { await pc.setRemoteDescription(new RTCSessionDescription(data.renegotiateAnswer.answer)); } catch (e) {}
+      setSwitchingType(false);
+    }
+  };
+
+  const switchCallType = async (newType) => {
+    const pc = pcRef.current;
+    const stream = localStreamRef.current;
+    if (!pc || !stream || !call || callStatus !== 'connected' || call.type === newType) return;
+    if (pc.signalingState !== 'stable') return; // a switch is already mid-flight
+    const callId = call.id;
+    setSwitchingType(true);
+    try {
+      if (newType === 'video') {
+        if (stream.getVideoTracks().length === 0) {
+          const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          const track = camStream.getVideoTracks()[0];
+          stream.addTrack(track);
+          pc.addTrack(track, stream);
+        }
+      } else {
+        stream.getVideoTracks().forEach(t => {
+          stream.removeTrack(t);
+          t.stop();
+          const sender = pc.getSenders().find(s => s.track === t);
+          if (sender) pc.removeTrack(sender);
+        });
+      }
+      const refreshed = new MediaStream(stream.getTracks());
+      localStreamRef.current = refreshed; setLocalStream(refreshed);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await db.collection('smiletak_calls').doc(callId).update({
+        type: newType,
+        renegotiateOffer: { offer: { type: offer.type, sdp: offer.sdp }, from: profile.id }
+      });
+      setCall(c => c ? Object.assign({}, c, { type: newType }) : c);
+    } catch (e) {
+      toast('Could not switch to ' + newType + ' call: ' + e.message, 'error');
+      setSwitchingType(false);
+    }
   };
 
   const startCall = async (other, type) => {
@@ -5125,6 +5212,7 @@ function CallProvider({ children }) {
         if (data.status === 'declined') { toast('Call declined', 'info'); cleanup(); }
         if (data.status === 'ended' || data.status === 'missed') cleanup();
         if (data.upgradeToGroupCallId) handleUpgrade(data.upgradeToGroupCallId, other.id, type);
+        handleRenegotiation(data, pc, callRef.id);
       });
       const candUnsub = db.collection('smiletak_calls').doc(callRef.id).collection('calleeCandidates').onSnapshot(snap => {
         snap.docChanges().forEach(c => { if (c.type === 'added') pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {}); });
@@ -5158,6 +5246,7 @@ function CallProvider({ children }) {
         const data = snap.data();
         if (data.status === 'ended') { cleanup(); return; }
         if (data.upgradeToGroupCallId) handleUpgrade(data.upgradeToGroupCallId, call.callerId, call.type);
+        handleRenegotiation(data, pc, call.id);
       });
       const candUnsub = db.collection('smiletak_calls').doc(call.id).collection('callerCandidates').onSnapshot(snap => {
         snap.docChanges().forEach(c => { if (c.type === 'added') pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {}); });
@@ -5379,10 +5468,10 @@ function CallProvider({ children }) {
     } catch (e) { toast(e.message, 'error'); }
   };
 
-  return h(CallCtx.Provider, { value: { callStatus, call, startCall, groupCall, incomingGroupCall, startGroupCall, joinGroupCall, declineGroupCall, leaveGroupCall, addToGroupCall, upgradeToGroupCall } },
+  return h(CallCtx.Provider, { value: { callStatus, call, startCall, switchCallType, switchingType, groupCall, incomingGroupCall, startGroupCall, joinGroupCall, declineGroupCall, leaveGroupCall, addToGroupCall, upgradeToGroupCall } },
     children,
     callStatus === 'incoming' && h(IncomingCallScreen, { call, remoteUser, onAccept: acceptCall, onDecline: declineCall }),
-    (callStatus === 'outgoing' || callStatus === 'connected') && h(ActiveCallScreen, { call, remoteUser, status: callStatus, localStream, remoteStream, onEnd: endCall, onAdd: upgradeToGroupCall }),
+    (callStatus === 'outgoing' || callStatus === 'connected') && h(ActiveCallScreen, { call, remoteUser, status: callStatus, localStream, remoteStream, onEnd: endCall, onAdd: upgradeToGroupCall, onSwitchType: switchCallType, switchingType }),
     incomingGroupCall && !groupCall && h(IncomingGroupCallScreen, { call: incomingGroupCall, onAccept: joinGroupCall, onDecline: declineGroupCall }),
     groupCall && h(GroupCallScreen, { call: groupCall, onLeave: leaveGroupCall, onAdd: addToGroupCall })
   );
@@ -5409,14 +5498,18 @@ function IncomingCallScreen({ remoteUser, call, onAccept, onDecline }) {
   );
 }
 
-function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream, onEnd, onAdd }) {
+function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream, onEnd, onAdd, onSwitchType, switchingType }) {
   const [muted, setMuted] = useState(false);
   const [camOff, setCamOff] = useState(false);
   const [secs, setSecs] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [onSpeaker, setOnSpeaker] = useState(true); // browsers default remote audio to the loudspeaker
+  const [speakerSupported, setSpeakerSupported] = useState(true);
   const remoteVidRef = useRef(null);
+  const remoteAudioRef = useRef(null); // dedicated element so voice-only calls actually play sound
   const localVidRef = useRef(null);
   const isVideo = call && call.type === 'video';
+  const toast = useToast();
   useRingTone(status === 'outgoing');
 
   useEffect(() => {
@@ -5425,23 +5518,59 @@ function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream,
     return () => clearInterval(t);
   }, [status]);
 
-  useEffect(() => { if (remoteVidRef.current && remoteStream) remoteVidRef.current.srcObject = remoteStream; }, [remoteStream]);
+  useEffect(() => { if (remoteVidRef.current && remoteStream) remoteVidRef.current.srcObject = remoteStream; }, [remoteStream, isVideo]);
+  useEffect(() => { if (remoteAudioRef.current && remoteStream) remoteAudioRef.current.srcObject = remoteStream; }, [remoteStream, isVideo]);
   useEffect(() => { if (localVidRef.current && localStream) localVidRef.current.srcObject = localStream; }, [localStream]);
 
   const toggleMute = () => { if (localStream) { localStream.getAudioTracks().forEach(t => t.enabled = muted); setMuted(m => !m); } };
   const toggleCam = () => { if (localStream) { localStream.getVideoTracks().forEach(t => t.enabled = camOff); setCamOff(c => !c); } };
   const fmt = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 
+  // Best-effort loudspeaker <-> earpiece routing via the Audio Output Devices
+  // API (HTMLMediaElement.setSinkId). Support varies a lot by browser/OS —
+  // notably iOS Safari doesn't support it at all — so this quietly no-ops
+  // with a toast rather than breaking the call if the device can't do it.
+  const toggleSpeaker = async () => {
+    const el = isVideo ? remoteVidRef.current : remoteAudioRef.current;
+    if (!el || typeof el.setSinkId !== 'function') {
+      setSpeakerSupported(false);
+      toast('This device/browser doesn\u2019t support switching audio output', 'info');
+      return;
+    }
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const outputs = devices.filter(d => d.kind === 'audiooutput');
+      const earpiece = outputs.find(d => /earpiece|receiver/i.test(d.label));
+      const speaker = outputs.find(d => /speaker/i.test(d.label)) || outputs.find(d => d.deviceId === 'default');
+      const goingToSpeaker = !onSpeaker;
+      const target = goingToSpeaker ? speaker : earpiece;
+      if (!target) {
+        toast('No earpiece output found on this device', 'info');
+        return;
+      }
+      await el.setSinkId(target.deviceId);
+      setOnSpeaker(goingToSpeaker);
+    } catch (e) { toast('Could not switch audio output: ' + e.message, 'error'); }
+  };
+
   return h('div', { className: 'fixed inset-0 z-[999] bg-ink-900 text-white flex flex-col items-center justify-between py-10 px-6 overflow-hidden' },
     isVideo && remoteStream && h('video', { ref: remoteVidRef, autoPlay: true, playsInline: true, className: 'absolute inset-0 w-full h-full object-cover' }),
+    !isVideo && remoteStream && h('audio', { ref: remoteAudioRef, autoPlay: true }),
     isVideo && h('video', { ref: localVidRef, autoPlay: true, playsInline: true, muted: true, className: 'absolute top-4 right-4 w-24 h-32 rounded-xl object-cover border border-white/30' }),
     h('div', { className: 'relative z-10 flex flex-col items-center gap-3 mt-6' },
       (!isVideo || !remoteStream) && h(Avatar, { url: remoteUser && remoteUser.photoURL, name: remoteUser && remoteUser.fullName, size: 96 }),
       h('p', { className: 'text-xl font-bold mt-2' }, (remoteUser && remoteUser.fullName) || 'Unknown'),
-      h('p', { className: 'text-sm opacity-70' }, status === 'connected' ? fmt(secs) : 'Calling…')
+      h('p', { className: 'text-sm opacity-70' }, status === 'connected' ? fmt(secs) : 'Calling…'),
+      status === 'connected' && switchingType && h('p', { className: 'text-xs opacity-60' }, 'Switching…')
     ),
-    h('div', { className: 'relative z-10 flex items-center gap-6' },
+    h('div', { className: 'relative z-10 flex flex-wrap items-center justify-center gap-4' },
       h('button', { onClick: toggleMute, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (muted ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (muted ? 'fa-microphone-slash' : 'fa-microphone') })),
+      status === 'connected' && speakerSupported && h('button', { onClick: toggleSpeaker, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (onSpeaker ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (onSpeaker ? 'fa-volume-high' : 'fa-ear-listen') })),
+      status === 'connected' && onSwitchType && h('button', {
+        onClick: () => onSwitchType(isVideo ? 'audio' : 'video'),
+        disabled: switchingType,
+        className: 'w-14 h-14 rounded-full flex items-center justify-center bg-white/20 ' + (switchingType ? 'opacity-50' : '')
+      }, h('i', { className: 'fa-solid ' + (isVideo ? 'fa-video-slash' : 'fa-video') })),
       status === 'connected' && onAdd && h('button', { onClick: () => setAdding(true), className: 'w-14 h-14 rounded-full bg-white/20 flex items-center justify-center' }, h('i', { className: 'fa-solid fa-user-plus' })),
       h('button', { onClick: onEnd, className: 'w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-2xl' }, h('i', { className: 'fa-solid fa-phone-slash' })),
       isVideo && h('button', { onClick: toggleCam, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (camOff ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (camOff ? 'fa-video-slash' : 'fa-video') }))
@@ -5476,29 +5605,72 @@ function GroupCallScreen({ call, onLeave, onAdd }) {
   const isVideo = call.type === 'video';
   const localVidRef = useRef(null);
   const [adding, setAdding] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [onSpeaker, setOnSpeaker] = useState(true);
+  const [speakerSupported, setSpeakerSupported] = useState(true);
+  const [sinkId, setSinkId] = useState(null); // propagated to every participant tile's audio/video element
+  const toast = useToast();
   useEffect(() => { if (localVidRef.current && call.myStream) localVidRef.current.srcObject = call.myStream; }, [call.myStream]);
   const tiles = Object.keys(call.participants || {});
+
+  const toggleMute = () => { if (call.myStream) { call.myStream.getAudioTracks().forEach(t => t.enabled = muted); setMuted(m => !m); } };
+
+  // Same best-effort loudspeaker/earpiece routing as 1:1 calls, applied to
+  // every participant tile at once since a group call has one remote
+  // audio/video element per person. See the 1:1 ActiveCallScreen comment
+  // for the iOS Safari caveat — this silently no-ops there.
+  const toggleSpeaker = async () => {
+    const probe = document.createElement('audio');
+    if (typeof probe.setSinkId !== 'function') {
+      setSpeakerSupported(false);
+      toast('This device/browser doesn\u2019t support switching audio output', 'info');
+      return;
+    }
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const outputs = devices.filter(d => d.kind === 'audiooutput');
+      const earpiece = outputs.find(d => /earpiece|receiver/i.test(d.label));
+      const speaker = outputs.find(d => /speaker/i.test(d.label)) || outputs.find(d => d.deviceId === 'default');
+      const goingToSpeaker = !onSpeaker;
+      const target = goingToSpeaker ? speaker : earpiece;
+      if (!target) { toast('No earpiece output found on this device', 'info'); return; }
+      setSinkId(target.deviceId);
+      setOnSpeaker(goingToSpeaker);
+    } catch (e) { toast('Could not switch audio output: ' + e.message, 'error'); }
+  };
+
   return h('div', { className: 'fixed inset-0 z-[999] bg-ink-900 text-white flex flex-col' },
     h('div', { className: 'px-4 pt-4 pb-2 text-sm text-white/70' }, call.groupName || 'Group call'),
     h('div', { className: 'flex-1 grid grid-cols-2 gap-1 p-1 overflow-y-auto no-scrollbar auto-rows-[140px]' },
       tiles.length === 0 && h('div', { className: 'col-span-2 flex items-center justify-center text-sm text-white/60' }, 'Waiting for others to join…'),
-      tiles.map(uid => h(GroupCallTile, { key: uid, uid, stream: call.participants[uid].stream, isVideo }))
+      tiles.map(uid => h(GroupCallTile, { key: uid, uid, stream: call.participants[uid].stream, isVideo, sinkId }))
     ),
     isVideo && h('video', { ref: localVidRef, autoPlay: true, playsInline: true, muted: true, className: 'absolute top-16 right-4 w-20 h-28 rounded-xl object-cover border border-white/30' }),
-    h('div', { className: 'flex items-center justify-center gap-6 py-6' },
+    h('div', { className: 'flex items-center justify-center gap-4 py-6 flex-wrap' },
+      h('button', { onClick: toggleMute, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (muted ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (muted ? 'fa-microphone-slash' : 'fa-microphone') })),
+      speakerSupported && h('button', { onClick: toggleSpeaker, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (onSpeaker ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (onSpeaker ? 'fa-volume-high' : 'fa-ear-listen') })),
       h('button', { onClick: () => setAdding(true), className: 'w-14 h-14 rounded-full bg-white/20 flex items-center justify-center' }, h('i', { className: 'fa-solid fa-user-plus' })),
       h('button', { onClick: onLeave, className: 'w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-2xl' }, h('i', { className: 'fa-solid fa-phone-slash' }))
     ),
     adding && h(AddToCallModal, { onClose: () => setAdding(false), onPick: (uid) => { onAdd(uid); setAdding(false); } })
   );
 }
-function GroupCallTile({ uid, stream, isVideo }) {
+function GroupCallTile({ uid, stream, isVideo, sinkId }) {
   const [user, setUser] = useState(null);
   const vidRef = useRef(null);
+  const audioRef = useRef(null); // used whenever this tile isn't showing a <video> so voice-only participants are still heard
+  const showsVideo = isVideo && !!stream;
   useEffect(() => { db.collection('smiletak_users').doc(uid).get().then(s => { if (s.exists) setUser(s.data()); }); }, [uid]);
-  useEffect(() => { if (vidRef.current && stream) vidRef.current.srcObject = stream; }, [stream]);
+  useEffect(() => { if (vidRef.current && stream) vidRef.current.srcObject = stream; }, [stream, showsVideo]);
+  useEffect(() => { if (audioRef.current && stream) audioRef.current.srcObject = stream; }, [stream, showsVideo]);
+  useEffect(() => {
+    if (!sinkId) return;
+    const el = showsVideo ? vidRef.current : audioRef.current;
+    if (el && typeof el.setSinkId === 'function') el.setSinkId(sinkId).catch(() => {});
+  }, [sinkId, showsVideo]);
   return h('div', { className: 'relative bg-ink-800 rounded-lg overflow-hidden flex items-center justify-center' },
-    isVideo && stream ? h('video', { ref: vidRef, autoPlay: true, playsInline: true, className: 'w-full h-full object-cover' }) : h(Avatar, { url: user && user.photoURL, name: user && user.fullName, size: 56 }),
+    showsVideo ? h('video', { ref: vidRef, autoPlay: true, playsInline: true, className: 'w-full h-full object-cover' }) : h(Avatar, { url: user && user.photoURL, name: user && user.fullName, size: 56 }),
+    !showsVideo && stream && h('audio', { ref: audioRef, autoPlay: true }),
     h('span', { className: 'absolute bottom-1 left-1 text-[10px] bg-black/50 px-1.5 py-0.5 rounded' }, (user && user.fullName) || '…')
   );
 }
