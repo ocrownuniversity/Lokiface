@@ -1559,6 +1559,7 @@ function GroupMessageBubble({ m, mine, sender }) {
       m.type === 'image' && m.mediaURL && h('img', { src: m.mediaURL, className: 'rounded-lg max-w-full max-h-64 object-cover' }),
       m.type === 'video' && m.mediaURL && h('video', { src: m.mediaURL, controls: true, className: 'rounded-lg max-w-full max-h-64' }),
       m.type === 'audio' && m.mediaURL && h('audio', { src: m.mediaURL, controls: true, className: 'max-w-full' }),
+      m.type === 'voice' && m.mediaURL && h(VoiceMessagePlayer, { src: m.mediaURL, mine, avatarURL: sender && sender.photoURL, avatarName: sender && sender.fullName, durationSecs: m.durationSecs }),
       m.type === 'document' && m.mediaURL && h('a', { href: m.mediaURL, target: '_blank', rel: 'noreferrer', className: 'underline text-xs' }, m.mediaName || 'Document'),
       h('p', { className: 'text-[10px] mt-1 text-right ' + (mine ? 'text-white/70' : 'text-slate-400') }, fmtClock(m.createdAt))
     )
@@ -2420,6 +2421,8 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
             ? h(CallLogRow, { m })
             : h(MessageBubble, {
                 m, mine,
+                senderAvatar: mine ? profile.photoURL : otherLive.photoURL,
+                senderName: mine ? profile.fullName : otherLive.fullName,
                 onMenu: () => setMenuMsg(m),
                 onReply: () => setReplyTo(m)
               })
@@ -2500,7 +2503,78 @@ function MessageListSkeleton() {
     ))
   );
 }
-function MessageBubble({ m, mine, onMenu, onReply }) {
+/* WhatsApp-style compact voice note bubble: small circular avatar, a
+   play/pause button, a scrubbable progress bar, and mm:ss duration — instead
+   of the browser's oversized native <audio controls>. Uses one shared
+   <audio> element per bubble, driven entirely by our own UI. */
+function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs }) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [curTime, setCurTime] = useState(0);
+  const [duration, setDuration] = useState(durationSecs || 0);
+  const barRef = useRef(null);
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const onTime = () => setCurTime(el.currentTime);
+    const onMeta = () => { if (isFinite(el.duration) && el.duration > 0) setDuration(el.duration); };
+    const onEnd = () => { setPlaying(false); setCurTime(0); };
+    el.addEventListener('timeupdate', onTime);
+    el.addEventListener('loadedmetadata', onMeta);
+    el.addEventListener('durationchange', onMeta);
+    el.addEventListener('ended', onEnd);
+    return () => {
+      el.removeEventListener('timeupdate', onTime);
+      el.removeEventListener('loadedmetadata', onMeta);
+      el.removeEventListener('durationchange', onMeta);
+      el.removeEventListener('ended', onEnd);
+    };
+  }, []);
+
+  const toggle = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) { el.pause(); setPlaying(false); }
+    else { el.play().catch(() => {}); setPlaying(true); }
+  };
+  const seek = (e) => {
+    const el = audioRef.current;
+    if (!el || !duration || !barRef.current) return;
+    const rect = barRef.current.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    el.currentTime = ratio * duration;
+    setCurTime(el.currentTime);
+  };
+  const fmt = (s) => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  const pct = duration ? Math.min(100, (curTime / duration) * 100) : 0;
+  const barColor = mine ? 'bg-white/40' : 'bg-slate-300 dark:bg-ink-600';
+  const fillColor = mine ? 'bg-white' : 'bg-brand-500';
+
+  return h('div', { className: 'flex items-center gap-2 w-[210px]' },
+    h('audio', { ref: audioRef, src, preload: 'metadata', className: 'hidden' }),
+    h(Avatar, { url: avatarURL, name: avatarName, size: 30 }),
+    h('button', { onClick: toggle, className: 'shrink-0 w-7 h-7 rounded-full flex items-center justify-center ' + (mine ? 'bg-white text-brand-600' : 'bg-brand-500 text-white') },
+      h('i', { className: 'fa-solid ' + (playing ? 'fa-pause' : 'fa-play') + ' text-[10px]' })
+    ),
+    h('div', { className: 'flex-1 min-w-0' },
+      h('div', {
+        ref: barRef, onClick: seek,
+        className: 'relative h-1.5 rounded-full cursor-pointer ' + barColor
+      },
+        h('div', { className: 'absolute inset-y-0 left-0 rounded-full ' + fillColor, style: { width: pct + '%' } }),
+        h('div', {
+          className: 'absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ' + fillColor,
+          style: { left: 'calc(' + pct + '% - 5px)' }
+        })
+      ),
+      h('p', { className: 'text-[10px] mt-0.5 ' + (mine ? 'text-white/80' : 'text-slate-400') }, fmt(playing || curTime ? curTime : duration))
+    )
+  );
+}
+
+function MessageBubble({ m, mine, onMenu, onReply, senderAvatar, senderName }) {
   if (m.deletedForEveryone) {
     return h('div', { id: 'msg-' + m.id, className: 'flex ' + (mine ? 'justify-end' : 'justify-start') + ' mb-1.5' },
       h('div', { className: 'italic text-xs text-slate-400 bg-white dark:bg-ink-800 px-3 py-2 rounded-2xl' }, h('i', { className: 'fa-solid fa-ban mr-1' }), 'This message was deleted')
@@ -2518,7 +2592,7 @@ function MessageBubble({ m, mine, onMenu, onReply }) {
         m.type === 'image' && h('img', { src: m.mediaURL, className: 'rounded-lg max-w-full max-h-64 mb-1' }),
         m.type === 'video' && h('video', { src: m.mediaURL, controls: true, className: 'rounded-lg max-w-full max-h-64 mb-1' }),
         m.type === 'audio' && h('audio', { src: m.mediaURL, controls: true, className: 'max-w-full' }),
-        m.type === 'voice' && h('div', { className: 'flex items-center gap-2' }, h('i', { className: 'fa-solid fa-microphone' }), h('audio', { src: m.mediaURL, controls: true, className: 'max-w-[180px]' })),
+        m.type === 'voice' && m.mediaURL && h(VoiceMessagePlayer, { src: m.mediaURL, mine, avatarURL: senderAvatar, avatarName: senderName, durationSecs: m.durationSecs }),
         m.type === 'document' && h('a', { href: m.mediaURL, target: '_blank', rel: 'noreferrer', className: 'flex items-center gap-2 underline' }, h('i', { className: 'fa-solid fa-file' }), h('span', null, m.mediaName, ' ', m.mediaSize ? h('span', { className: 'opacity-70' }, '(' + bytesToSize(m.mediaSize) + ')') : null)),
         h('div', { className: 'flex items-center gap-1 justify-end mt-0.5' },
           h('span', { className: 'text-[10px] ' + (mine ? 'text-white/70' : 'text-slate-400') }, fmtClock(m.createdAt)),
@@ -5027,21 +5101,74 @@ function StatCard({ label, value }) {
 /* ============================== CALLING (WebRTC) ==============================
    Voice/video calls, signaled through Firestore (smiletak_calls + per-call
    candidate subcollections) — no Cloud Functions, same pattern as the rest
-   of the app. STUN + a free public TURN relay (openrelay.metered.ca) are
+   of the app. STUN + free public TURN relays (openrelay.metered.ca) are
    included so calls still connect when both people are on different
-   networks (mobile data <-> wifi), not just on the same LAN. */
-const RTC_CONFIG = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-  ]
-};
+   networks (mobile data <-> wifi), not just on the same LAN.
+
+   IF CALLS ONLY WORK BETWEEN TWO TABS ON YOUR OWN PHONE, BUT A REAL SECOND
+   PERSON ON A DIFFERENT DEVICE CAN'T HEAR/SEE YOU, THE #1 CAUSE IS FIRESTORE
+   SECURITY RULES — NOT THIS FILE. The other person's phone has to be able to
+   WRITE into a call document that YOU created (and vice versa), which a
+   typical "only the owner can write" rule blocks. Make sure your rules
+   (Firebase Console → Firestore Database → Rules) include something like:
+
+     match /smiletak_calls/{callId} {
+       allow read, update: if request.auth != null &&
+         (request.auth.uid == resource.data.callerId ||
+          request.auth.uid == resource.data.calleeId);
+       allow create: if request.auth != null &&
+         request.auth.uid == request.resource.data.callerId;
+       match /callerCandidates/{candidateId} {
+         allow read, write: if request.auth != null &&
+           (request.auth.uid == get(/databases/$(database)/documents/smiletak_calls/$(callId)).data.callerId ||
+            request.auth.uid == get(/databases/$(database)/documents/smiletak_calls/$(callId)).data.calleeId);
+       }
+       match /calleeCandidates/{candidateId} {
+         allow read, write: if request.auth != null &&
+           (request.auth.uid == get(/databases/$(database)/documents/smiletak_calls/$(callId)).data.callerId ||
+            request.auth.uid == get(/databases/$(database)/documents/smiletak_calls/$(callId)).data.calleeId);
+       }
+     }
+
+   Without the candidate-subcollection rules specifically, each side can
+   create/accept the call doc fine (so it *looks* like it connects), but the
+   ICE candidates that carry actual audio/video never make it across —
+   which matches exactly "connects but no one hears/sees anything." */
+function buildRtcConfig(forceRelay) {
+  return {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      // TWO independent free TURN providers (not just one) so that if either
+      // one is rate-limited or briefly down, the call still has a working
+      // relay path. This matters most exactly when two phones are on two
+      // SEPARATE mobile data connections (as opposed to sharing one
+      // hotspot) — mobile carriers almost always sit behind carrier-grade
+      // NAT, so a direct/STUN-only path frequently can't be found and the
+      // call has no choice but to relay through TURN.
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+      // Second, independent free/no-signup TURN provider as a fallback in
+      // case Open Relay is down or overloaded at the moment of the call.
+      { urls: 'turn:relay.freeturn.net:3478', username: 'freeturn', credential: 'freeturn' },
+      { urls: 'turns:relay.freeturn.net:5349', username: 'freeturn', credential: 'freeturn' }
+    ],
+    iceCandidatePoolSize: 10,
+    bundlePolicy: 'max-bundle',
+    // On the *retry* after an initial connection stall, force every candidate
+    // through TURN relay instead of also trying the direct/STUN path. Mobile
+    // carriers often silently drop the direct path, so the browser can waste
+    // its whole gathering window on candidates that were never going to work.
+    // Forcing 'relay' skips straight to the path that actually succeeds
+    // across two separate mobile networks.
+    iceTransportPolicy: forceRelay ? 'relay' : 'all'
+  };
+}
+const RTC_CONFIG = buildRtcConfig(false);
 // Applied to every microphone getUserMedia() call (calls, group calls, voice
 // notes) so the browser actively cancels echo/feedback and normalizes mic
 // gain instead of leaving that entirely to device defaults, which is where
@@ -5093,6 +5220,7 @@ function CallProvider({ children }) {
   const lastHandledOfferSdp = useRef(null);
   const lastHandledAnswerSdp = useRef(null);
   const [switchingType, setSwitchingType] = useState(false);
+  const endCallRef = useRef(() => {});
 
   const logCallMessage = useCallback(async (theCall, status, durationSecs) => {
     if (!theCall) return;
@@ -5128,6 +5256,12 @@ function CallProvider({ children }) {
           setRemoteUser(uSnap.exists ? Object.assign({ id: uSnap.id }, uSnap.data()) : { id: data.callerId, fullName: 'Unknown' });
           setCall(Object.assign({ id: change.doc.id }, data));
           setCallStatus('incoming');
+          // Tell the caller's phone that the call actually reached this
+          // device and is now audibly ringing here, so their screen can
+          // switch from "Calling…" to "Ringing…" instead of showing
+          // "Calling…" the entire time with no feedback that anything
+          // happened on the other end.
+          db.collection('smiletak_calls').doc(change.doc.id).update({ deviceRinging: true }).catch(() => {});
           // While it's still just ringing on my screen, watch for the caller
           // cancelling or the ring timing out so this screen dismisses itself
           // instead of ringing forever with a dead call behind it.
@@ -5154,9 +5288,10 @@ function CallProvider({ children }) {
   }, []);
   const cleanupRef = useRef(cleanup);
   useEffect(() => { cleanupRef.current = cleanup; }, [cleanup]);
+  useEffect(() => { endCallRef.current = endCall; });
 
   const setupPeer = (callId, isCaller) => {
-    const pc = new RTCPeerConnection(RTC_CONFIG);
+    const pc = new RTCPeerConnection(buildRtcConfig(false));
     pcRef.current = pc;
     const remote = new MediaStream();
     setRemoteStream(remote);
@@ -5166,6 +5301,57 @@ function CallProvider({ children }) {
         db.collection('smiletak_calls').doc(callId)
           .collection(isCaller ? 'callerCandidates' : 'calleeCandidates')
           .add(e.candidate.toJSON()).catch(() => {});
+      }
+    };
+    /* ---- ICE FAILURE DETECTION / RECOVERY ----
+       Without this, the call can sit on screen looking "connected" (because
+       that flag comes from Firestore signaling, not from real media) while
+       no audio/video is actually flowing — exactly the symptom of one side
+       hearing/seeing nothing. If the peer connection genuinely can't find a
+       path (common when the two phones are on different networks — e.g. two
+       separate mobile data connections instead of one shared hotspot — so
+       the direct/STUN path is blocked by carrier NAT and the browser has to
+       fall back to a TURN relay), the recovery sequence is now:
+         1. plain ICE restart (cheap, works if it was just a transient blip)
+         2. if still stuck after 6s, restart AGAIN but force iceTransportPolicy
+            'relay' — this skips the direct/STUN path entirely and goes
+            straight to TURN, which is what actually succeeds across two
+            separate carrier networks
+         3. only give up and show an error after relay-forced restart has
+            also had a real chance (14s total) — TURN over TCP (needed when
+            UDP is blocked, common on mobile carriers) takes noticeably
+            longer to establish than a direct path, so the old flat 8s
+            timeout could give up right as the TCP relay was about to work. */
+    let iceFailTimer = null;
+    let stage = 0; // 0 = not yet restarted, 1 = plain restart done, 2 = relay-forced restart done
+    const scheduleCheck = (delayMs) => {
+      if (iceFailTimer) clearTimeout(iceFailTimer);
+      iceFailTimer = setTimeout(() => {
+        const cur = pc.iceConnectionState;
+        if (cur === 'failed' || cur === 'disconnected') {
+          if (stage === 0) {
+            stage = 1;
+            if (typeof pc.restartIce === 'function') { try { pc.restartIce(); } catch (e) {} }
+            scheduleCheck(6000);
+          } else if (stage === 1) {
+            stage = 2;
+            try { pc.setConfiguration(buildRtcConfig(true)); } catch (e) {}
+            if (typeof pc.restartIce === 'function') { try { pc.restartIce(); } catch (e) {} }
+            scheduleCheck(8000);
+          } else {
+            toast('Call connection failed — check that both people have a stable internet connection', 'error');
+            endCallRef.current && endCallRef.current();
+          }
+        }
+      }, delayMs);
+    };
+    pc.oniceconnectionstatechange = () => {
+      const st = pc.iceConnectionState;
+      if (st === 'failed' || st === 'disconnected') {
+        if (!iceFailTimer) scheduleCheck(stage === 0 ? 3000 : 6000);
+      } else if (st === 'connected' || st === 'completed') {
+        if (iceFailTimer) { clearTimeout(iceFailTimer); iceFailTimer = null; }
+        stage = 0;
       }
     };
     return pc;
@@ -5277,6 +5463,7 @@ function CallProvider({ children }) {
         if (data.answer && !pc.currentRemoteDescription) {
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
+        if (data.deviceRinging) setCall(c => (c && !c.deviceRinging) ? Object.assign({}, c, { deviceRinging: true }) : c);
         if (data.status === 'accepted') { clearTimeout(ringTimeout.current); connectedAt.current = Date.now(); setCallStatus('connected'); }
         if (data.status === 'declined') { toast('Call declined', 'info'); cleanup(); }
         if (data.status === 'ended' || data.status === 'missed') cleanup();
@@ -5629,7 +5816,7 @@ function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream,
     h('div', { className: 'relative z-10 flex flex-col items-center gap-3 mt-6' },
       (!isVideo || !remoteStream) && h(Avatar, { url: remoteUser && remoteUser.photoURL, name: remoteUser && remoteUser.fullName, size: 96 }),
       h('p', { className: 'text-xl font-bold mt-2' }, (remoteUser && remoteUser.fullName) || 'Unknown'),
-      h('p', { className: 'text-sm opacity-70' }, status === 'connected' ? fmt(secs) : 'Calling…'),
+      h('p', { className: 'text-sm opacity-70' }, status === 'connected' ? fmt(secs) : (call && call.deviceRinging ? 'Ringing…' : 'Calling…')),
       status === 'connected' && switchingType && h('p', { className: 'text-xs opacity-60' }, 'Switching…')
     ),
     h('div', { className: 'relative z-10 flex flex-wrap items-center justify-center gap-4' },
