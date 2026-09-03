@@ -412,6 +412,31 @@ function bytesToSize(b) {
   while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
   return n.toFixed(n < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
 }
+
+/* ============================== DEVICE-LOCAL SETTINGS ==============================
+   A handful of group-settings features (Chat lock, Media visibility) are, by
+   nature, PER-DEVICE rather than synced account data — exactly like
+   WhatsApp's own "Lock and hide this chat on this device" wording. These
+   live in localStorage, never in Firestore, and never leave the device.
+   Wrapped in try/catch since some embedded/privacy-mode browsers throw on
+   localStorage access entirely. */
+function lsGet(key, fallback) {
+  try { const v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
+}
+function lsSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable — feature just won't persist */ }
+}
+// Not cryptographic — this is a convenience "keep my kid/coworker from
+// casually opening this chat" lock, same threat model as WhatsApp's device
+// chat lock, not a secrets vault. A determined attacker with devtools access
+// could bypass any client-side lock; real confidentiality would need the
+// message content itself encrypted at rest, which this simple hash does not do.
+function simplePinHash(pin) {
+  let h = 0;
+  const salted = 'smiletak-lock:' + pin;
+  for (let i = 0; i < salted.length; i++) h = (Math.imul(31, h) + salted.charCodeAt(i)) | 0;
+  return String(h);
+}
 async function uploadFile(path, file, onProgress) {
   const ref = storage.ref().child(path);
   const task = ref.put(file);
@@ -988,8 +1013,21 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
   const [selected, setSelected] = useState([]); // array of "type_id" keys, e.g. "dm_abc123"
   const [dmsLoaded, setDmsLoaded] = useState(false);
   const [groupsLoaded, setGroupsLoaded] = useState(false);
+  const [statusUids, setStatusUids] = useState(new Set());
   const camRef = useRef(null);
   const toast = useToast();
+
+  // Which contacts currently have an active (< 24h old) status update —
+  // used to draw the little "someone posted a status" ring around their
+  // avatar in the chat list, the same way WhatsApp highlights a contact's
+  // avatar when they have a story you haven't seen yet.
+  useEffect(() => {
+    const cutoff = new Date(Date.now() - 24 * 3600 * 1000);
+    const unsub = db.collection('smiletak_statuses').where('createdAt', '>', cutoff).onSnapshot(snap => {
+      setStatusUids(new Set(snap.docs.map(d => d.data().uid)));
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     if (!profile) return;
@@ -1270,6 +1308,7 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
       rows.map(r => h(ChatRow, {
         key: r.type + '_' + r.id,
         row: r,
+        hasStatus: r.type === 'dm' && !!(r.other && statusUids.has(r.other.id)),
         selectMode: selected.length > 0,
         isSelected: selected.includes(rowKey(r)),
         onOpen: () => {
@@ -1304,9 +1343,9 @@ function ChatRowSkeleton() {
     )
   );
 }
-function ChatRow({ row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile }) {
+function ChatRow({ row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile, hasStatus }) {
   if (row.type === 'group') return h(GroupChatRow, { row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive });
-  return h(DmChatRow, { row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile });
+  return h(DmChatRow, { row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile, hasStatus });
 }
 // Small checkmark badge shown over an avatar once a chat is selected —
 // same spot/behaviour as the green check badge in the native app.
@@ -1348,7 +1387,7 @@ function GroupChatRow({ row, onOpen, onLongPress, selectMode, isSelected, onPin,
     )
   );
 }
-function DmChatRow({ row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile } ) {
+function DmChatRow({ row, onOpen, onLongPress, selectMode, isSelected, onPin, onMute, onArchive, onProfile, hasStatus } ) {
   const { meta, chat, other } = row;
   const typing = chat.typing && other && chat.typing[other.id] && (Date.now() - (chat.typing[other.id].toMillis ? chat.typing[other.id].toMillis() : 0) < 5000);
   const unread = !!meta.unreadCount;
@@ -1362,7 +1401,12 @@ function DmChatRow({ row, onOpen, onLongPress, selectMode, isSelected, onPin, on
     className: 'relative flex items-center gap-3 px-4 py-3 select-none ' +
       (isSelected ? 'bg-brand-50 dark:bg-ink-700' : 'hover:bg-slate-50 dark:hover:bg-ink-800')
   },
-    h('div', { className: 'relative shrink-0 cursor-pointer', ...avatarPress },
+    h('div', {
+      className: 'relative shrink-0 cursor-pointer rounded-full ' +
+        (hasStatus ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-white dark:ring-offset-ink-900' : ''),
+      title: hasStatus ? 'Recently posted a status' : undefined,
+      ...avatarPress
+    },
       h(Avatar, { url: other && other.photoURL, name: other && other.fullName, size: 48, online: other && other.online }),
       selectMode && h(SelectBadge, { selected: isSelected })
     ),
@@ -1496,13 +1540,21 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
   const scrollRef = useRef(null);
   const call = useCall();
 
+  // Chat lock (device-local, see lsGet/lsSet comment above): if this group
+  // is on the locked list and hasn't been unlocked yet this tab session,
+  // gate the whole screen behind a PIN prompt before anything else runs.
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem('st_unlocked_' + groupId) === '1');
+  const isLocked = lsGet('st_lockedGroups', []).includes(groupId) && !unlocked;
+
   useEffect(() => { const unsub = db.collection('smiletak_groups').doc(groupId).onSnapshot(s => { if (s.exists) setGroup(Object.assign({ id: s.id }, s.data())); }); return unsub; }, [groupId]);
   useEffect(() => {
+    if (isLocked) return; // don't even subscribe to messages until unlocked
     const unsub = db.collection('smiletak_groups').doc(groupId).collection('messages').orderBy('createdAt', 'asc').limitToLast(200).onSnapshot(snap => {
       setMessages(snap.docs.map(d => Object.assign({ id: d.id }, d.data())));
     });
     return unsub;
-  }, [groupId]);
+    // eslint-disable-next-line
+  }, [groupId, isLocked]);
   useEffect(() => {
     if (!group) return;
     (group.members || []).forEach(uid => {
@@ -1512,11 +1564,37 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
   }, [group]);
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages.length]);
   useEffect(() => {
+    if (isLocked) return;
     db.collection('smiletak_groupMembers').doc(groupId + '_' + profile.id).update({ unreadCount: 0, lastReadAt: FieldValue.serverTimestamp() }).catch(() => {});
-  }, [groupId, profile.id]);
+  }, [groupId, profile.id, isLocked]);
+
+  // Disappearing messages: opportunistic cleanup. There's no Cloud
+  // Functions/cron in this app, so expired messages are swept out whenever
+  // anyone with the chat open notices them — same "self-heal on next visit"
+  // pattern used elsewhere in this file. Expired docs are also filtered out
+  // of `messages` below so nobody sees them even in the brief window before
+  // the delete completes.
+  useEffect(() => {
+    if (isLocked || !messages.length) return;
+    const now = Date.now();
+    const expired = messages.filter(m => m.expiresAt && m.expiresAt.toMillis && m.expiresAt.toMillis() < now);
+    if (!expired.length) return;
+    const batch = db.batch();
+    expired.forEach(m => batch.delete(db.collection('smiletak_groups').doc(groupId).collection('messages').doc(m.id)));
+    batch.commit().catch(() => {});
+  }, [messages, groupId, isLocked]);
+  const visibleMessages = useMemo(() => {
+    const now = Date.now();
+    return messages.filter(m => !(m.expiresAt && m.expiresAt.toMillis && m.expiresAt.toMillis() < now));
+  }, [messages]);
+
+  const isAdmin = group && (group.admins || []).includes(profile.id);
+  const canSend = !group || !group.onlyAdminsCanMessage || isAdmin;
 
   const sendMessage = async (payload) => {
+    if (!canSend) return;
     const base = { senderId: profile.id, createdAt: FieldValue.serverTimestamp(), readBy: [], deletedFor: [] };
+    if (group && group.disappearingMs) base.expiresAt = Timestamp.fromMillis(Date.now() + group.disappearingMs);
     await db.collection('smiletak_groups').doc(groupId).collection('messages').add(Object.assign(base, payload));
     const preview = payload.type === 'text' ? payload.text : ('📎 ' + payload.type);
     await db.collection('smiletak_groups').doc(groupId).set({ lastMessage: preview.slice(0, 100), lastMessageAt: FieldValue.serverTimestamp(), lastSenderId: profile.id }, { merge: true });
@@ -1529,6 +1607,7 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
   };
 
   const onPickFile = async (e) => {
+    if (!canSend) return;
     const f = e.target.files[0]; if (!f) return;
     fileRef.current.value = '';
     const capMB = isPremiumActive(profile) ? 200 : 25;
@@ -1553,6 +1632,13 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
 
   if (!group) return h('div', { className: 'p-6 flex items-center justify-center' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' }));
 
+  if (isLocked) {
+    return h(ChatLockGate, {
+      name: group.name, photoURL: group.photoURL, onBack,
+      onUnlock: () => { sessionStorage.setItem('st_unlocked_' + groupId, '1'); setUnlocked(true); }
+    });
+  }
+
   return h('div', { className: 'h-full flex flex-col bg-slate-50 dark:bg-ink-900' },
     h('div', { className: 'flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-ink-800 border-b border-slate-100 dark:border-ink-700' },
       h('button', { onClick: onBack, className: 'text-slate-500 px-1' }, h('i', { className: 'fa-solid fa-arrow-left' })),
@@ -1560,7 +1646,10 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
         h(Avatar, { url: group.photoURL, name: group.name, size: 36 }),
         h('div', { className: 'min-w-0' },
           h('p', { className: 'font-semibold text-sm truncate' }, group.name),
-          h('p', { className: 'text-[11px] text-slate-400 truncate' }, (group.members || []).length + ' members')
+          h('p', { className: 'text-[11px] text-slate-400 truncate flex items-center gap-1' },
+            (group.members || []).length + ' members',
+            group.disappearingMs ? h('i', { className: 'fa-solid fa-clock', title: 'Disappearing messages on' }) : null
+          )
         )
       ),
       h('button', { className: 'text-slate-400 px-2', onClick: () => callGroup('audio') }, h('i', { className: 'fa-solid fa-phone' })),
@@ -1568,37 +1657,94 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
     ),
     h(AdBanner, { type: 'chat_window_banner' }),
     h('div', { ref: scrollRef, className: 'flex-1 overflow-y-auto no-scrollbar px-3 py-3' },
-      messages.map(m => m.type === 'call'
+      visibleMessages.map(m => m.type === 'call'
         ? h(CallLogRow, { key: m.id, m })
-        : h(GroupMessageBubble, { key: m.id, m, mine: m.senderId === profile.id, sender: membersMap[m.senderId] })
+        : h(GroupMessageBubble, { key: m.id, m, mine: m.senderId === profile.id, sender: membersMap[m.senderId], groupId, advancedPrivacy: !!group.advancedPrivacy })
       )
     ),
     typeof uploadPct === 'number' && h('div', { className: 'px-3 pb-1 text-xs text-slate-400' }, 'Uploading… ' + uploadPct + '%'),
-    h('div', { className: 'flex items-center gap-2 px-3 py-2 bg-white dark:bg-ink-800 border-t border-slate-100 dark:border-ink-700' },
-      h('input', { type: 'file', ref: fileRef, className: 'hidden', onChange: onPickFile }),
-      h('button', { className: 'text-slate-400 px-1', onClick: () => fileRef.current.click() }, h('i', { className: 'fa-solid fa-paperclip text-lg' })),
-      h('input', {
-        className: 'flex-1 px-4 py-2.5 rounded-full bg-slate-100 dark:bg-ink-700 text-sm focus:outline-none', placeholder: 'Message',
-        value: text, onChange: e => setText(e.target.value),
-        onKeyDown: e => { if (e.key === 'Enter' && text.trim()) sendMessage({ type: 'text', text: text.trim() }); }
-      }),
-      h('button', { className: 'w-10 h-10 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0', onClick: () => text.trim() && sendMessage({ type: 'text', text: text.trim() }) }, h('i', { className: 'fa-solid fa-paper-plane text-sm' }))
-    )
+    canSend
+      ? h('div', { className: 'flex items-center gap-2 px-3 py-2 bg-white dark:bg-ink-800 border-t border-slate-100 dark:border-ink-700' },
+          h('input', { type: 'file', ref: fileRef, className: 'hidden', onChange: onPickFile }),
+          h('button', { className: 'text-slate-400 px-1', onClick: () => fileRef.current.click() }, h('i', { className: 'fa-solid fa-paperclip text-lg' })),
+          h('input', {
+            className: 'flex-1 px-4 py-2.5 rounded-full bg-slate-100 dark:bg-ink-700 text-sm focus:outline-none', placeholder: 'Message',
+            value: text, onChange: e => setText(e.target.value),
+            onKeyDown: e => { if (e.key === 'Enter' && text.trim()) sendMessage({ type: 'text', text: text.trim() }); }
+          }),
+          h('button', { className: 'w-10 h-10 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0', onClick: () => text.trim() && sendMessage({ type: 'text', text: text.trim() }) }, h('i', { className: 'fa-solid fa-paper-plane text-sm' }))
+        )
+      : h('div', { className: 'px-4 py-3 bg-white dark:bg-ink-800 border-t border-slate-100 dark:border-ink-700 text-center text-xs text-slate-400' },
+          h('i', { className: 'fa-solid fa-lock mr-1' }), 'Only admins can send messages in this group'
+        )
   );
 }
 
-function GroupMessageBubble({ m, mine, sender }) {
+/* Device-local PIN gate shown instead of the chat when a group has Chat
+   lock turned on (see GroupInfoScreen → ChatLockModal). The PIN itself
+   lives only in this browser's localStorage — nothing is sent to Firestore. */
+function ChatLockGate({ name, photoURL, onBack, onUnlock }) {
+  const toast = useToast();
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
+  const submit = () => {
+    const stored = lsGet('st_chatLockPin', null);
+    if (!stored) { onUnlock(); return; } // lock was on but PIN got cleared somehow — fail open rather than trap the user out of their own chat
+    if (simplePinHash(pin) === stored) { onUnlock(); }
+    else { setError('Wrong PIN'); setPin(''); }
+  };
+  return h('div', { className: 'h-full flex flex-col items-center justify-center gap-4 bg-white dark:bg-ink-900 px-8' },
+    h('button', { onClick: onBack, className: 'absolute top-4 left-4 text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+    h(Avatar, { url: photoURL, name, size: 72 }),
+    h('p', { className: 'font-semibold' }, name),
+    h('p', { className: 'text-xs text-slate-400 flex items-center gap-1' }, h('i', { className: 'fa-solid fa-lock' }), 'This chat is locked on this device'),
+    h('input', {
+      type: 'password', inputMode: 'numeric', maxLength: 6, autoFocus: true, placeholder: 'Enter PIN',
+      className: inputCls + ' text-center tracking-widest w-40 mb-0', value: pin,
+      onChange: e => { setError(''); setPin(e.target.value.replace(/\D/g, '')); },
+      onKeyDown: e => { if (e.key === 'Enter' && pin) submit(); }
+    }),
+    error && h('p', { className: 'text-xs text-red-500' }, error),
+    h('button', { onClick: submit, disabled: !pin, className: 'bg-brand-600 text-white rounded-xl px-6 py-2 text-sm font-semibold disabled:opacity-40' }, 'Unlock')
+  );
+}
+
+function GroupMessageBubble({ m, mine, sender, groupId, advancedPrivacy }) {
+  // Media visibility: a per-device, per-group preference (Group info →
+  // Settings → Media visibility). When off, photos/videos in THIS group
+  // render as a tap-to-reveal placeholder instead of loading inline — this
+  // controls in-app visibility only. A browser page has no way to reach a
+  // phone's OS Gallery/MediaStore to hide files there (that needs native
+  // app storage permissions), so this intentionally doesn't claim to do that.
+  const [revealed, setRevealed] = useState(false);
+  const mediaVisible = lsGet('st_mediaVisible_' + groupId, true);
+  const showMediaInline = mediaVisible || revealed;
+  const isMedia = m.type === 'image' || m.type === 'video';
+
   return h('div', { className: 'flex mb-2 ' + (mine ? 'justify-end' : 'justify-start') },
-    h('div', { className: 'max-w-[78%] rounded-2xl px-3 py-2 text-sm ' + (mine ? 'bg-brand-600 text-white rounded-br-sm' : 'bg-white dark:bg-ink-800 rounded-bl-sm shadow-sm') },
+    h('div', {
+      className: 'max-w-[78%] rounded-2xl px-3 py-2 text-sm ' + (mine ? 'bg-brand-600 text-white rounded-br-sm' : 'bg-white dark:bg-ink-800 rounded-bl-sm shadow-sm'),
+      style: advancedPrivacy ? { userSelect: 'none', WebkitUserSelect: 'none' } : undefined
+    },
       !mine && h('p', { className: 'text-[11px] font-bold mb-0.5 ' + (mine ? 'text-white/80' : 'text-brand-600') }, (sender && sender.fullName) || '…'),
       m.type === 'text' && h('p', { className: 'whitespace-pre-wrap break-words' }, m.text),
-      m.type === 'image' && m.mediaURL && h('img', { src: m.mediaURL, className: 'rounded-lg max-w-full max-h-64 object-cover' }),
-      m.type === 'video' && m.mediaURL && h('video', { src: m.mediaURL, controls: true, className: 'rounded-lg max-w-full max-h-64' }),
+      m.type === 'image' && m.mediaURL && (showMediaInline
+        ? h('img', { src: m.mediaURL, className: 'rounded-lg max-w-full max-h-64 object-cover' + (advancedPrivacy ? ' pointer-events-none' : '') })
+        : h(HiddenMediaPlaceholder, { icon: 'fa-image', onReveal: () => setRevealed(true) })),
+      m.type === 'video' && m.mediaURL && (showMediaInline
+        ? h('video', { src: m.mediaURL, controls: !advancedPrivacy, className: 'rounded-lg max-w-full max-h-64' })
+        : h(HiddenMediaPlaceholder, { icon: 'fa-video', onReveal: () => setRevealed(true) })),
       m.type === 'audio' && m.mediaURL && h('audio', { src: m.mediaURL, controls: true, className: 'max-w-full' }),
       m.type === 'voice' && m.mediaURL && h(VoiceMessagePlayer, { src: m.mediaURL, mine, avatarURL: sender && sender.photoURL, avatarName: sender && sender.fullName, durationSecs: m.durationSecs }),
       m.type === 'document' && m.mediaURL && h('a', { href: m.mediaURL, target: '_blank', rel: 'noreferrer', className: 'underline text-xs' }, m.mediaName || 'Document'),
       h('p', { className: 'text-[10px] mt-1 text-right ' + (mine ? 'text-white/70' : 'text-slate-400') }, fmtClock(m.createdAt))
     )
+  );
+}
+function HiddenMediaPlaceholder({ icon, onReveal }) {
+  return h('button', { onClick: onReveal, className: 'w-full h-32 rounded-lg bg-slate-100 dark:bg-ink-700 flex flex-col items-center justify-center gap-1 text-slate-400' },
+    h('i', { className: 'fa-solid ' + icon + ' text-lg' }),
+    h('span', { className: 'text-[10px]' }, 'Tap to view')
   );
 }
 
@@ -1619,6 +1765,12 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
   const [editName, setEditName] = useState('');
   const [editPhotoFile, setEditPhotoFile] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showStorage, setShowStorage] = useState(false);
+  const [showDisappearing, setShowDisappearing] = useState(false);
+  const [showChatLock, setShowChatLock] = useState(false);
+  const [showPermissions, setShowPermissions] = useState(false);
+  const [mediaVisible, setMediaVisibleState] = useState(true);
+  const [locked, setLockedState] = useState(false);
 
   useEffect(() => { const unsub = db.collection('smiletak_groups').doc(groupId).onSnapshot(s => setGroup(s.exists ? Object.assign({ id: s.id }, s.data()) : null)); return unsub; }, [groupId]);
   useEffect(() => {
@@ -1633,9 +1785,47 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
   useEffect(() => {
     db.collection('smiletak_groupMembers').doc(groupId + '_' + profile.id).get().then(s => setMuted(s.exists && !!s.data().muted));
   }, [groupId, profile.id]);
+  // These two are device-local (localStorage), so they load synchronously
+  // once we know groupId rather than via a Firestore round-trip.
+  useEffect(() => {
+    setMediaVisibleState(lsGet('st_mediaVisible_' + groupId, true));
+    setLockedState(lsGet('st_lockedGroups', []).includes(groupId));
+  }, [groupId]);
 
   if (!group) return h('div', { className: 'p-6 flex items-center justify-center' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' }));
   const isAdmin = (group.admins || []).includes(profile.id);
+  const canEditInfo = isAdmin || !group.onlyAdminsCanEditInfo;
+
+  const toggleMediaVisible = () => {
+    const next = !mediaVisible;
+    lsSet('st_mediaVisible_' + groupId, next);
+    setMediaVisibleState(next);
+  };
+  const toggleLock = (pin) => {
+    const list = lsGet('st_lockedGroups', []);
+    if (locked) {
+      lsSet('st_lockedGroups', list.filter(id => id !== groupId));
+      setLockedState(false);
+      toast('Chat lock turned off', 'success');
+    } else {
+      if (!lsGet('st_chatLockPin', null)) { if (!pin) return; lsSet('st_chatLockPin', simplePinHash(pin)); }
+      lsSet('st_lockedGroups', list.concat(groupId));
+      setLockedState(true);
+      toast('Chat locked on this device', 'success');
+    }
+    setShowChatLock(false);
+  };
+  const setDisappearing = async (ms) => {
+    try {
+      await db.collection('smiletak_groups').doc(groupId).update({ disappearingMs: ms });
+      toast(ms ? 'Disappearing messages set' : 'Disappearing messages off', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+    setShowDisappearing(false);
+  };
+  const savePermissions = async (patch) => {
+    try { await db.collection('smiletak_groups').doc(groupId).update(patch); }
+    catch (e) { toast(e.message, 'error'); }
+  };
 
   const runSearch = async () => {
     const term = q.trim();
@@ -1716,9 +1906,9 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
               h('button', { onClick: saveEdit, disabled: saving, className: 'flex-1 bg-brand-600 text-white rounded-xl py-2 text-sm font-semibold' }, saving ? 'Saving…' : 'Save')
             )
           )
-        : h('div', { className: 'flex flex-col items-center cursor-pointer', onClick: () => isAdmin && startEdit() },
+        : h('div', { className: 'flex flex-col items-center cursor-pointer', onClick: () => canEditInfo && startEdit() },
             h(Avatar, { url: group.photoURL, name: group.name, size: 88 }),
-            h('h2', { className: 'font-extrabold text-lg mt-3' }, group.name, isAdmin && h('i', { className: 'fa-solid fa-pen text-xs text-slate-400 ml-2' })),
+            h('h2', { className: 'font-extrabold text-lg mt-3' }, group.name, canEditInfo && h('i', { className: 'fa-solid fa-pen text-xs text-slate-400 ml-2' })),
             h('p', { className: 'text-xs text-slate-400' }, (group.members || []).length + ' members')
           )
     ),
@@ -1738,10 +1928,90 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
     ),
     h('div', { className: 'px-4 pt-4' },
       h('p', { className: 'text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2' }, 'Settings'),
-      h('div', { className: 'flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-ink-800' },
-        h('span', { className: 'text-sm' }, 'Mute notifications'),
-        h('button', { onClick: toggleMute, className: 'w-11 h-6 rounded-full relative ' + (muted ? 'bg-brand-600' : 'bg-slate-200 dark:bg-ink-600') },
-          h('span', { className: 'absolute top-0.5 w-5 h-5 bg-white rounded-full transition ' + (muted ? 'left-[22px]' : 'left-0.5') }))
+
+      h('button', { className: 'w-full flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800 text-left', onClick: () => setShowStorage(true) },
+        h('i', { className: 'fa-regular fa-folder-open text-slate-400 w-5' }),
+        h('div', { className: 'flex-1 min-w-0' },
+          h('p', { className: 'text-sm' }, 'Manage storage'),
+          h('p', { className: 'text-xs text-slate-400' }, mediaCount === null ? '…' : (mediaCount + ' item' + (mediaCount === 1 ? '' : 's')))
+        ),
+        h('i', { className: 'fa-solid fa-chevron-right text-xs text-slate-300' })
+      ),
+
+      h('div', { className: 'flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+        h('i', { className: 'fa-regular fa-bell text-slate-400 w-5' }),
+        h('div', { className: 'flex-1' }, h('p', { className: 'text-sm' }, 'Notifications'), h('p', { className: 'text-xs text-slate-400' }, muted ? 'Muted' : 'All')),
+        h('button', { onClick: toggleMute, className: 'w-11 h-6 rounded-full relative shrink-0 ' + (!muted ? 'bg-brand-600' : 'bg-slate-200 dark:bg-ink-600') },
+          h('span', { className: 'absolute top-0.5 w-5 h-5 bg-white rounded-full transition ' + (!muted ? 'left-[22px]' : 'left-0.5') }))
+      ),
+
+      h('div', { className: 'flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+        h('i', { className: 'fa-regular fa-image text-slate-400 w-5' }),
+        h('div', { className: 'flex-1' },
+          h('p', { className: 'text-sm' }, 'Media visibility'),
+          h('p', { className: 'text-xs text-slate-400' }, mediaVisible ? 'Media shows automatically in this chat' : 'Media hidden until tapped')
+        ),
+        h('button', { onClick: toggleMediaVisible, className: 'w-11 h-6 rounded-full relative shrink-0 ' + (mediaVisible ? 'bg-brand-600' : 'bg-slate-200 dark:bg-ink-600') },
+          h('span', { className: 'absolute top-0.5 w-5 h-5 bg-white rounded-full transition ' + (mediaVisible ? 'left-[22px]' : 'left-0.5') }))
+      ),
+
+      h('div', { className: 'flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+        h('i', { className: 'fa-solid fa-lock text-slate-400 w-5' }),
+        h('div', null,
+          h('p', { className: 'text-sm' }, 'Encryption'),
+          h('p', { className: 'text-xs text-slate-400 leading-snug' }, 'Messages, calls, and media in this group are secured with Firebase\u2019s encryption in transit and at rest.')
+        )
+      ),
+
+      h('button', { className: 'w-full flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800 text-left', onClick: () => setShowDisappearing(true) },
+        h('i', { className: 'fa-regular fa-clock text-slate-400 w-5' }),
+        h('div', { className: 'flex-1' },
+          h('p', { className: 'text-sm' }, 'Disappearing messages'),
+          h('p', { className: 'text-xs text-slate-400' }, group.disappearingMs ? disappearingLabel(group.disappearingMs) : 'Off')
+        ),
+        h('i', { className: 'fa-solid fa-chevron-right text-xs text-slate-300' })
+      ),
+
+      h('button', { className: 'w-full flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800 text-left', onClick: () => setShowChatLock(true) },
+        h('i', { className: 'fa-solid fa-lock text-slate-400 w-5' }),
+        h('div', { className: 'flex-1' },
+          h('p', { className: 'text-sm' }, 'Chat lock'),
+          h('p', { className: 'text-xs text-slate-400' }, 'Lock and hide this chat on this device')
+        ),
+        h('button', { onClick: (e) => { e.stopPropagation(); locked ? toggleLock() : setShowChatLock(true); }, className: 'w-11 h-6 rounded-full relative shrink-0 ' + (locked ? 'bg-brand-600' : 'bg-slate-200 dark:bg-ink-600') },
+          h('span', { className: 'absolute top-0.5 w-5 h-5 bg-white rounded-full transition ' + (locked ? 'left-[22px]' : 'left-0.5') }))
+      ),
+
+      h('div', { className: 'flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+        h('i', { className: 'fa-solid fa-shield-halved text-slate-400 w-5' }),
+        h('div', { className: 'flex-1' },
+          h('p', { className: 'text-sm' }, 'Advanced chat privacy'),
+          h('p', { className: 'text-xs text-slate-400' }, group.advancedPrivacy ? 'On — copying text and media is restricted' : 'Off')
+        ),
+        h('button', {
+          onClick: (e) => { e.stopPropagation(); isAdmin ? savePermissions({ advancedPrivacy: !group.advancedPrivacy }) : toast('Only admins can change this', 'info'); },
+          className: 'w-11 h-6 rounded-full relative shrink-0 ' + (group.advancedPrivacy ? 'bg-brand-600' : 'bg-slate-200 dark:bg-ink-600')
+        }, h('span', { className: 'absolute top-0.5 w-5 h-5 bg-white rounded-full transition ' + (group.advancedPrivacy ? 'left-[22px]' : 'left-0.5') }))
+      ),
+
+      h('button', { className: 'w-full flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800 text-left', onClick: () => setShowPermissions(true) },
+        h('i', { className: 'fa-solid fa-gear text-slate-400 w-5' }),
+        h('div', { className: 'flex-1' },
+          h('p', { className: 'text-sm' }, 'Group permissions'),
+          h('p', { className: 'text-xs text-slate-400' }, 'Choose what members can do')
+        ),
+        h('i', { className: 'fa-solid fa-chevron-right text-xs text-slate-300' })
+      ),
+
+      h('button', {
+        className: 'w-full flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-ink-800 text-left',
+        onClick: () => toast('Communities aren\u2019t available in this app yet', 'info')
+      },
+        h('div', { className: 'w-7 h-7 rounded-lg bg-brand-600 text-white flex items-center justify-center' }, h('i', { className: 'fa-solid fa-people-group text-xs' })),
+        h('div', { className: 'flex-1' },
+          h('p', { className: 'text-sm' }, 'Add group to a community'),
+          h('p', { className: 'text-xs text-slate-400' }, 'Not available yet')
+        )
       )
     ),
     h('div', { className: 'px-4 pt-4' },
@@ -1767,7 +2037,14 @@ function GroupInfoScreen({ groupId, onBack, onViewProfile }) {
       ),
       h('button', { onClick: leaveGroup, className: 'w-full border border-red-200 text-red-500 rounded-xl py-2.5 font-semibold text-sm mt-4 mb-8' }, 'Leave group')
     ),
-    showMedia && h(GroupMediaGrid, { groupId, onClose: () => setShowMedia(false) })
+    showMedia && h(GroupMediaGrid, { groupId, onClose: () => setShowMedia(false) }),
+    showStorage && h(GroupStorageModal, { groupId, onClose: () => setShowStorage(false) }),
+    showDisappearing && h(DisappearingMessagesModal, { current: group.disappearingMs || 0, canEdit: isAdmin, onClose: () => setShowDisappearing(false), onPick: setDisappearing }),
+    showChatLock && h(ChatLockSetupModal, { locked, onClose: () => setShowChatLock(false), onConfirm: toggleLock }),
+    showPermissions && h(GroupPermissionsModal, {
+      onlyAdminsCanMessage: !!group.onlyAdminsCanMessage, onlyAdminsCanEditInfo: !!group.onlyAdminsCanEditInfo,
+      canEdit: isAdmin, onClose: () => setShowPermissions(false), onSave: savePermissions
+    })
   );
 }
 
@@ -1791,6 +2068,144 @@ function GroupMediaGrid({ groupId, onClose }) {
           m.type === 'image' ? h('img', { src: m.mediaURL, className: 'w-full h-full object-cover' }) : h('video', { src: m.mediaURL, className: 'w-full h-full object-cover' })
         ))
       )
+    )
+  );
+}
+
+/* ---- Manage storage: real numbers pulled from this group's messages
+   (count + total bytes by type). "Free up space" hides cached media
+   thumbnails in this browser only — it can't and doesn't claim to delete
+   the underlying files, since other members still need them. */
+function GroupStorageModal({ groupId, onClose }) {
+  const toast = useToast();
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    db.collection('smiletak_groups').doc(groupId).collection('messages')
+      .where('type', 'in', ['image', 'video', 'audio', 'voice', 'document']).get()
+      .then(s => {
+        const byType = {};
+        let totalBytes = 0;
+        s.docs.forEach(d => {
+          const m = d.data();
+          const size = m.mediaSize || 0;
+          totalBytes += size;
+          byType[m.type] = byType[m.type] || { count: 0, bytes: 0 };
+          byType[m.type].count++;
+          byType[m.type].bytes += size;
+        });
+        setStats({ byType, totalBytes, total: s.size });
+      }).catch(() => setStats({ byType: {}, totalBytes: 0, total: 0 }));
+  }, [groupId]);
+  const freeUpSpace = () => {
+    lsSet('st_mediaVisible_' + groupId, false);
+    toast('Media in this chat will now load only when you tap it', 'success');
+    onClose();
+  };
+  const TYPE_LABEL = { image: 'Photos', video: 'Videos', audio: 'Audio files', voice: 'Voice notes', document: 'Documents' };
+  return h('div', { className: 'fixed inset-0 z-[900] bg-white dark:bg-ink-900 flex flex-col' },
+    h('div', { className: 'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-ink-800' },
+      h('button', { onClick: onClose, className: 'text-slate-500' }, h('i', { className: 'fa-solid fa-arrow-left' })),
+      h('p', { className: 'font-semibold' }, 'Manage storage')
+    ),
+    h('div', { className: 'flex-1 overflow-y-auto no-scrollbar p-4' },
+      !stats && h('div', { className: 'flex justify-center mt-8' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' })),
+      stats && h('div', null,
+        h('p', { className: 'text-3xl font-extrabold' }, bytesToSize(stats.totalBytes) || '0 B'),
+        h('p', { className: 'text-xs text-slate-400 mb-6' }, stats.total + ' item' + (stats.total === 1 ? '' : 's') + ' shared in this group'),
+        Object.keys(stats.byType).length === 0 && h('p', { className: 'text-sm text-slate-400' }, 'No media shared yet'),
+        Object.keys(stats.byType).map(t => h('div', { key: t, className: 'flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-ink-800' },
+          h('span', { className: 'text-sm' }, TYPE_LABEL[t] || t),
+          h('span', { className: 'text-xs text-slate-400' }, stats.byType[t].count + ' \u00b7 ' + (bytesToSize(stats.byType[t].bytes) || '0 B'))
+        )),
+        h('button', { onClick: freeUpSpace, className: 'w-full border border-slate-200 dark:border-ink-600 rounded-xl py-2.5 font-semibold text-sm mt-6' }, 'Free up space on this device')
+      )
+    )
+  );
+}
+
+function disappearingLabel(ms) {
+  if (!ms) return 'Off';
+  const days = ms / 86400000;
+  if (days === 1) return '24 hours';
+  if (days >= 1) return Math.round(days) + ' days';
+  return Math.round(ms / 3600000) + ' hours';
+}
+const DISAPPEARING_OPTIONS = [
+  { label: 'Off', ms: 0 },
+  { label: '24 hours', ms: 24 * 3600 * 1000 },
+  { label: '7 days', ms: 7 * 24 * 3600 * 1000 },
+  { label: '90 days', ms: 90 * 24 * 3600 * 1000 }
+];
+function DisappearingMessagesModal({ current, canEdit, onClose, onPick }) {
+  return h('div', { className: 'fixed inset-0 z-[900] flex items-end justify-center bg-black/30', onClick: onClose },
+    h('div', { className: 'bg-white dark:bg-ink-800 w-full max-w-sm rounded-t-2xl p-4 pb-6', onClick: e => e.stopPropagation() },
+      h('p', { className: 'font-semibold mb-1' }, 'Disappearing messages'),
+      h('p', { className: 'text-xs text-slate-400 mb-3' }, canEdit
+        ? 'New messages sent to this group will disappear from the chat after the time you select.'
+        : 'Only group admins can change this setting.'),
+      DISAPPEARING_OPTIONS.map(o => h('button', {
+        key: o.ms, disabled: !canEdit, onClick: () => onPick(o.ms),
+        className: 'w-full flex items-center justify-between py-3 border-b border-slate-100 dark:border-ink-700 text-left disabled:opacity-40'
+      },
+        h('span', { className: 'text-sm' }, o.label),
+        current === o.ms && h('i', { className: 'fa-solid fa-check text-brand-600' })
+      ))
+    )
+  );
+}
+
+/* One PIN unlocks every chat that has Chat lock turned on, mirroring how
+   WhatsApp's own device chat lock works — you set it once, then flip the
+   toggle per chat. */
+function ChatLockSetupModal({ locked, onClose, onConfirm }) {
+  const hasPin = !!lsGet('st_chatLockPin', null);
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const needsNewPin = !locked && !hasPin;
+  const canSubmit = locked || (needsNewPin ? (pin.length >= 4 && pin === confirmPin) : true);
+  return h('div', { className: 'fixed inset-0 z-[900] flex items-end justify-center bg-black/30', onClick: onClose },
+    h('div', { className: 'bg-white dark:bg-ink-800 w-full max-w-sm rounded-t-2xl p-4 pb-6', onClick: e => e.stopPropagation() },
+      h('p', { className: 'font-semibold mb-1' }, locked ? 'Turn off chat lock?' : 'Lock this chat'),
+      h('p', { className: 'text-xs text-slate-400 mb-3' }, locked
+        ? 'This chat will no longer require a PIN to open on this device.'
+        : (needsNewPin ? 'Create a device PIN. You\u2019ll use it to unlock any chat you lock on this device.' : 'This chat will require your device PIN to open.')),
+      needsNewPin && h('div', null,
+        h('input', { type: 'password', inputMode: 'numeric', maxLength: 6, placeholder: 'New PIN (4\u20136 digits)', className: inputCls, value: pin, onChange: e => setPin(e.target.value.replace(/\D/g, '')) }),
+        h('input', { type: 'password', inputMode: 'numeric', maxLength: 6, placeholder: 'Confirm PIN', className: inputCls, value: confirmPin, onChange: e => setConfirmPin(e.target.value.replace(/\D/g, '')) })
+      ),
+      h('div', { className: 'flex gap-2 mt-2' },
+        h('button', { onClick: onClose, className: 'flex-1 border border-slate-200 dark:border-ink-600 rounded-xl py-2 text-sm font-semibold' }, 'Cancel'),
+        h('button', { onClick: () => canSubmit && onConfirm(pin), disabled: !canSubmit, className: 'flex-1 bg-brand-600 text-white rounded-xl py-2 text-sm font-semibold disabled:opacity-40' }, locked ? 'Turn off' : 'Lock chat')
+      )
+    )
+  );
+}
+
+function GroupPermissionsModal({ onlyAdminsCanMessage, onlyAdminsCanEditInfo, canEdit, onClose, onSave }) {
+  const [msgAdmins, setMsgAdmins] = useState(onlyAdminsCanMessage);
+  const [infoAdmins, setInfoAdmins] = useState(onlyAdminsCanEditInfo);
+  const save = async (key, val, setter) => {
+    if (!canEdit) return;
+    setter(val);
+    await onSave({ [key]: val });
+  };
+  return h('div', { className: 'fixed inset-0 z-[900] flex items-end justify-center bg-black/30', onClick: onClose },
+    h('div', { className: 'bg-white dark:bg-ink-800 w-full max-w-sm rounded-t-2xl p-4 pb-6', onClick: e => e.stopPropagation() },
+      h('div', { className: 'flex items-center justify-between mb-3' },
+        h('p', { className: 'font-semibold' }, 'Group permissions'),
+        h('button', { onClick: onClose, className: 'text-slate-400' }, h('i', { className: 'fa-solid fa-xmark' }))
+      ),
+      !canEdit && h('p', { className: 'text-xs text-slate-400 mb-2' }, 'Only group admins can change these.'),
+      h('p', { className: 'text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2 mt-1' }, 'Send messages'),
+      [{ label: 'All members', val: false }, { label: 'Only admins', val: true }].map(o => h('button', {
+        key: String(o.val), disabled: !canEdit, onClick: () => save('onlyAdminsCanMessage', o.val, setMsgAdmins),
+        className: 'w-full flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-ink-700 text-left disabled:opacity-40'
+      }, h('span', { className: 'text-sm' }, o.label), msgAdmins === o.val && h('i', { className: 'fa-solid fa-check text-brand-600' }))),
+      h('p', { className: 'text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2 mt-4' }, 'Edit group info'),
+      [{ label: 'All members', val: false }, { label: 'Only admins', val: true }].map(o => h('button', {
+        key: String(o.val), disabled: !canEdit, onClick: () => save('onlyAdminsCanEditInfo', o.val, setInfoAdmins),
+        className: 'w-full flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-ink-700 text-left disabled:opacity-40'
+      }, h('span', { className: 'text-sm' }, o.label), infoAdmins === o.val && h('i', { className: 'fa-solid fa-check text-brand-600' })))
     )
   );
 }
@@ -2539,11 +2954,13 @@ function MessageListSkeleton() {
     ))
   );
 }
-/* WhatsApp-style compact voice note bubble: small circular avatar, a
-   play/pause button, a scrubbable progress bar, and mm:ss duration — instead
-   of the browser's oversized native <audio controls>. Uses one shared
-   <audio> element per bubble, driven entirely by our own UI. */
+/* WhatsApp-style compact voice note bubble: play/pause button, a scrubbable
+   waveform, a small circular avatar with a mic badge sitting to the right
+   of the waveform, and a bold mm:ss duration underneath — matching the
+   native WhatsApp voice-note layout. Uses one shared <audio> element per
+   bubble, driven entirely by our own UI. */
 function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs }) {
+  const { profile } = useAuth();
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [curTime, setCurTime] = useState(0);
@@ -2603,35 +3020,36 @@ function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs }) 
   const fillColor = mine ? 'bg-white' : 'bg-brand-500';
   const dimColor = mine ? 'bg-white/35' : 'bg-slate-300 dark:bg-ink-600';
 
-  // Avatar is only ever shown for messages from the OTHER person — WhatsApp
-  // never shows your own avatar on your own sent bubble. Showing it
-  // unconditionally (as before) meant your own sent voice notes displayed
-  // your own avatar too, which rendered as a stray empty circle whenever
-  // you didn't have a profile photo set.
-  const showAvatar = !mine && avatarURL !== undefined;
+  // Avatar sits to the right of the waveform on BOTH sent and received
+  // bubbles, matching WhatsApp's voice-note layout: your own photo on
+  // bubbles you sent, the sender's photo on bubbles you received.
+  const displayAvatarURL = mine ? (profile && profile.photoURL) : avatarURL;
+  const displayAvatarName = mine ? (profile && profile.fullName) : avatarName;
 
-  return h('div', { className: 'flex items-center gap-2 w-[230px]' },
+  return h('div', { className: 'flex flex-col gap-1.5 w-[240px]' },
     h('audio', { ref: audioRef, src, preload: 'metadata', className: 'hidden' }),
-    showAvatar && h('div', { className: 'relative shrink-0' },
-      h(Avatar, { url: avatarURL, name: avatarName, size: 32 }),
-      h('span', { className: 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-brand-500 flex items-center justify-center border border-white dark:border-ink-800' },
-        h('i', { className: 'fa-solid fa-microphone text-white', style: { fontSize: 6 } })
+    h('div', { className: 'flex items-center gap-2' },
+      h('button', { onClick: toggle, className: 'shrink-0 w-9 h-9 rounded-full flex items-center justify-center ' + (mine ? 'bg-white text-brand-600' : 'bg-brand-500 text-white') },
+        h('i', { className: 'fa-solid ' + (playing ? 'fa-pause' : 'fa-play') + ' text-xs' })
+      ),
+      h('div', {
+        ref: barRef, onClick: seek,
+        className: 'flex-1 h-9 flex items-center gap-[2px] cursor-pointer'
+      },
+        barHeights.map((hgt, i) => h('span', {
+          key: i,
+          className: 'flex-1 rounded-full ' + (i < playedBars ? fillColor : dimColor),
+          style: { height: hgt }
+        }))
+      ),
+      h('div', { className: 'relative shrink-0' },
+        h(Avatar, { url: displayAvatarURL, name: displayAvatarName, size: 34 }),
+        h('span', { className: 'absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center border-2 border-white dark:border-ink-800' },
+          h('i', { className: 'fa-solid fa-microphone text-white', style: { fontSize: 7 } })
+        )
       )
     ),
-    h('button', { onClick: toggle, className: 'shrink-0 w-8 h-8 rounded-full flex items-center justify-center ' + (mine ? 'bg-white text-brand-600' : 'bg-brand-500 text-white') },
-      h('i', { className: 'fa-solid ' + (playing ? 'fa-pause' : 'fa-play') + ' text-[11px]' })
-    ),
-    h('div', {
-      ref: barRef, onClick: seek,
-      className: 'flex-1 h-8 flex items-center gap-[2px] cursor-pointer'
-    },
-      barHeights.map((hgt, i) => h('span', {
-        key: i,
-        className: 'flex-1 rounded-full ' + (i < playedBars ? fillColor : dimColor),
-        style: { height: hgt }
-      }))
-    ),
-    h('span', { className: 'text-[10px] shrink-0 tabular-nums ' + (mine ? 'text-white/80' : 'text-slate-400') }, fmt(playing || curTime ? curTime : duration))
+    h('span', { className: 'text-sm font-bold shrink-0 tabular-nums pl-11 ' + (mine ? 'text-white' : 'text-slate-700 dark:text-slate-200') }, fmt(playing || curTime ? curTime : duration))
   );
 }
 
@@ -2641,6 +3059,9 @@ function MessageBubble({ m, mine, onMenu, onReply, senderAvatar, senderName }) {
   // already attaches whatever replyTo is set to any message type sent next,
   // voice notes included.
   const [dragX, setDragX] = useState(0);
+  // Tapping a photo message opens it full-screen, WhatsApp-style, with a
+  // download button — see ImageViewerModal below.
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const dragState = useRef({ startX: 0, active: false, pointerId: null });
   const SWIPE_TRIGGER = 60;
   const SWIPE_MAX = 84;
@@ -2688,7 +3109,11 @@ function MessageBubble({ m, mine, onMenu, onReply, senderAvatar, senderName }) {
         m.forwarded && h('p', { className: 'text-[10px] italic opacity-70 mb-0.5' }, h('i', { className: 'fa-solid fa-share mr-1' }), 'Forwarded'),
         m.replyTo && h('div', { className: 'border-l-2 pl-2 mb-1 text-xs opacity-75 ' + (mine ? 'border-white/60' : 'border-brand-500') }, m.replyTo.snippet),
         m.type === 'text' && h('p', { className: 'whitespace-pre-wrap break-words' }, m.text),
-        m.type === 'image' && h('img', { src: m.mediaURL, className: 'rounded-lg max-w-full max-h-64 mb-1' }),
+        m.type === 'image' && h('img', {
+          src: m.mediaURL,
+          className: 'rounded-lg max-w-full max-h-64 mb-1 cursor-pointer',
+          onClick: () => setImageViewerOpen(true)
+        }),
         m.type === 'video' && h('video', { src: m.mediaURL, controls: true, className: 'rounded-lg max-w-full max-h-64 mb-1' }),
         m.type === 'audio' && h('audio', { src: m.mediaURL, controls: true, className: 'max-w-full' }),
         m.type === 'voice' && m.mediaURL && h(VoiceMessagePlayer, { src: m.mediaURL, mine, avatarURL: senderAvatar, avatarName: senderName, durationSecs: m.durationSecs }),
@@ -2699,7 +3124,43 @@ function MessageBubble({ m, mine, onMenu, onReply, senderAvatar, senderName }) {
         )
       ),
       h('button', { className: 'opacity-0 group-hover:opacity-100 text-slate-300 text-xs px-1', onClick: onMenu }, h('i', { className: 'fa-solid fa-chevron-down' }))
-    )
+    ),
+    m.type === 'image' && imageViewerOpen && h(ImageViewerModal, { url: m.mediaURL, onClose: () => setImageViewerOpen(false) })
+  );
+}
+
+/* Full-screen photo viewer for tapped image messages — mirrors WhatsApp:
+   dark backdrop, the photo shown as large as it'll fit, a close button,
+   and a download button that saves it to the device. Reuses the same
+   fetch-as-blob save helper the Status feature already uses. */
+function ImageViewerModal({ url, onClose }) {
+  const toast = useToast();
+  const [saving, setSaving] = useState(false);
+  useBackClose(true, onClose);
+  const download = async (e) => {
+    e.stopPropagation();
+    if (saving) return;
+    setSaving(true);
+    try {
+      await saveMediaFile(url, 'IMG_' + Date.now() + '.jpg');
+      toast('Saved', 'success');
+    } catch (err) {
+      toast(err.message || 'Download failed', 'error');
+    }
+    setSaving(false);
+  };
+  return h('div', { className: 'fixed inset-0 z-[60] bg-black/95 flex items-center justify-center', onClick: onClose },
+    h('div', { className: 'absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-10', onClick: e => e.stopPropagation() },
+      h('button', { onClick: onClose, className: 'w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center' },
+        h('i', { className: 'fa-solid fa-xmark text-lg' })
+      ),
+      h('button', { onClick: download, disabled: saving, className: 'w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center' },
+        saving
+          ? h('div', { className: 'w-4 h-4 border-2 border-white border-t-transparent rounded-full spinner' })
+          : h('i', { className: 'fa-solid fa-download text-base' })
+      )
+    ),
+    h('img', { src: url, className: 'max-w-full max-h-full object-contain', onClick: e => e.stopPropagation() })
   );
 }
 
