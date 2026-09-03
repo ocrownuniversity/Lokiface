@@ -911,28 +911,32 @@ function useUnreadBadges(profile) {
   const [statusList, setStatusList] = useState([]); // [{ uid, latestMs }]
   const [missedCalls, setMissedCalls] = useState([]); // recent missed/cancelled incoming calls
   const [seenTick, setSeenTick] = useState(0); // bumped after marking something seen, to force a re-read of localStorage
-  // Previous per-doc unreadCount snapshots, used only to detect a fresh
-  // incoming message (count going UP) so the notification chime plays once
-  // per new message instead of on every unrelated re-render or on the count
-  // going back down when something gets marked read.
+  // Previous per-doc unreadCount snapshots — kept only for the badge-count
+  // math below now (the sound trigger moved off of unreadCount, see the two
+  // effects further down and the comment there for why).
   const prevDmCounts = useRef({});
-  const dmSoundInit = useRef(false);
   const prevGroupCounts = useRef({});
-  const groupSoundInit = useRef(false);
+  // Muted flags, mirrored here from chatMembers/groupMembers (a normal
+  // same-user write, so this part IS reliable) so the message-based sound
+  // effects below can skip muted chats/groups without needing their own
+  // separate read of the same collections.
+  const mutedDmChats = useRef({});
+  const mutedGroups = useRef({});
 
   useEffect(() => {
     if (!profile) { setDmUnread(0); return; }
     const unsub = db.collection('smiletak_chatMembers').where('uid', '==', profile.id).onSnapshot(snap => {
       let sum = 0;
       const nextCounts = {};
+      const nextMuted = {};
       snap.docs.forEach(d => {
         const m = d.data();
         nextCounts[d.id] = m.unreadCount || 0;
+        nextMuted[m.chatId] = !!m.muted;
         if (!m.archived && m.unreadCount > 0) sum += m.unreadCount;
-        if (dmSoundInit.current && !m.muted && (m.unreadCount || 0) > (prevDmCounts.current[d.id] || 0)) playNotificationSound();
       });
       prevDmCounts.current = nextCounts;
-      dmSoundInit.current = true;
+      mutedDmChats.current = nextMuted;
       setDmUnread(sum);
     });
     return unsub;
@@ -943,18 +947,76 @@ function useUnreadBadges(profile) {
     const unsub = db.collection('smiletak_groupMembers').where('uid', '==', profile.id).onSnapshot(snap => {
       let sum = 0;
       const nextCounts = {};
+      const nextMuted = {};
       snap.docs.forEach(d => {
         const m = d.data();
         nextCounts[d.id] = m.unreadCount || 0;
+        nextMuted[m.groupId] = !!m.muted;
         if (!m.archived && m.unreadCount > 0) sum += m.unreadCount;
-        if (groupSoundInit.current && !m.muted && (m.unreadCount || 0) > (prevGroupCounts.current[d.id] || 0)) playNotificationSound();
       });
       prevGroupCounts.current = nextCounts;
-      groupSoundInit.current = true;
+      mutedGroups.current = nextMuted;
       setGroupUnread(sum);
     });
     return unsub;
   }, [profile]);
+
+  // ============ NOTIFICATION SOUND — driven by lastMessageAt/lastSenderId ============
+  // The chime used to be triggered by unreadCount going up (see the two
+  // effects above). That count is bumped by the SENDER writing into the
+  // RECIPIENT's own chatMembers/groupMembers doc — a cross-user write that
+  // sendMessage() itself already comments is "typically blocked by
+  // security rules" and silently swallows the failure. In a real chat
+  // between two different accounts that write often never lands, so the
+  // count never actually changes and the chime never fires — even though
+  // manually flipping the settings toggle (which calls the chime directly,
+  // with no Firestore write involved) works fine.
+  //
+  // lastMessageAt/lastSenderId on smiletak_chats/smiletak_groups don't have
+  // that problem: they're written by the SENDER to a doc they're already a
+  // member of, which is an ordinary same-user write, so it always lands.
+  // Using those instead makes the chime reliable regardless of how the
+  // recipient's security rules are configured.
+  const prevChatMsgAt = useRef({});
+  const chatSoundInit = useRef(false);
+  useEffect(() => {
+    if (!profile) return;
+    const unsub = db.collection('smiletak_chats').where('members', 'array-contains', profile.id).onSnapshot(snap => {
+      snap.docChanges().forEach(change => {
+        const c = change.doc.data();
+        const id = change.doc.id;
+        const ms = c.lastMessageAt && c.lastMessageAt.toMillis ? c.lastMessageAt.toMillis() : 0;
+        const prevMs = prevChatMsgAt.current[id] || 0;
+        if (chatSoundInit.current && ms > prevMs && c.lastSenderId && c.lastSenderId !== profile.id && !mutedDmChats.current[id]) {
+          playNotificationSound();
+        }
+        prevChatMsgAt.current[id] = ms;
+      });
+      chatSoundInit.current = true;
+    });
+    return unsub;
+  }, [profile]);
+
+  const prevGroupMsgAt = useRef({});
+  const groupSoundInit = useRef(false);
+  useEffect(() => {
+    if (!profile) return;
+    const unsub = db.collection('smiletak_groups').where('members', 'array-contains', profile.id).onSnapshot(snap => {
+      snap.docChanges().forEach(change => {
+        const g = change.doc.data();
+        const id = change.doc.id;
+        const ms = g.lastMessageAt && g.lastMessageAt.toMillis ? g.lastMessageAt.toMillis() : 0;
+        const prevMs = prevGroupMsgAt.current[id] || 0;
+        if (groupSoundInit.current && ms > prevMs && g.lastSenderId && g.lastSenderId !== profile.id && !mutedGroups.current[id]) {
+          playNotificationSound();
+        }
+        prevGroupMsgAt.current[id] = ms;
+      });
+      groupSoundInit.current = true;
+    });
+    return unsub;
+  }, [profile]);
+
 
   useEffect(() => {
     if (!profile) { setStatusList([]); return; }
