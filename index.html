@@ -3434,14 +3434,24 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
    a plain <a download> is silently ignored by browsers for cross-origin
    URLs (like Firebase Storage links), so we pull the bytes ourselves. */
 async function saveMediaFile(url, filename) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Download failed');
-  const blob = await res.blob();
-  const objUrl = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = objUrl; a.download = filename || 'status';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(objUrl), 4000);
+  // fetch() can fail outright ("Failed to fetch") on a flaky connection or
+  // if the storage bucket doesn't send CORS headers for this origin — that
+  // failure gave no way to actually save the file. Fall back to opening the
+  // media in a new tab so the browser's own long-press-to-save/download
+  // still works even when the blob fetch can't complete.
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Download failed');
+    const blob = await res.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl; a.download = filename || 'status';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(objUrl), 4000);
+  } catch (e) {
+    window.open(url, '_blank');
+    throw new Error('Could not auto-save (' + (e.message || 'network error') + ') — opened it in a new tab, long-press the image there to save it');
+  }
 }
 
 /* Full-screen list of the signed-in user's own statuses — mirrors WhatsApp's
