@@ -1547,6 +1547,18 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
   const isLocked = lsGet('st_lockedGroups', []).includes(groupId) && !unlocked;
 
   useEffect(() => { const unsub = db.collection('smiletak_groups').doc(groupId).onSnapshot(s => { if (s.exists) setGroup(Object.assign({ id: s.id }, s.data())); }); return unsub; }, [groupId]);
+  // "On call" banner: watches for any active smiletak_groupCalls doc tied
+  // to this group so members see a call is in progress (and can join it)
+  // even if they missed/dismissed the incoming-ring popup.
+  const [activeGroupCall, setActiveGroupCall] = useState(null);
+  useEffect(() => {
+    const unsub = db.collection('smiletak_groupCalls')
+      .where('groupId', '==', groupId).where('status', '==', 'active')
+      .onSnapshot(snap => setActiveGroupCall(snap.empty ? null : Object.assign({ id: snap.docs[0].id }, snap.docs[0].data())),
+        () => {});
+    return unsub;
+  }, [groupId]);
+  const iAmOnThisCall = !!(call.groupCall && activeGroupCall && call.groupCall.id === activeGroupCall.id);
   useEffect(() => {
     if (isLocked) return; // don't even subscribe to messages until unlocked
     const unsub = db.collection('smiletak_groups').doc(groupId).collection('messages').orderBy('createdAt', 'asc').limitToLast(200).onSnapshot(snap => {
@@ -1646,10 +1658,18 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
         h(Avatar, { url: group.photoURL, name: group.name, size: 36 }),
         h('div', { className: 'min-w-0' },
           h('p', { className: 'font-semibold text-sm truncate' }, group.name),
-          h('p', { className: 'text-[11px] text-slate-400 truncate flex items-center gap-1' },
-            (group.members || []).length + ' members',
-            group.disappearingMs ? h('i', { className: 'fa-solid fa-clock', title: 'Disappearing messages on' }) : null
-          )
+          activeGroupCall
+            ? h('button', {
+                onClick: () => !iAmOnThisCall && call.joinGroupCall({ id: activeGroupCall.id, type: activeGroupCall.type, groupName: group.name }),
+                className: 'text-[11px] text-green-600 dark:text-green-400 font-semibold flex items-center gap-1'
+              },
+                h('span', { className: 'w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse' }),
+                iAmOnThisCall ? 'On call' : ('On call · tap to join')
+              )
+            : h('p', { className: 'text-[11px] text-slate-400 truncate flex items-center gap-1' },
+                (group.members || []).length + ' members',
+                group.disappearingMs ? h('i', { className: 'fa-solid fa-clock', title: 'Disappearing messages on' }) : null
+              )
         )
       ),
       h('button', { className: 'text-slate-400 px-2', onClick: () => callGroup('audio') }, h('i', { className: 'fa-solid fa-phone' })),
@@ -3026,15 +3046,19 @@ function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs }) 
   const displayAvatarURL = mine ? (profile && profile.photoURL) : avatarURL;
   const displayAvatarName = mine ? (profile && profile.fullName) : avatarName;
 
-  return h('div', { className: 'flex flex-col gap-1.5 w-[240px]' },
+  // Single compact row — play button, waveform, duration, and avatar all on
+  // one line — so the bubble's height stays tight instead of stacking the
+  // duration on its own line underneath (which was pushing the bubble too
+  // tall). All the same content is still shown, just arranged horizontally.
+  return h('div', { className: 'flex items-center gap-2 w-[230px]' },
     h('audio', { ref: audioRef, src, preload: 'metadata', className: 'hidden' }),
-    h('div', { className: 'flex items-center gap-2' },
-      h('button', { onClick: toggle, className: 'shrink-0 w-9 h-9 rounded-full flex items-center justify-center ' + (mine ? 'bg-white text-brand-600' : 'bg-brand-500 text-white') },
-        h('i', { className: 'fa-solid ' + (playing ? 'fa-pause' : 'fa-play') + ' text-xs' })
-      ),
+    h('button', { onClick: toggle, className: 'shrink-0 w-8 h-8 rounded-full flex items-center justify-center ' + (mine ? 'bg-white text-brand-600' : 'bg-brand-500 text-white') },
+      h('i', { className: 'fa-solid ' + (playing ? 'fa-pause' : 'fa-play') + ' text-xs' })
+    ),
+    h('div', { className: 'flex-1 min-w-0 flex flex-col gap-0.5' },
       h('div', {
         ref: barRef, onClick: seek,
-        className: 'flex-1 h-9 flex items-center gap-[2px] cursor-pointer'
+        className: 'h-6 flex items-center gap-[2px] cursor-pointer'
       },
         barHeights.map((hgt, i) => h('span', {
           key: i,
@@ -3042,14 +3066,14 @@ function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs }) 
           style: { height: hgt }
         }))
       ),
-      h('div', { className: 'relative shrink-0' },
-        h(Avatar, { url: displayAvatarURL, name: displayAvatarName, size: 34 }),
-        h('span', { className: 'absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center border-2 border-white dark:border-ink-800' },
-          h('i', { className: 'fa-solid fa-microphone text-white', style: { fontSize: 7 } })
-        )
-      )
+      h('span', { className: 'text-[11px] font-bold tabular-nums ' + (mine ? 'text-white' : 'text-slate-700 dark:text-slate-200') }, fmt(playing || curTime ? curTime : duration))
     ),
-    h('span', { className: 'text-sm font-bold shrink-0 tabular-nums pl-11 ' + (mine ? 'text-white' : 'text-slate-700 dark:text-slate-200') }, fmt(playing || curTime ? curTime : duration))
+    h('div', { className: 'relative shrink-0' },
+      h(Avatar, { url: displayAvatarURL, name: displayAvatarName, size: 30 }),
+      h('span', { className: 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-brand-500 flex items-center justify-center border-2 border-white dark:border-ink-800' },
+        h('i', { className: 'fa-solid fa-microphone text-white', style: { fontSize: 6 } })
+      )
+    )
   );
 }
 
@@ -3092,7 +3116,7 @@ function MessageBubble({ m, mine, onMenu, onReply, senderAvatar, senderName }) {
     );
   }
   const status = mine ? (m.readBy && m.readBy.length ? 'read' : (m.deliveredTo && m.deliveredTo.length ? 'delivered' : 'sent')) : null;
-  return h('div', { id: 'msg-' + m.id, className: 'flex ' + (mine ? 'justify-end' : 'justify-start') + ' mb-1.5 group relative' },
+  return h('div', { id: 'msg-' + m.id, className: 'flex ' + (mine ? 'justify-end' : 'justify-start') + ' mb-1 group relative' },
     // Reply icon revealed behind the bubble as it's dragged right.
     h('div', {
       className: 'absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-200 dark:bg-ink-700 flex items-center justify-center pointer-events-none transition-opacity',
@@ -3104,11 +3128,21 @@ function MessageBubble({ m, mine, onMenu, onReply, senderAvatar, senderName }) {
       onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag
     },
       h('div', {
-        className: 'msg-in px-3 py-2 rounded-2xl text-sm shadow-sm ' + (mine ? 'bg-brand-600 text-white rounded-br-md' : 'bg-white dark:bg-ink-800 rounded-bl-md')
+        className: 'msg-in flow-root px-3 py-2 rounded-2xl text-sm shadow-sm ' + (mine ? 'bg-brand-600 text-white rounded-br-md' : 'bg-white dark:bg-ink-800 rounded-bl-md')
       },
         m.forwarded && h('p', { className: 'text-[10px] italic opacity-70 mb-0.5' }, h('i', { className: 'fa-solid fa-share mr-1' }), 'Forwarded'),
         m.replyTo && h('div', { className: 'border-l-2 pl-2 mb-1 text-xs opacity-75 ' + (mine ? 'border-white/60' : 'border-brand-500') }, m.replyTo.snippet),
-        m.type === 'text' && h('p', { className: 'whitespace-pre-wrap break-words' }, m.text),
+        // Text messages: the timestamp+ticks float at the end of the text
+        // (WhatsApp-style) instead of sitting on their own row below, so a
+        // short message's bubble hugs the text instead of always reserving
+        // a full extra line of height for the time.
+        m.type === 'text' && h('p', { className: 'whitespace-pre-wrap break-words leading-snug' },
+          m.text,
+          h('span', { className: 'float-right ml-2 inline-flex items-center gap-1 relative top-[3px]' },
+            h('span', { className: 'text-[10px] ' + (mine ? 'text-white/70' : 'text-slate-400') }, fmtClock(m.createdAt)),
+            mine && h('i', { className: 'fa-solid ' + (status === 'read' ? 'fa-check-double text-sky-300' : status === 'delivered' ? 'fa-check-double text-white/70' : 'fa-check text-white/70') + ' text-[10px]' })
+          )
+        ),
         m.type === 'image' && h('img', {
           src: m.mediaURL,
           className: 'rounded-lg max-w-full max-h-64 mb-1 cursor-pointer',
@@ -3118,7 +3152,7 @@ function MessageBubble({ m, mine, onMenu, onReply, senderAvatar, senderName }) {
         m.type === 'audio' && h('audio', { src: m.mediaURL, controls: true, className: 'max-w-full' }),
         m.type === 'voice' && m.mediaURL && h(VoiceMessagePlayer, { src: m.mediaURL, mine, avatarURL: senderAvatar, avatarName: senderName, durationSecs: m.durationSecs }),
         m.type === 'document' && h('a', { href: m.mediaURL, target: '_blank', rel: 'noreferrer', className: 'flex items-center gap-2 underline' }, h('i', { className: 'fa-solid fa-file' }), h('span', null, m.mediaName, ' ', m.mediaSize ? h('span', { className: 'opacity-70' }, '(' + bytesToSize(m.mediaSize) + ')') : null)),
-        h('div', { className: 'flex items-center gap-1 justify-end mt-0.5' },
+        m.type !== 'text' && h('div', { className: 'flex items-center gap-1 justify-end mt-0.5' },
           h('span', { className: 'text-[10px] ' + (mine ? 'text-white/70' : 'text-slate-400') }, fmtClock(m.createdAt)),
           mine && h('i', { className: 'fa-solid ' + (status === 'read' ? 'fa-check-double text-sky-300' : status === 'delivered' ? 'fa-check-double text-white/70' : 'fa-check text-white/70') + ' text-[10px]' })
         )
@@ -6312,9 +6346,14 @@ function CallProvider({ children }) {
     } catch (e) { toast('Could not start group call: ' + e.message, 'error'); }
   };
 
-  const joinGroupCall = async () => {
-    if (!incomingGroupCall) return;
-    const { id: callId, type, groupName } = incomingGroupCall;
+  const joinGroupCall = async (callInfo) => {
+    // Accepts an explicit callInfo ({ id, type, groupName }) so a group's
+    // "On call" banner can join an already-in-progress call directly,
+    // without waiting for/needing the incoming-ring popup. Falls back to
+    // incomingGroupCall for the existing ring-accept flow.
+    const info = callInfo || incomingGroupCall;
+    if (!info) return;
+    const { id: callId, type, groupName } = info;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS, video: type === 'video' });
       groupLocalStream.current = stream;
