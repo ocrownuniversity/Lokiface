@@ -1113,7 +1113,7 @@ function AppShell() {
   const tabs = [
     { id: 'chats', icon: 'fa-comment-dots', label: 'Chats', badge: badges.chats },
     { id: 'status', icon: 'fa-circle-notch', label: 'Updates', badge: badges.updates },
-    { id: 'search', icon: 'fa-magnifying-glass', label: 'Discover' },
+    { id: 'communities', icon: 'fa-users', label: 'Communities' },
     { id: 'calls', icon: 'fa-phone', label: 'Calls', badge: badges.calls }
   ];
   if (profile && profile.isAdmin) tabs.push({ id: 'admin', icon: 'fa-shield-halved', label: 'Admin' });
@@ -1121,8 +1121,8 @@ function AppShell() {
   return h('div', { className: 'h-full flex flex-col' },
     h('div', { className: 'flex-1 overflow-hidden' },
       tab === 'chats' && h(ChatsListScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onOpenGroup: openGroup, onNewGroup: openNewGroup, onNewChat: openNewChat, onNewBroadcast: openNewBroadcast, onLinkedDevices: openLinkedDevices, onStarred: openStarred, onViewProfile: openProfile, onNavigate: goToTab, onSettings: openSettings }),
-      tab === 'status' && h(StatusScreen, { onViewProfile: openProfile, onOpenChannel: openChannel, onNewChannel: openNewChannel, onExploreChannels: openExploreChannels, onStarred: openStarred, onNavigate: goToTab, onSettings: openSettings }),
-      tab === 'search' && h(DiscoverScreen, { onOpenChat: (c) => openChat(c.chatId, c.other), onViewProfile: openProfile }),
+      tab === 'status' && h(StatusScreen, { onViewProfile: openProfile, onOpenChannel: openChannel, onNewChannel: openNewChannel, onExploreChannels: openExploreChannels, onStarred: openStarred, onNavigate: goToTab, onSettings: openSettings, onOpenChat: (other) => openChat(chatIdFor(profile.id, other.id), other) }),
+      tab === 'communities' && h(CommunitiesScreen, {}),
       tab === 'profile' && h(MyProfileScreen, { onOpenPremium: openPremium, onOpenBusiness: openBusiness }),
       tab === 'calls' && h(CallsScreen, { onOpenChat: (other) => openChat(chatIdFor(profile.id, other.id), other) }),
       tab === 'admin' && h(AdminPanel, {})
@@ -1139,6 +1139,22 @@ function AppShell() {
         ),
         t.label
       ))
+    )
+  );
+}
+
+/* ============================== COMMUNITIES ============================== */
+function CommunitiesScreen() {
+  return h('div', { className: 'h-full flex flex-col bg-white dark:bg-ink-900' },
+    h('div', { className: 'px-4 pt-4 pb-3 flex items-center justify-between' },
+      h('h1', { className: 'text-2xl font-extrabold' }, 'Communities')
+    ),
+    h('div', { className: 'flex-1 overflow-y-auto no-scrollbar flex flex-col items-center justify-center px-8 text-center' },
+      h('div', { className: 'w-20 h-20 rounded-full bg-brand-100 dark:bg-ink-700 text-brand-600 flex items-center justify-center mb-4' },
+        h('i', { className: 'fa-solid fa-users text-3xl' })
+      ),
+      h('p', { className: 'font-semibold text-[16px] mb-1' }, 'Stay connected with a community'),
+      h('p', { className: 'text-sm text-slate-400' }, 'Communities bring group chats together and are coming soon to SmileTak.')
     )
   );
 }
@@ -3407,7 +3423,7 @@ function ForwardPicker({ onClose, onPick }) {
 }
 
 /* ============================== STATUS ============================== */
-function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreChannels, onStarred, onNavigate, onSettings }) {
+function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreChannels, onStarred, onNavigate, onSettings, onOpenChat }) {
   const { profile } = useAuth();
   const toast = useToast();
   const [statuses, setStatuses] = useState([]);
@@ -3549,7 +3565,7 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
       myChannels.map(c => h(ChannelRow, { key: c.id, c, onOpen: () => onOpenChannel(c.id) }))
     ),
     creating && h(CreateStatusModal, { onClose: closeCreate, onText: createTextStatus, onMedia: createMediaStatus }),
-    viewing && h(StatusViewer, { groups: viewing.groups, startIndex: viewing.groupIndex, startItemIndex: viewing.itemIndex, onClose: closeViewer }),
+    viewing && h(StatusViewer, { groups: viewing.groups, startIndex: viewing.groupIndex, startItemIndex: viewing.itemIndex, onClose: closeViewer, onOpenChat }),
     myListOpen && h(MyStatusListScreen, {
       myStatuses, profile,
       onClose: closeMyList,
@@ -4037,7 +4053,7 @@ function CreateStatusModal({ onClose, onText, onMedia }) {
   );
 }
 
-function StatusViewer({ groups, startIndex, startItemIndex, onClose }) {
+function StatusViewer({ groups, startIndex, startItemIndex, onClose, onOpenChat }) {
   const { profile } = useAuth();
   const toast = useToast();
   const [groupIndex, setGroupIndex] = useState(startIndex || 0);
@@ -4048,6 +4064,8 @@ function StatusViewer({ groups, startIndex, startItemIndex, onClose }) {
   const [viewers, setViewers] = useState([]);
   const [sharing, setSharing] = useState(false);
   const [forwardOpen, setForwardOpen] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
   const closeSharing = useBackClose(sharing, () => setSharing(false));
   const closeForward = useBackClose(forwardOpen, () => setForwardOpen(false));
   useEffect(() => {
@@ -4168,6 +4186,28 @@ function StatusViewer({ groups, startIndex, startItemIndex, onClose }) {
     setForwardOpen(false);
     setSharing(false);
   };
+  // ---- Reply to a status: exactly like WhatsApp, typing a comment here
+  // sends it as a normal chat message to the status owner and takes you
+  // straight into that normal one-to-one chat. ----
+  const sendReply = async () => {
+    const text = replyText.trim();
+    if (!text || sendingReply) return;
+    setSendingReply(true);
+    try {
+      const chatId = chatIdFor(profile.id, data.uid);
+      await db.collection('smiletak_chats').doc(chatId).collection('messages').add({
+        senderId: profile.id, createdAt: FieldValue.serverTimestamp(), readBy: [], deliveredTo: [], deletedFor: [], deletedForEveryone: false,
+        type: 'text', text: text, statusReplyTo: item.id
+      });
+      await db.collection('smiletak_chats').doc(chatId).set({ lastMessage: text, lastMessageAt: FieldValue.serverTimestamp(), lastSenderId: profile.id }, { merge: true });
+      // Cross-user write — see the comment in ChatWindow.sendMessage().
+      db.collection('smiletak_chatMembers').doc(chatId + '_' + data.uid).set({ unreadCount: FieldValue.increment(1) }, { merge: true }).catch(() => {});
+      setReplyText('');
+      onOpenChat && onOpenChat(Object.assign({}, data.user, { id: data.uid }));
+      onClose();
+    } catch (e) { toast(e.message || 'Could not send reply', 'error'); }
+    setSendingReply(false);
+  };
   const shareExternally = async () => {
     setSharing(false);
     try {
@@ -4212,6 +4252,22 @@ function StatusViewer({ groups, startIndex, startItemIndex, onClose }) {
     ),
     mine && h('div', { className: 'p-3 text-white text-sm' }, h('i', { className: 'fa-solid fa-eye mr-2' }), viewers.length, ' view(s)',
       viewers.length > 0 && h('div', { className: 'flex flex-wrap gap-2 mt-2' }, viewers.map(v => h('div', { key: v.id, className: 'flex items-center gap-1 bg-white/10 rounded-full px-2 py-1' }, h(Avatar, { url: v.photoURL, name: v.fullName, size: 18 }), h('span', { className: 'text-xs' }, v.fullName))))
+    ),
+    // Reply bar — commenting here sends a normal chat message to the
+    // status owner and opens that one-to-one chat, same as WhatsApp.
+    !mine && h('div', { className: 'p-3 flex items-center gap-2', onClick: e => e.stopPropagation() },
+      h('input', {
+        type: 'text', value: replyText, placeholder: 'Reply to ' + (data.user.fullName || 'status') + '…',
+        className: 'flex-1 bg-white/10 text-white placeholder-white/50 text-sm rounded-full px-4 py-2.5 outline-none',
+        onChange: e => setReplyText(e.target.value),
+        onFocus: () => setPaused(true),
+        onKeyDown: e => { if (e.key === 'Enter') sendReply(); }
+      }),
+      h('button', {
+        className: 'w-10 h-10 rounded-full flex items-center justify-center shrink-0 ' + (replyText.trim() ? 'bg-brand-600 text-white' : 'bg-white/10 text-white/40'),
+        disabled: !replyText.trim() || sendingReply,
+        onClick: sendReply
+      }, h('i', { className: 'fa-solid ' + (sendingReply ? 'fa-spinner fa-spin' : 'fa-paper-plane') + ' text-sm' }))
     ),
     sharing && h('div', { className: 'fixed inset-0 z-[60] bg-black/50 flex items-end justify-center', onClick: closeSharing },
       h('div', { className: 'bg-ink-800 w-full max-w-sm rounded-t-2xl p-2', onClick: e => e.stopPropagation() },
