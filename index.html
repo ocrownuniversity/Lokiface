@@ -111,7 +111,7 @@
 </script>
 <style>
   html,body{height:100%;overscroll-behavior-y:none;}
-  html{font-size:114%;} /* bumps every Tailwind text-* size (they're rem-based) app-wide */
+  html{font-size:130%;} /* bumps every Tailwind text-* size (they're rem-based) app-wide */
   body{font-family:'Inter',sans-serif;}
   #root{height:100%;overflow:hidden;}
   input,textarea,select{font-size:16px!important;}
@@ -439,7 +439,7 @@ function FloatingAdOverlay() {
   if (!visible || !ad || isPremiumActive(profile)) return null;
   const hasMedia = (ad.mediaType === 'image' || ad.mediaType === 'video') && ad.mediaURL;
 
-  return h('div', { className: 'fixed left-0 right-0 bottom-3 z-40 px-3 pointer-events-none flex justify-center' },
+  return h('div', { className: 'fixed left-0 right-0 top-[168px] z-40 px-3 pointer-events-none flex justify-center' },
     h('div', {
       className: 'relative w-full max-w-md aspect-[2.45/1] rounded-2xl overflow-hidden shadow-xl border-2 border-amber-300 dark:border-amber-500/40 bg-white dark:bg-ink-800 pointer-events-auto cursor-pointer',
       onClick: () => logAdClick(ad)
@@ -623,7 +623,7 @@ function useAuth() { return useContext(AuthCtx); }
 
 /* ============================== AVATAR ============================== */
 function Avatar({ url, name, size, online }) {
-  const s = size || 42;
+  const s = (size || 42) * 1.2; // scaled up 20% app-wide so profile pics read larger everywhere
   return h('div', { className: 'relative shrink-0', style: { width: s, height: s } },
     url
       ? h('img', { src: url, className: 'rounded-full object-cover w-full h-full' })
