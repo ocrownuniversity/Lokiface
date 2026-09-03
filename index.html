@@ -137,6 +137,25 @@
   .dark .skel{background:linear-gradient(90deg,#1c2532 25%,#26313f 37%,#1c2532 63%);background-size:800px 100%;}
   html.st-reduce-motion .skel{animation:none;background:#e5e9ef;}
   html.st-reduce-motion.dark .skel{background:#1c2532;}
+  /* ============== Global legibility boost ==============
+     Feedback: most body text and icons across the app read as too light/
+     faded. The app leans heavily on Tailwind's text-slate-400/500/300
+     utilities for secondary text (timestamps, hints, icons) — those are
+     Tailwind's stock light greys, which have low contrast against a white
+     background. Overriding the utility classes directly here (rather than
+     touching every className in the app) darkens all of them at once,
+     consistently, in both light and dark mode. !important is required
+     because Tailwind's CDN build injects its own stylesheet dynamically and
+     its insertion order relative to this block isn't guaranteed. */
+  body{font-weight:500;}
+  .text-slate-300{color:#7c8ba1!important;}
+  .text-slate-400{color:#52657a!important;}
+  .text-slate-500{color:#37455a!important;}
+  .dark .text-slate-300{color:#c7d0dc!important;}
+  .dark .text-slate-400{color:#a8b4c4!important;}
+  .dark .text-slate-500{color:#dbe1e9!important;}
+  ::placeholder{color:#6b7a90!important;opacity:1;}
+  .dark ::placeholder{color:#8a97a8!important;opacity:1;}
 </style>
 </head>
 <body class="bg-slate-100 dark:bg-ink-900 text-slate-900 dark:text-slate-100">
@@ -360,13 +379,30 @@ function AdBanner({ type }) {
   const ad = useAd(type);
   useEffect(() => { if (ad) logAdImpression(ad); }, [ad]);
   if (!ad || isPremiumActive(profile)) return null;
-  return h('div', { className: 'mx-4 my-2 rounded-xl overflow-hidden border border-slate-200 dark:border-ink-700 cursor-pointer relative shrink-0', onClick: () => logAdClick(ad) },
-    h('span', { className: 'absolute top-1.5 left-1.5 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded-full z-10' }, 'Sponsored'),
-    ad.mediaType === 'image' && ad.mediaURL && h('img', { src: ad.mediaURL, className: 'w-full max-h-32 object-cover' }),
-    ad.mediaType === 'video' && ad.mediaURL && h('video', { src: ad.mediaURL, className: 'w-full max-h-32 object-cover', muted: true, autoPlay: true, loop: true, playsInline: true }),
-    h('div', { className: 'p-2 bg-slate-50 dark:bg-ink-800' },
-      h('p', { className: 'text-sm font-semibold truncate' }, ad.headline || ad.advertiserName || 'Sponsored'),
-      ad.body && h('p', { className: 'text-xs text-slate-500 truncate' }, ad.body)
+  const hasMedia = (ad.mediaType === 'image' || ad.mediaType === 'video') && ad.mediaURL;
+  return h('div', {
+    className: 'mx-4 my-2.5 rounded-2xl overflow-hidden border-2 border-amber-300 dark:border-amber-500/40 shadow-md cursor-pointer relative shrink-0 bg-white dark:bg-ink-800',
+    onClick: () => logAdClick(ad)
+  },
+    // The "Sponsored" tag now sits INSIDE the content area's own top row
+    // instead of being absolutely positioned over the whole card. It used
+    // to be pinned to the card's top-left corner assuming there'd always be
+    // a media thumbnail underneath it — for text-only ads (no image/video)
+    // that meant it landed directly on top of the headline, covering it.
+    hasMedia && h('span', { className: 'absolute top-2 left-2 bg-amber-400 text-ink-900 text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-sm tracking-wide' }, 'SPONSORED'),
+    ad.mediaType === 'image' && ad.mediaURL && h('img', { src: ad.mediaURL, className: 'w-full max-h-36 object-cover' }),
+    ad.mediaType === 'video' && ad.mediaURL && h('video', { src: ad.mediaURL, className: 'w-full max-h-36 object-cover', muted: true, autoPlay: true, loop: true, playsInline: true }),
+    h('div', { className: 'p-3.5 bg-gradient-to-br from-amber-50 to-white dark:from-ink-800 dark:to-ink-800' },
+      !hasMedia && h('span', { className: 'inline-block bg-amber-400 text-ink-900 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5 tracking-wide' }, 'SPONSORED'),
+      h('div', { className: 'flex items-center justify-between gap-3' },
+        h('div', { className: 'min-w-0' },
+          h('p', { className: 'text-base font-extrabold leading-snug truncate text-ink-900 dark:text-white' }, ad.headline || ad.advertiserName || 'Sponsored'),
+          ad.body && h('p', { className: 'text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5' }, ad.body)
+        ),
+        h('span', { className: 'shrink-0 flex items-center gap-1 text-xs font-bold text-brand-600 bg-brand-50 dark:bg-brand-500/10 px-2.5 py-1.5 rounded-full' },
+          'View', h('i', { className: 'fa-solid fa-arrow-right text-[10px]' })
+        )
+      )
     )
   );
 }
@@ -2385,8 +2421,8 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
           h('p', { className: 'text-[11px] text-slate-400' }, typingNow ? h('span', { className: 'text-brand-600' }, 'typing…') : (otherLive.showLastSeen === false ? '' : (otherLive.online ? 'Online' : otherLive.lastSeen ? 'last seen ' + timeAgo(otherLive.lastSeen) : '')))
         )
       ),
-      h('button', { className: 'text-slate-400 px-2', onClick: () => call.startCall(otherLive, 'audio') }, h('i', { className: 'fa-solid fa-phone' })),
-      h('button', { className: 'text-slate-400 px-2', onClick: () => call.startCall(otherLive, 'video') }, h('i', { className: 'fa-solid fa-video' })),
+      call.callFeatures.voiceEnabled && h('button', { className: 'text-slate-400 px-2', onClick: () => call.startCall(otherLive, 'audio') }, h('i', { className: 'fa-solid fa-phone' })),
+      call.callFeatures.videoEnabled && h('button', { className: 'text-slate-400 px-2', onClick: () => call.startCall(otherLive, 'video') }, h('i', { className: 'fa-solid fa-video' })),
       h('button', { className: 'text-slate-400 px-1', onClick: () => setSearch(search === null ? '' : null) }, h('i', { className: 'fa-solid fa-magnifying-glass' }))
     ),
     chat && chat.pinnedMessageId && !pinExpired && h('div', {
@@ -2549,40 +2585,103 @@ function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs }) 
   };
   const fmt = (s) => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
   const pct = duration ? Math.min(100, (curTime / duration) * 100) : 0;
-  const barColor = mine ? 'bg-white/40' : 'bg-slate-300 dark:bg-ink-600';
-  const fillColor = mine ? 'bg-white' : 'bg-brand-500';
 
-  return h('div', { className: 'flex items-center gap-2 w-[210px]' },
+  // A fixed pseudo-random bar-height pattern (WhatsApp-style waveform look).
+  // This doesn't reflect the actual audio amplitude — a real waveform would
+  // need decoding the audio client-side, which is unnecessary cost for a
+  // purely decorative visual. The same seeded pattern is reused every
+  // render so bars don't jump around while playing.
+  const BAR_COUNT = 32;
+  const barHeights = useMemo(() => {
+    let seed = 0;
+    for (let i = 0; i < src.length; i++) seed = (seed * 31 + src.charCodeAt(i)) >>> 0;
+    const rand = () => { seed = (seed * 1103515245 + 12345) >>> 0; return (seed >>> 8) / 0xFFFFFF; };
+    return Array.from({ length: BAR_COUNT }, () => 4 + Math.round(rand() * 12));
+  }, [src]);
+
+  const playedBars = Math.round((pct / 100) * BAR_COUNT);
+  const fillColor = mine ? 'bg-white' : 'bg-brand-500';
+  const dimColor = mine ? 'bg-white/35' : 'bg-slate-300 dark:bg-ink-600';
+
+  // Avatar is only ever shown for messages from the OTHER person — WhatsApp
+  // never shows your own avatar on your own sent bubble. Showing it
+  // unconditionally (as before) meant your own sent voice notes displayed
+  // your own avatar too, which rendered as a stray empty circle whenever
+  // you didn't have a profile photo set.
+  const showAvatar = !mine && avatarURL !== undefined;
+
+  return h('div', { className: 'flex items-center gap-2 w-[230px]' },
     h('audio', { ref: audioRef, src, preload: 'metadata', className: 'hidden' }),
-    h(Avatar, { url: avatarURL, name: avatarName, size: 30 }),
-    h('button', { onClick: toggle, className: 'shrink-0 w-7 h-7 rounded-full flex items-center justify-center ' + (mine ? 'bg-white text-brand-600' : 'bg-brand-500 text-white') },
-      h('i', { className: 'fa-solid ' + (playing ? 'fa-pause' : 'fa-play') + ' text-[10px]' })
+    showAvatar && h('div', { className: 'relative shrink-0' },
+      h(Avatar, { url: avatarURL, name: avatarName, size: 32 }),
+      h('span', { className: 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-brand-500 flex items-center justify-center border border-white dark:border-ink-800' },
+        h('i', { className: 'fa-solid fa-microphone text-white', style: { fontSize: 6 } })
+      )
     ),
-    h('div', { className: 'flex-1 min-w-0' },
-      h('div', {
-        ref: barRef, onClick: seek,
-        className: 'relative h-1.5 rounded-full cursor-pointer ' + barColor
-      },
-        h('div', { className: 'absolute inset-y-0 left-0 rounded-full ' + fillColor, style: { width: pct + '%' } }),
-        h('div', {
-          className: 'absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ' + fillColor,
-          style: { left: 'calc(' + pct + '% - 5px)' }
-        })
-      ),
-      h('p', { className: 'text-[10px] mt-0.5 ' + (mine ? 'text-white/80' : 'text-slate-400') }, fmt(playing || curTime ? curTime : duration))
-    )
+    h('button', { onClick: toggle, className: 'shrink-0 w-8 h-8 rounded-full flex items-center justify-center ' + (mine ? 'bg-white text-brand-600' : 'bg-brand-500 text-white') },
+      h('i', { className: 'fa-solid ' + (playing ? 'fa-pause' : 'fa-play') + ' text-[11px]' })
+    ),
+    h('div', {
+      ref: barRef, onClick: seek,
+      className: 'flex-1 h-8 flex items-center gap-[2px] cursor-pointer'
+    },
+      barHeights.map((hgt, i) => h('span', {
+        key: i,
+        className: 'flex-1 rounded-full ' + (i < playedBars ? fillColor : dimColor),
+        style: { height: hgt }
+      }))
+    ),
+    h('span', { className: 'text-[10px] shrink-0 tabular-nums ' + (mine ? 'text-white/80' : 'text-slate-400') }, fmt(playing || curTime ? curTime : duration))
   );
 }
 
 function MessageBubble({ m, mine, onMenu, onReply, senderAvatar, senderName }) {
+  // Swipe-to-reply: drag the bubble right (like WhatsApp) to reply to it —
+  // works for both text replies and a voice-note reply, since sendMessage()
+  // already attaches whatever replyTo is set to any message type sent next,
+  // voice notes included.
+  const [dragX, setDragX] = useState(0);
+  const dragState = useRef({ startX: 0, active: false, pointerId: null });
+  const SWIPE_TRIGGER = 60;
+  const SWIPE_MAX = 84;
+
+  const onPointerDown = (e) => {
+    if (m.deletedForEveryone) return;
+    dragState.current = { startX: e.clientX, active: true, pointerId: e.pointerId };
+    e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e) => {
+    if (!dragState.current.active) return;
+    const dx = e.clientX - dragState.current.startX;
+    // Only allow dragging right, and only far enough to reveal the reply icon —
+    // dragging left does nothing (matches the one-directional swipe pattern
+    // people already know from WhatsApp/Telegram).
+    setDragX(Math.max(0, Math.min(SWIPE_MAX, dx)));
+  };
+  const endDrag = () => {
+    if (!dragState.current.active) return;
+    dragState.current.active = false;
+    if (dragX > SWIPE_TRIGGER) onReply();
+    setDragX(0);
+  };
+
   if (m.deletedForEveryone) {
     return h('div', { id: 'msg-' + m.id, className: 'flex ' + (mine ? 'justify-end' : 'justify-start') + ' mb-1.5' },
       h('div', { className: 'italic text-xs text-slate-400 bg-white dark:bg-ink-800 px-3 py-2 rounded-2xl' }, h('i', { className: 'fa-solid fa-ban mr-1' }), 'This message was deleted')
     );
   }
   const status = mine ? (m.readBy && m.readBy.length ? 'read' : (m.deliveredTo && m.deliveredTo.length ? 'delivered' : 'sent')) : null;
-  return h('div', { id: 'msg-' + m.id, className: 'flex ' + (mine ? 'justify-end' : 'justify-start') + ' mb-1.5 group' },
-    h('div', { className: 'flex items-end gap-1 max-w-[78%] ' + (mine ? 'flex-row-reverse' : '') },
+  return h('div', { id: 'msg-' + m.id, className: 'flex ' + (mine ? 'justify-end' : 'justify-start') + ' mb-1.5 group relative' },
+    // Reply icon revealed behind the bubble as it's dragged right.
+    h('div', {
+      className: 'absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-200 dark:bg-ink-700 flex items-center justify-center pointer-events-none transition-opacity',
+      style: { opacity: Math.min(1, dragX / SWIPE_TRIGGER) }
+    }, h('i', { className: 'fa-solid fa-reply text-slate-500 text-xs' })),
+    h('div', {
+      className: 'flex items-end gap-1 max-w-[78%] touch-pan-y ' + (mine ? 'flex-row-reverse' : ''),
+      style: { transform: 'translateX(' + dragX + 'px)', transition: dragState.current.active ? 'none' : 'transform .15s ease-out' },
+      onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag
+    },
       h('div', {
         className: 'msg-in px-3 py-2 rounded-2xl text-sm shadow-sm ' + (mine ? 'bg-brand-600 text-white rounded-br-md' : 'bg-white dark:bg-ink-800 rounded-bl-md')
       },
@@ -2797,7 +2896,7 @@ function StatusScreen({ onViewProfile, onOpenChannel, onNewChannel, onExploreCha
           onClick: () => logAdClick(statusAd)
         },
           h('div', { className: 'absolute inset-0 bg-black/25' }),
-          h('span', { className: 'absolute top-3 left-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full' }, 'Sponsored'),
+          h('span', { className: 'absolute top-3 left-3 bg-amber-400 text-ink-900 text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide' }, 'SPONSORED'),
           h('p', { className: 'relative text-white text-sm font-semibold px-2.5 pb-3 truncate w-full' }, statusAd.headline || statusAd.advertiserName || 'Ad')
         )
       ),
@@ -4904,6 +5003,22 @@ function AdminPanel() {
   const toggleAd = (ad) => db.collection('smiletak_adCampaigns').doc(ad.id).update({ enabled: !ad.enabled }).catch(e => toast(e.message, 'error'));
   const deleteAd = (ad) => { if (confirm('Delete this campaign?')) db.collection('smiletak_adCampaigns').doc(ad.id).delete().catch(e => toast(e.message, 'error')); };
 
+  const [callFeatures, setCallFeatures] = useState({ voiceEnabled: true, videoEnabled: true });
+  useEffect(() => {
+    if (tab !== 'settings') return;
+    const unsub = db.collection('smiletak_settings').doc('callFeatures').onSnapshot(s => {
+      if (s.exists) setCallFeatures(f => Object.assign({}, f, s.data()));
+    });
+    return unsub;
+  }, [tab]);
+  const toggleCallFeature = (key) => {
+    const next = !callFeatures[key];
+    setCallFeatures(f => Object.assign({}, f, { [key]: next })); // optimistic
+    db.collection('smiletak_settings').doc('callFeatures').set({ [key]: next }, { merge: true })
+      .then(() => toast((key === 'videoEnabled' ? 'Video calls ' : 'Voice calls ') + (next ? 'enabled' : 'disabled'), 'success'))
+      .catch(e => { setCallFeatures(f => Object.assign({}, f, { [key]: !next })); toast(e.message, 'error'); });
+  };
+
   const saveSettings = async () => {
     try {
       await db.collection('smiletak_settings').doc('paymentAccount').set({ bankName: settingsForm.bankName || '', accountNumber: settingsForm.accountNumber || '', accountName: settingsForm.accountName || '', instructions: settingsForm.instructions || '' });
@@ -4967,7 +5082,23 @@ function AdminPanel() {
       ),
       tab === 'ads' && h(AdCampaignsAdmin, { ads, onToggle: toggleAd, onDelete: deleteAd }),
       tab === 'settings' && h('div', { className: 'space-y-1' },
-        h('p', { className: 'font-semibold text-sm mt-2 mb-1' }, 'Manual payment account'),
+        h('p', { className: 'font-semibold text-sm mt-2 mb-1' }, 'Calling'),
+        h('div', { className: 'flex items-center justify-between py-2 border-b border-slate-100 dark:border-ink-800' },
+          h('span', { className: 'text-sm' }, 'Voice calls'),
+          h('button', {
+            onClick: () => toggleCallFeature('voiceEnabled'),
+            className: 'w-12 h-7 rounded-full relative transition-colors ' + (callFeatures.voiceEnabled ? 'bg-brand-600' : 'bg-slate-300 dark:bg-ink-600')
+          }, h('span', { className: 'absolute top-1 w-5 h-5 rounded-full bg-white transition-all ' + (callFeatures.voiceEnabled ? 'left-6' : 'left-1') }))
+        ),
+        h('div', { className: 'flex items-center justify-between py-2 border-b border-slate-100 dark:border-ink-800' },
+          h('span', { className: 'text-sm' }, 'Video calls'),
+          h('button', {
+            onClick: () => toggleCallFeature('videoEnabled'),
+            className: 'w-12 h-7 rounded-full relative transition-colors ' + (callFeatures.videoEnabled ? 'bg-brand-600' : 'bg-slate-300 dark:bg-ink-600')
+          }, h('span', { className: 'absolute top-1 w-5 h-5 rounded-full bg-white transition-all ' + (callFeatures.videoEnabled ? 'left-6' : 'left-1') }))
+        ),
+        h('p', { className: 'text-xs text-slate-400 -mt-1 mb-2' }, 'Turning either off hides the matching call button for everyone and blocks starting or switching to that call type, even if someone calls the app directly.'),
+        h('p', { className: 'font-semibold text-sm mt-4 mb-1' }, 'Manual payment account'),
         h('input', { className: inputCls, placeholder: 'Bank name', value: settingsForm.bankName, onChange: e => setSettingsForm(f => Object.assign({}, f, { bankName: e.target.value })) }),
         h('input', { className: inputCls, placeholder: 'Account number', value: settingsForm.accountNumber, onChange: e => setSettingsForm(f => Object.assign({}, f, { accountNumber: e.target.value })) }),
         h('input', { className: inputCls, placeholder: 'Account name', value: settingsForm.accountName, onChange: e => setSettingsForm(f => Object.assign({}, f, { accountName: e.target.value })) }),
@@ -5221,6 +5352,17 @@ function CallProvider({ children }) {
   const lastHandledAnswerSdp = useRef(null);
   const [switchingType, setSwitchingType] = useState(false);
   const endCallRef = useRef(() => {});
+  // Admin-controlled kill switches for voice/video calling, read from the
+  // same smiletak_settings collection the admin panel already uses for
+  // pricing/payment config. Defaults to enabled so existing behavior is
+  // unchanged for anyone who hasn't touched this setting yet.
+  const [callFeatures, setCallFeatures] = useState({ voiceEnabled: true, videoEnabled: true });
+  useEffect(() => {
+    const unsub = db.collection('smiletak_settings').doc('callFeatures').onSnapshot(snap => {
+      if (snap.exists) setCallFeatures(f => Object.assign({}, f, snap.data()));
+    }, () => {});
+    return unsub;
+  }, []);
 
   const logCallMessage = useCallback(async (theCall, status, durationSecs) => {
     if (!theCall) return;
@@ -5422,6 +5564,7 @@ function CallProvider({ children }) {
     const stream = localStreamRef.current;
     if (!pc || !stream || !call || callStatus !== 'connected' || call.type === newType) return;
     if (pc.signalingState !== 'stable') return; // a switch is already mid-flight
+    if (newType === 'video' && !callFeatures.videoEnabled) { toast('Video calls are currently disabled', 'info'); return; }
     const callId = call.id;
     setSwitchingType(true);
     try {
@@ -5457,6 +5600,11 @@ function CallProvider({ children }) {
 
   const startCall = async (other, type) => {
     if (!other || callStatus !== 'idle') return;
+    // Respect the admin's kill switch. Checked here (not just hidden in the
+    // UI) so a stale/cached page or a direct call to startCall() can't
+    // bypass it.
+    if (type === 'video' && !callFeatures.videoEnabled) { toast('Video calls are currently disabled', 'info'); return; }
+    if (type !== 'video' && !callFeatures.voiceEnabled) { toast('Voice calls are currently disabled', 'info'); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS, video: type === 'video' });
       localStreamRef.current = stream; setLocalStream(stream);
@@ -5742,10 +5890,10 @@ function CallProvider({ children }) {
     } catch (e) { toast(e.message, 'error'); }
   };
 
-  return h(CallCtx.Provider, { value: { callStatus, call, startCall, switchCallType, switchingType, groupCall, incomingGroupCall, startGroupCall, joinGroupCall, declineGroupCall, leaveGroupCall, addToGroupCall, upgradeToGroupCall } },
+  return h(CallCtx.Provider, { value: { callStatus, call, startCall, switchCallType, switchingType, callFeatures, groupCall, incomingGroupCall, startGroupCall, joinGroupCall, declineGroupCall, leaveGroupCall, addToGroupCall, upgradeToGroupCall } },
     children,
     callStatus === 'incoming' && h(IncomingCallScreen, { call, remoteUser, onAccept: acceptCall, onDecline: declineCall }),
-    (callStatus === 'outgoing' || callStatus === 'connected') && h(ActiveCallScreen, { call, remoteUser, status: callStatus, localStream, remoteStream, onEnd: endCall, onAdd: upgradeToGroupCall, onSwitchType: switchCallType, switchingType }),
+    (callStatus === 'outgoing' || callStatus === 'connected') && h(ActiveCallScreen, { call, remoteUser, status: callStatus, localStream, remoteStream, onEnd: endCall, onAdd: upgradeToGroupCall, onSwitchType: switchCallType, switchingType, videoEnabled: callFeatures.videoEnabled }),
     incomingGroupCall && !groupCall && h(IncomingGroupCallScreen, { call: incomingGroupCall, onAccept: joinGroupCall, onDecline: declineGroupCall }),
     groupCall && h(GroupCallScreen, { call: groupCall, onLeave: leaveGroupCall, onAdd: addToGroupCall })
   );
@@ -5772,7 +5920,7 @@ function IncomingCallScreen({ remoteUser, call, onAccept, onDecline }) {
   );
 }
 
-function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream, onEnd, onAdd, onSwitchType, switchingType }) {
+function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream, onEnd, onAdd, onSwitchType, switchingType, videoEnabled }) {
   const [muted, setMuted] = useState(false);
   const [camOff, setCamOff] = useState(false);
   const [secs, setSecs] = useState(0);
@@ -5853,7 +6001,7 @@ function ActiveCallScreen({ remoteUser, status, call, localStream, remoteStream,
     h('div', { className: 'relative z-10 flex flex-wrap items-center justify-center gap-4' },
       h('button', { onClick: toggleMute, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (muted ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (muted ? 'fa-microphone-slash' : 'fa-microphone') })),
       status === 'connected' && speakerSupported && h('button', { onClick: toggleSpeaker, className: 'w-14 h-14 rounded-full flex items-center justify-center ' + (onSpeaker ? 'bg-white text-ink-900' : 'bg-white/20') }, h('i', { className: 'fa-solid ' + (onSpeaker ? 'fa-volume-high' : 'fa-ear-listen') })),
-      status === 'connected' && onSwitchType && h('button', {
+      status === 'connected' && onSwitchType && (isVideo || videoEnabled !== false) && h('button', {
         onClick: () => onSwitchType(isVideo ? 'audio' : 'video'),
         disabled: switchingType,
         className: 'w-14 h-14 rounded-full flex items-center justify-center bg-white/20 ' + (switchingType ? 'opacity-50' : '')
