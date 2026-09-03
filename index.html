@@ -839,9 +839,89 @@ function useLongPress(onLongPress, onTap, ms) {
   };
 }
 
+/* ============================== BOTTOM-NAV UNREAD BADGES ==============================
+   Small red-number badges for the Chats / Updates / Calls tabs, shown next
+   to each label the same way the marked-up screenshot requested. Chat/group
+   unread counts already exist as real Firestore fields (unreadCount) and are
+   summed here. Status "unviewed" and missed-call "unseen" have no such
+   field anywhere else in the app, so — following the same device-local
+   pattern already used for chat-lock/media-visibility settings (see
+   lsGet/lsSet above) — we track a per-device "last seen" marker in
+   localStorage and clear it the moment the person opens that tab. */
+function useUnreadBadges(profile) {
+  const [dmUnread, setDmUnread] = useState(0);
+  const [groupUnread, setGroupUnread] = useState(0);
+  const [statusList, setStatusList] = useState([]); // [{ uid, latestMs }]
+  const [missedCalls, setMissedCalls] = useState([]); // recent missed/cancelled incoming calls
+  const [seenTick, setSeenTick] = useState(0); // bumped after marking something seen, to force a re-read of localStorage
+
+  useEffect(() => {
+    if (!profile) { setDmUnread(0); return; }
+    const unsub = db.collection('smiletak_chatMembers').where('uid', '==', profile.id).onSnapshot(snap => {
+      let sum = 0;
+      snap.docs.forEach(d => { const m = d.data(); if (!m.archived && m.unreadCount > 0) sum += m.unreadCount; });
+      setDmUnread(sum);
+    });
+    return unsub;
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile) { setGroupUnread(0); return; }
+    const unsub = db.collection('smiletak_groupMembers').where('uid', '==', profile.id).onSnapshot(snap => {
+      let sum = 0;
+      snap.docs.forEach(d => { const m = d.data(); if (!m.archived && m.unreadCount > 0) sum += m.unreadCount; });
+      setGroupUnread(sum);
+    });
+    return unsub;
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile) { setStatusList([]); return; }
+    const cutoff = Timestamp.fromMillis(Date.now() - 24 * 3600 * 1000);
+    const unsub = db.collection('smiletak_statuses').where('createdAt', '>', cutoff).onSnapshot(snap => {
+      const byUser = {};
+      snap.docs.forEach(d => {
+        const s = d.data();
+        if (s.uid === profile.id) return;
+        const ms = s.createdAt && s.createdAt.toMillis ? s.createdAt.toMillis() : Date.now();
+        if (!byUser[s.uid] || ms > byUser[s.uid]) byUser[s.uid] = ms;
+      });
+      setStatusList(Object.keys(byUser).map(uid => ({ uid, latestMs: byUser[uid] })));
+    });
+    return unsub;
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile) { setMissedCalls([]); return; }
+    const unsub = db.collection('smiletak_calls').where('calleeId', '==', profile.id).onSnapshot(snap => {
+      const rows = snap.docs
+        .map(d => Object.assign({ id: d.id }, d.data()))
+        .filter(c => c.id.indexOf('__diag_') !== 0)
+        .filter(c => c.status === 'missed' || c.status === 'cancelled');
+      setMissedCalls(rows);
+    });
+    return unsub;
+  }, [profile]);
+
+  const statusSeenMap = lsGet('st_statusSeen', {});
+  const statusUnread = statusList.filter(s => !statusSeenMap[s.uid] || statusSeenMap[s.uid] < s.latestMs).length;
+
+  const callsSeenAt = lsGet('st_callsSeenAt', 0);
+  const callsUnread = missedCalls.filter(c => {
+    const ms = c.createdAt && c.createdAt.toMillis ? c.createdAt.toMillis() : 0;
+    return ms > callsSeenAt;
+  }).length;
+
+  const markStatusSeen = () => { lsSet('st_statusSeen', Object.assign({}, lsGet('st_statusSeen', {}), (() => { const m = {}; statusList.forEach(s => { m[s.uid] = Date.now(); }); return m; })())); setSeenTick(t => t + 1); };
+  const markCallsSeen = () => { lsSet('st_callsSeenAt', Date.now()); setSeenTick(t => t + 1); };
+
+  return { chats: dmUnread + groupUnread, updates: statusUnread, calls: callsUnread, markStatusSeen, markCallsSeen };
+}
+
 function AppShell() {
   const { profile } = useAuth();
   const toast = useToast();
+  const badges = useUnreadBadges(profile);
   const initialView = { screen: 'tab', tab: 'chats' };
   const [view, setView] = useState(initialView);
   const viewRef = useRef(initialView);
@@ -882,7 +962,11 @@ function AppShell() {
     // eslint-disable-next-line
   }, []);
 
-  const goToTab = (t) => { const v = { screen: 'tab', tab: t }; window.history.replaceState(v, ''); viewRef.current = v; setView(v); };
+  const goToTab = (t) => {
+    const v = { screen: 'tab', tab: t }; window.history.replaceState(v, ''); viewRef.current = v; setView(v);
+    if (t === 'status') badges.markStatusSeen();
+    if (t === 'calls') badges.markCallsSeen();
+  };
   const openChat = (chatId, other) => { const v = { screen: 'chat', chatId, other }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openProfile = (uid) => { const v = { screen: 'profile', uid }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
   const openPremium = () => { const v = { screen: 'premium' }; window.history.pushState(v, ''); viewRef.current = v; setView(v); };
@@ -1023,10 +1107,10 @@ function AppShell() {
 
   const tab = view.tab || 'chats';
   const tabs = [
-    { id: 'chats', icon: 'fa-comment-dots', label: 'Chats' },
-    { id: 'status', icon: 'fa-circle-notch', label: 'Updates' },
+    { id: 'chats', icon: 'fa-comment-dots', label: 'Chats', badge: badges.chats },
+    { id: 'status', icon: 'fa-circle-notch', label: 'Updates', badge: badges.updates },
     { id: 'search', icon: 'fa-magnifying-glass', label: 'Discover' },
-    { id: 'calls', icon: 'fa-phone', label: 'Calls' }
+    { id: 'calls', icon: 'fa-phone', label: 'Calls', badge: badges.calls }
   ];
   if (profile && profile.isAdmin) tabs.push({ id: 'admin', icon: 'fa-shield-halved', label: 'Admin' });
 
@@ -1043,8 +1127,14 @@ function AppShell() {
       tabs.map(t => h('button', {
         key: t.id,
         onClick: () => goToTab(t.id),
-        className: 'flex-1 py-2.5 flex flex-col items-center gap-1 text-xs font-medium ' + (tab === t.id ? 'text-brand-600' : 'text-slate-400')
-      }, h('i', { className: 'fa-solid ' + t.icon + ' text-lg' }), t.label))
+        className: 'flex-1 py-2.5 flex flex-col items-center gap-1 text-xs font-medium relative ' + (tab === t.id ? 'text-brand-600' : 'text-slate-400')
+      },
+        h('span', { className: 'relative' },
+          h('i', { className: 'fa-solid ' + t.icon + ' text-lg' }),
+          !!t.badge && h('span', { className: 'absolute -top-1.5 -right-2.5 text-red-600 text-[11px] font-bold leading-none' }, t.badge > 99 ? '99+' : t.badge)
+        ),
+        t.label
+      ))
     )
   );
 }
