@@ -526,13 +526,41 @@ function fireLocalNotification(title, body, icon) {
 /* Short two-tone "ding" chime for incoming messages, built with the Web
    Audio API (same approach as useRingTone below) so no audio file needs to
    be shipped. Gated behind the device-local 'st_notifSoundEnabled' setting
-   (see NotificationSettingsScreen) so people can turn it off. */
+   (see NotificationSettingsScreen) so people can turn it off.
+
+   IMPORTANT: mobile browsers (Chrome included) refuse to let a freshly
+   created AudioContext actually produce sound unless it's resumed from
+   inside a genuine user-gesture handler (tap/click/keypress). The chime is
+   triggered from a Firestore realtime listener — not a tap — so a
+   brand-new context created there stays permanently 'suspended' and no
+   sound comes out, even though nothing throws an error. The fix is to keep
+   ONE shared context alive for the whole session and "unlock" it the
+   moment the person taps anywhere in the app; after that first unlock,
+   the same context can be reused to play sound from background callbacks
+   for the rest of the session. */
+let _notifAudioCtx = null;
+function _getNotifAudioCtx() {
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!_notifAudioCtx) _notifAudioCtx = new AudioCtx();
+  return _notifAudioCtx;
+}
+function _unlockNotifAudio() {
+  const ctx = _getNotifAudioCtx();
+  if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+}
+['pointerdown', 'touchstart', 'click', 'keydown'].forEach(evt => {
+  document.addEventListener(evt, _unlockNotifAudio, { passive: true });
+});
 function playNotificationSound() {
   try {
     if (!lsGet('st_notifSoundEnabled', true)) return;
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = _getNotifAudioCtx();
+    if (!ctx) return;
+    // Best-effort resume even here — if this call happens to be the very
+    // first "tap" won't have fired yet, this at least tries; once the
+    // person has tapped anywhere once, this always succeeds instantly.
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     const now = ctx.currentTime;
     [[880, 0], [1175, 0.09]].forEach(([freq, delay]) => {
       const osc = ctx.createOscillator();
@@ -546,7 +574,6 @@ function playNotificationSound() {
       osc.start(now + delay);
       osc.stop(now + delay + 0.18);
     });
-    setTimeout(() => { try { ctx.close(); } catch (e) {} }, 400);
   } catch (e) { /* sound is best-effort, never block on it */ }
 }
 
