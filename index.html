@@ -377,8 +377,18 @@ function useAd(type) {
 function AdBanner({ type }) {
   const { profile } = useAuth();
   const ad = useAd(type);
+  const [visible, setVisible] = useState(true);
+  const hideTimer = useRef(null);
   useEffect(() => { if (ad) logAdImpression(ad); }, [ad]);
-  if (!ad || isPremiumActive(profile)) return null;
+  // Reset visibility whenever a (new) ad loads, and auto-hide it 30 seconds
+  // later so it doesn't sit in the chat/list forever on its own.
+  useEffect(() => {
+    setVisible(true);
+    clearTimeout(hideTimer.current);
+    if (ad) hideTimer.current = setTimeout(() => setVisible(false), 30000);
+    return () => clearTimeout(hideTimer.current);
+  }, [ad]);
+  if (!ad || !visible || isPremiumActive(profile)) return null;
   const hasMedia = (ad.mediaType === 'image' || ad.mediaType === 'video') && ad.mediaURL;
   return h('div', {
     className: 'mx-4 my-2.5 rounded-2xl overflow-hidden border-2 border-amber-300 dark:border-amber-500/40 shadow-md cursor-pointer relative shrink-0 bg-white dark:bg-ink-800',
@@ -390,8 +400,19 @@ function AdBanner({ type }) {
     // a media thumbnail underneath it — for text-only ads (no image/video)
     // that meant it landed directly on top of the headline, covering it.
     hasMedia && h('span', { className: 'absolute top-2 left-2 bg-amber-400 text-ink-900 text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-sm tracking-wide' }, 'SPONSORED'),
-    ad.mediaType === 'image' && ad.mediaURL && h('img', { src: ad.mediaURL, className: 'w-full max-h-36 object-cover' }),
-    ad.mediaType === 'video' && ad.mediaURL && h('video', { src: ad.mediaURL, className: 'w-full max-h-36 object-cover', muted: true, autoPlay: true, loop: true, playsInline: true }),
+    // A close button so the person can dismiss the ad immediately instead
+    // of waiting out the 30-second auto-hide.
+    h('button', {
+      onClick: (e) => { e.stopPropagation(); clearTimeout(hideTimer.current); setVisible(false); },
+      className: 'absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center text-xs z-10'
+    }, h('i', { className: 'fa-solid fa-xmark' })),
+    // Fixed letterbox aspect ratio (same wide-banner shape as other ad
+    // placements) instead of an open-ended max-height, so the media stays
+    // compact and consistent no matter what image/video is uploaded.
+    hasMedia && h('div', { className: 'relative w-full aspect-[2.45/1] bg-slate-100 dark:bg-ink-900' },
+      ad.mediaType === 'image' && h('img', { src: ad.mediaURL, className: 'absolute inset-0 w-full h-full object-cover' }),
+      ad.mediaType === 'video' && h('video', { src: ad.mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, autoPlay: true, loop: true, playsInline: true })
+    ),
     h('div', { className: 'p-3.5 bg-gradient-to-br from-amber-50 to-white dark:from-ink-800 dark:to-ink-800' },
       !hasMedia && h('span', { className: 'inline-block bg-amber-400 text-ink-900 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5 tracking-wide' }, 'SPONSORED'),
       h('div', { className: 'flex items-center justify-between gap-3' },
