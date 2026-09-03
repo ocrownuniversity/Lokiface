@@ -770,19 +770,25 @@ function useBackClose(isOpen, onClose) {
 function useLongPress(onLongPress, onTap, ms) {
   const timer = useRef(null);
   const fired = useRef(false);
+  const moved = useRef(false);
   const start = () => {
     fired.current = false;
+    moved.current = false;
     timer.current = setTimeout(() => { fired.current = true; onLongPress(); }, ms || 500);
   };
   const clear = () => { if (timer.current) clearTimeout(timer.current); };
-  const end = () => { clear(); if (!fired.current && onTap) onTap(); };
+  // A finger move means the person is scrolling the list, not tapping the
+  // row — cancel the pending long-press AND remember that this wasn't a
+  // tap, so touchend below doesn't still open the chat underneath the scroll.
+  const onMove = () => { moved.current = true; clear(); };
+  const end = () => { clear(); if (!fired.current && !moved.current && onTap) onTap(); };
   return {
     onMouseDown: start,
     onMouseUp: end,
     onMouseLeave: clear,
     onTouchStart: start,
     onTouchEnd: end,
-    onTouchMove: clear,
+    onTouchMove: onMove,
     onContextMenu: (e) => { e.preventDefault(); if (!fired.current) { fired.current = true; onLongPress(); } }
   };
 }
