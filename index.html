@@ -374,59 +374,6 @@ function useAd(type) {
   }, [type]);
   return ad;
 }
-function AdBanner({ type }) {
-  const { profile } = useAuth();
-  const ad = useAd(type);
-  const [visible, setVisible] = useState(true);
-  const hideTimer = useRef(null);
-  useEffect(() => { if (ad) logAdImpression(ad); }, [ad]);
-  // Reset visibility whenever a (new) ad loads, and auto-hide it 30 seconds
-  // later so it doesn't sit in the chat/list forever on its own.
-  useEffect(() => {
-    setVisible(true);
-    clearTimeout(hideTimer.current);
-    if (ad) hideTimer.current = setTimeout(() => setVisible(false), 30000);
-    return () => clearTimeout(hideTimer.current);
-  }, [ad]);
-  if (!ad || !visible || isPremiumActive(profile)) return null;
-  const hasMedia = (ad.mediaType === 'image' || ad.mediaType === 'video') && ad.mediaURL;
-  return h('div', {
-    className: 'mx-4 my-2.5 rounded-2xl overflow-hidden border-2 border-amber-300 dark:border-amber-500/40 shadow-md cursor-pointer relative shrink-0 bg-white dark:bg-ink-800',
-    onClick: () => logAdClick(ad)
-  },
-    // The "Sponsored" tag now sits INSIDE the content area's own top row
-    // instead of being absolutely positioned over the whole card. It used
-    // to be pinned to the card's top-left corner assuming there'd always be
-    // a media thumbnail underneath it — for text-only ads (no image/video)
-    // that meant it landed directly on top of the headline, covering it.
-    hasMedia && h('span', { className: 'absolute top-2 left-2 bg-amber-400 text-ink-900 text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-sm tracking-wide' }, 'SPONSORED'),
-    // A close button so the person can dismiss the ad immediately instead
-    // of waiting out the 30-second auto-hide.
-    h('button', {
-      onClick: (e) => { e.stopPropagation(); clearTimeout(hideTimer.current); setVisible(false); },
-      className: 'absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center text-xs z-10'
-    }, h('i', { className: 'fa-solid fa-xmark' })),
-    // Fixed letterbox aspect ratio (same wide-banner shape as other ad
-    // placements) instead of an open-ended max-height, so the media stays
-    // compact and consistent no matter what image/video is uploaded.
-    hasMedia && h('div', { className: 'relative w-full aspect-[2.45/1] bg-slate-100 dark:bg-ink-900' },
-      ad.mediaType === 'image' && h('img', { src: ad.mediaURL, className: 'absolute inset-0 w-full h-full object-cover' }),
-      ad.mediaType === 'video' && h('video', { src: ad.mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, autoPlay: true, loop: true, playsInline: true })
-    ),
-    h('div', { className: 'p-3.5 bg-gradient-to-br from-amber-50 to-white dark:from-ink-800 dark:to-ink-800' },
-      !hasMedia && h('span', { className: 'inline-block bg-amber-400 text-ink-900 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5 tracking-wide' }, 'SPONSORED'),
-      h('div', { className: 'flex items-center justify-between gap-3' },
-        h('div', { className: 'min-w-0' },
-          h('p', { className: 'text-base font-extrabold leading-snug truncate text-ink-900 dark:text-white' }, ad.headline || ad.advertiserName || 'Sponsored'),
-          ad.body && h('p', { className: 'text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5' }, ad.body)
-        ),
-        h('span', { className: 'shrink-0 flex items-center gap-1 text-xs font-bold text-brand-600 bg-brand-50 dark:bg-brand-500/10 px-2.5 py-1.5 rounded-full' },
-          'View', h('i', { className: 'fa-solid fa-arrow-right text-[10px]' })
-        )
-      )
-    )
-  );
-}
 function bytesToSize(b) {
   if (!b) return '';
   const u = ['B', 'KB', 'MB', 'GB']; let i = 0; let n = b;
@@ -434,35 +381,42 @@ function bytesToSize(b) {
   return n.toFixed(n < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
 }
 
-/* Floating banner ad: pops up over whatever screen is open (wide banner,
-   same ~2.45:1 letterbox shape as the reference creative), auto-hides after
-   30 seconds, and comes back with a (possibly different) ad 5 minutes after
-   it goes away. An X in the corner lets the person dismiss it immediately
-   instead of waiting out the 30 seconds — closing early still starts the
-   same 5-minute wait before the next one shows. Runs once at the app root
-   so it's a single global cycle, not per-screen. */
+/* Single global ad experience for the whole app: pops up over whatever
+   screen is open (wide banner, same ~2.45:1 letterbox shape as the
+   reference creative), auto-hides after 30 seconds, and — if there's more
+   than one active campaign — cycles through them one after another, 5
+   minutes apart, instead of repeating the same one. An X in the corner
+   lets the person dismiss it immediately instead of waiting out the 30
+   seconds — closing early still starts the same 5-minute wait before the
+   next one shows. Runs once at the app root so it's a single global cycle,
+   not a separate one per screen/placement. (Status ads are a different,
+   separate thing — they stay as normal-looking cards in the Status feed.) */
 function FloatingAdOverlay() {
   const { profile } = useAuth();
   const [ad, setAd] = useState(null);
   const [visible, setVisible] = useState(false);
   const hideTimer = useRef(null);
   const nextTimer = useRef(null);
+  const cycleIndex = useRef(0);
 
   const scheduleNext = () => {
     clearTimeout(nextTimer.current);
     nextTimer.current = setTimeout(fetchAndShow, 5 * 60 * 1000);
   };
   const fetchAndShow = () => {
-    db.collection('smiletak_adCampaigns').where('type', '==', 'floating_banner').where('enabled', '==', true).limit(20).get()
+    db.collection('smiletak_adCampaigns').where('type', '==', 'app_banner').where('enabled', '==', true).limit(20).get()
       .then(s => {
         const now = Date.now();
         const eligible = s.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(c => {
           const start = c.startAt ? c.startAt.toMillis() : 0;
           const end = c.endAt ? c.endAt.toMillis() : Infinity;
           return now >= start && now <= end;
-        });
+        }).sort((a, b) => a.id < b.id ? -1 : 1);
         if (!eligible.length) { scheduleNext(); return; }
-        const picked = eligible[Math.floor(Math.random() * eligible.length)];
+        // Round-robin through all active campaigns one after another,
+        // instead of re-rolling randomly (which could repeat the same ad).
+        const picked = eligible[cycleIndex.current % eligible.length];
+        cycleIndex.current += 1;
         setAd(picked);
         setVisible(true);
         logAdImpression(picked);
@@ -1373,7 +1327,6 @@ function ChatsListScreen({ onOpenChat, onOpenGroup, onNewGroup, onNewChat, onNew
       }, c.label, typeof c.count === 'number' && c.count > 0 && h('span', { className: 'text-xs ' + (filter === c.id ? 'text-white/80' : 'text-slate-400') }, c.count))
       )
     ),
-    filter !== 'archived' && h(AdBanner, { type: 'chatlist_banner' }),
     filter !== 'archived' && counts.archived > 0 && h('div', {
       className: 'flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-ink-800 border-b border-slate-100 dark:border-ink-800',
       onClick: () => setFilter('archived')
@@ -1773,7 +1726,6 @@ function GroupChatWindow({ groupId, group: groupProp, onBack, onInfo }) {
       h('button', { className: 'text-slate-400 px-2', onClick: () => callGroup('audio') }, h('i', { className: 'fa-solid fa-phone' })),
       h('button', { className: 'text-slate-400 px-2', onClick: () => callGroup('video') }, h('i', { className: 'fa-solid fa-video' }))
     ),
-    h(AdBanner, { type: 'chat_window_banner' }),
     h('div', { ref: scrollRef, className: 'flex-1 overflow-y-auto no-scrollbar px-3 py-3' },
       visibleMessages.map(m => m.type === 'call'
         ? h(CallLogRow, { key: m.id, m })
@@ -2631,7 +2583,6 @@ function DiscoverScreen({ onOpenChat, onViewProfile }) {
   };
 
   return h('div', { className: 'h-full flex flex-col' },
-    h(AdBanner, { type: 'in_app_banner' }),
     h('div', { className: 'px-4 pt-4 pb-2' }, h('h1', { className: 'text-xl font-extrabold' }, 'Discover people')),
     h('div', { className: 'px-4 pb-2 flex gap-2' },
       h('input', {
@@ -2972,7 +2923,6 @@ function ChatWindow({ chatId, other, onBack, onViewProfile }) {
     search !== null && h('div', { className: 'px-3 py-2 bg-white dark:bg-ink-800 border-b border-slate-100 dark:border-ink-700' },
       h('input', { autoFocus: true, className: 'w-full px-3 py-1.5 rounded-full bg-slate-100 dark:bg-ink-700 text-sm focus:outline-none', placeholder: 'Search in this chat', value: search, onChange: e => setSearch(e.target.value) })
     ),
-    h(AdBanner, { type: 'chat_window_banner' }),
     h('div', { className: 'flex-1 overflow-y-auto no-scrollbar px-3 py-2' },
       !messagesLoaded && h(MessageListSkeleton, {}),
       messagesLoaded && visible.length === 0 && !search && h('div', { className: 'h-full flex flex-col items-center justify-center text-center px-8' },
@@ -4952,15 +4902,12 @@ function PremiumScreen({ onBack }) {
 
 /* ============================== SELF-SERVE ADVERTISING ==============================
    Any user can submit an ad here and choose exactly where it should show:
-   Status, Chat list, Inside chats, or Discover. Same pay-by-transfer + admin
+   Status, or a Banner ad shown across the app. Same pay-by-transfer + admin
    review flow as Premium. On approval, the admin action creates one
    smiletak_adCampaigns doc per chosen placement (see AdminPanel.approvePayment). */
 const AD_PLACEMENTS = [
-  { value: 'sponsored_status', label: 'Status', hint: 'Shown as a card in the Updates/Status feed' },
-  { value: 'chatlist_banner', label: 'Chats list', hint: 'Banner at the top of the Chats tab' },
-  { value: 'chat_window_banner', label: 'Inside chats', hint: 'Banner inside open 1:1 and group chats' },
-  { value: 'in_app_banner', label: 'Discover', hint: 'Banner on the Discover / search screen' },
-  { value: 'floating_banner', label: 'Floating banner', hint: 'Wide banner that pops up over the app for 30s, closable, then returns every 5 min' }
+  { value: 'sponsored_status', label: 'Status', hint: 'Shown as a card in the Updates/Status feed, like a normal status' },
+  { value: 'app_banner', label: 'Banner ad', hint: 'Wide banner that pops up over the app (chats, chat list, Discover — anywhere) for 30s, closable, then returns every 5 min with the next ad' }
 ];
 function AdvertiseScreen({ onBack }) {
   const { profile } = useAuth();
@@ -5564,7 +5511,7 @@ function AdminPanel() {
         // by having multiple placements from a single payment.
         const startAt = Timestamp.now();
         const endAt = Timestamp.fromMillis(Date.now() + (Number(r.days) || 1) * 24 * 3600 * 1000);
-        const placements = r.placements && r.placements.length ? r.placements : ['chatlist_banner'];
+        const placements = r.placements && r.placements.length ? r.placements : ['app_banner'];
         await Promise.all(placements.map((type, i) => db.collection('smiletak_adCampaigns').add({
           advertiserName: r.advertiserName || 'Advertiser', type, mediaType: r.mediaType || 'text',
           mediaURL: r.mediaURL || null, headline: r.headline || '', body: r.body || '', targetURL: r.targetURL || '',
@@ -5751,7 +5698,7 @@ function PaymentRequestRow({ r, onApprove, onReject }) {
 }
 function AdCampaignsAdmin({ ads, onToggle, onDelete }) {
   const toast = useToast();
-  const [form, setForm] = useState({ advertiserName: '', type: 'chatlist_banner', mediaType: 'text', headline: '', body: '', targetURL: '', startAt: '', endAt: '', amountPaid: '' });
+  const [form, setForm] = useState({ advertiserName: '', type: 'app_banner', mediaType: 'text', headline: '', body: '', targetURL: '', startAt: '', endAt: '', amountPaid: '' });
   const [file, setFile] = useState(null);
   const [creating, setCreating] = useState(false);
 
@@ -5772,7 +5719,7 @@ function AdCampaignsAdmin({ ads, onToggle, onDelete }) {
         createdAt: FieldValue.serverTimestamp()
       });
       toast('Campaign created', 'success');
-      setForm({ advertiserName: '', type: 'chatlist_banner', mediaType: 'text', headline: '', body: '', targetURL: '', startAt: '', endAt: '', amountPaid: '' });
+      setForm({ advertiserName: '', type: 'app_banner', mediaType: 'text', headline: '', body: '', targetURL: '', startAt: '', endAt: '', amountPaid: '' });
       setFile(null);
     } catch (e) { toast('Could not create: ' + e.message, 'error'); }
     setCreating(false);
@@ -5792,12 +5739,9 @@ function AdCampaignsAdmin({ ads, onToggle, onDelete }) {
     h('p', { className: 'font-semibold text-sm mb-2' }, 'Create campaign'),
     h('input', { className: inputCls, placeholder: 'Advertiser name', value: form.advertiserName, onChange: e => setForm(f => Object.assign({}, f, { advertiserName: e.target.value })) }),
     h('select', { className: inputCls, value: form.type, onChange: e => setForm(f => Object.assign({}, f, { type: e.target.value })) },
-      h('option', { value: 'sponsored_status' }, 'Sponsored status'),
+      h('option', { value: 'sponsored_status' }, 'Sponsored status (acts like a normal status)'),
       h('option', { value: 'sponsored_post' }, 'Sponsored post'),
-      h('option', { value: 'chatlist_banner' }, 'Chat list banner'),
-      h('option', { value: 'chat_window_banner' }, 'Inside chat banner'),
-      h('option', { value: 'in_app_banner' }, 'In-app banner (Discover)'),
-      h('option', { value: 'floating_banner' }, 'Floating banner (pops up, 30s, closable)')
+      h('option', { value: 'app_banner' }, 'Banner ad (pops up across the app, 30s, closable, repeats every 5 min)')
     ),
     h('select', { className: inputCls, value: form.mediaType, onChange: e => setForm(f => Object.assign({}, f, { mediaType: e.target.value })) },
       h('option', { value: 'text' }, 'Text only'),
