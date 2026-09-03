@@ -1965,9 +1965,9 @@ function GroupMessageBubble({ m, mine, sender, groupId, advancedPrivacy }) {
         ? h('video', { src: m.mediaURL, controls: !advancedPrivacy, className: 'rounded-lg max-w-full max-h-64' })
         : h(HiddenMediaPlaceholder, { icon: 'fa-video', onReveal: () => setRevealed(true) })),
       m.type === 'audio' && m.mediaURL && h('audio', { src: m.mediaURL, controls: true, className: 'max-w-full' }),
-      m.type === 'voice' && m.mediaURL && h(VoiceMessagePlayer, { src: m.mediaURL, mine, avatarURL: sender && sender.photoURL, avatarName: sender && sender.fullName, durationSecs: m.durationSecs }),
+      m.type === 'voice' && m.mediaURL && h(VoiceMessagePlayer, { src: m.mediaURL, mine, avatarURL: sender && sender.photoURL, avatarName: sender && sender.fullName, durationSecs: m.durationSecs, createdAt: m.createdAt }),
       m.type === 'document' && m.mediaURL && h('a', { href: m.mediaURL, target: '_blank', rel: 'noreferrer', className: 'underline text-xs' }, m.mediaName || 'Document'),
-      h('p', { className: 'text-[10px] mt-1 text-right ' + (mine ? 'text-white/70' : 'text-slate-400') }, fmtClock(m.createdAt))
+      m.type !== 'voice' && h('p', { className: 'text-[10px] mt-1 text-right ' + (mine ? 'text-white/70' : 'text-slate-400') }, fmtClock(m.createdAt))
     )
   );
 }
@@ -3187,7 +3187,7 @@ function MessageListSkeleton() {
    of the waveform, and a bold mm:ss duration underneath — matching the
    native WhatsApp voice-note layout. Uses one shared <audio> element per
    bubble, driven entirely by our own UI. */
-function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs }) {
+function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs, createdAt, status }) {
   const { profile } = useAuth();
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -3236,7 +3236,7 @@ function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs }) 
   // need decoding the audio client-side, which is unnecessary cost for a
   // purely decorative visual. The same seeded pattern is reused every
   // render so bars don't jump around while playing.
-  const BAR_COUNT = 32;
+  const BAR_COUNT = 24;
   const barHeights = useMemo(() => {
     let seed = 0;
     for (let i = 0; i < src.length; i++) seed = (seed * 31 + src.charCodeAt(i)) >>> 0;
@@ -3254,30 +3254,42 @@ function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs }) 
   const displayAvatarURL = mine ? (profile && profile.photoURL) : avatarURL;
   const displayAvatarName = mine ? (profile && profile.fullName) : avatarName;
 
-  // True single-row WhatsApp layout: play button, waveform, duration, and
-  // avatar all sit on ONE line with nothing stacked underneath, so the
-  // bubble's height is just the row height (~32px) instead of a button row
-  // plus a separate waveform+duration row underneath it.
-  return h('div', { className: 'flex items-center gap-2 w-[200px]' },
-    h('audio', { ref: audioRef, src, preload: 'metadata', className: 'hidden' }),
-    h('button', { onClick: toggle, className: 'shrink-0 w-8 h-8 rounded-full flex items-center justify-center ' + (mine ? 'bg-white text-brand-600' : 'bg-brand-500 text-white') },
-      h('i', { className: 'fa-solid ' + (playing ? 'fa-pause' : 'fa-play') + ' text-xs' })
+  // Tight WhatsApp-style two-row layout, hugging its content instead of
+  // reserving a wide fixed box:
+  //   row 1 — play button, waveform, small avatar (mic badge)
+  //   row 2 — duration on the left, send-time + read ticks on the right
+  // This replaces the old design where the outer message bubble ALSO drew
+  // its own separate timestamp line below the player — that extra line was
+  // the redundant height users were seeing. Now there's exactly one compact
+  // row of "meta" text, same as native WhatsApp, and nothing else.
+  return h('div', { className: 'w-[172px]' },
+    h('div', { className: 'flex items-center gap-1.5' },
+      h('audio', { ref: audioRef, src, preload: 'metadata', className: 'hidden' }),
+      h('button', { onClick: toggle, className: 'shrink-0 w-7 h-7 rounded-full flex items-center justify-center ' + (mine ? 'bg-white text-brand-600' : 'bg-brand-500 text-white') },
+        h('i', { className: 'fa-solid ' + (playing ? 'fa-pause' : 'fa-play') + ' text-[10px]' })
+      ),
+      h('div', {
+        ref: barRef, onClick: seek,
+        className: 'flex-1 min-w-0 h-6 flex items-center gap-[2px] cursor-pointer'
+      },
+        barHeights.map((hgt, i) => h('span', {
+          key: i,
+          className: 'flex-1 rounded-full ' + (i < playedBars ? fillColor : dimColor),
+          style: { height: hgt }
+        }))
+      ),
+      h('div', { className: 'relative shrink-0' },
+        h(Avatar, { url: displayAvatarURL, name: displayAvatarName, size: 24 }),
+        h('span', { className: 'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-brand-500 flex items-center justify-center border-2 border-white dark:border-ink-800' },
+          h('i', { className: 'fa-solid fa-microphone text-white', style: { fontSize: 5 } })
+        )
+      )
     ),
-    h('div', {
-      ref: barRef, onClick: seek,
-      className: 'flex-1 min-w-0 h-8 flex items-center gap-[2px] cursor-pointer'
-    },
-      barHeights.map((hgt, i) => h('span', {
-        key: i,
-        className: 'flex-1 rounded-full ' + (i < playedBars ? fillColor : dimColor),
-        style: { height: hgt }
-      }))
-    ),
-    h('span', { className: 'shrink-0 text-[11px] font-bold tabular-nums ' + (mine ? 'text-white' : 'text-slate-700 dark:text-slate-200') }, fmt(playing || curTime ? curTime : duration)),
-    h('div', { className: 'relative shrink-0' },
-      h(Avatar, { url: displayAvatarURL, name: displayAvatarName, size: 28 }),
-      h('span', { className: 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-brand-500 flex items-center justify-center border-2 border-white dark:border-ink-800' },
-        h('i', { className: 'fa-solid fa-microphone text-white', style: { fontSize: 6 } })
+    h('div', { className: 'flex items-center justify-between mt-0.5 pl-[34px]' },
+      h('span', { className: 'text-[10px] font-bold tabular-nums ' + (mine ? 'text-white' : 'text-slate-700 dark:text-slate-200') }, fmt(playing || curTime ? curTime : duration)),
+      createdAt !== undefined && h('span', { className: 'flex items-center gap-1' },
+        h('span', { className: 'text-[10px] ' + (mine ? 'text-white/70' : 'text-slate-400') }, fmtClock(createdAt)),
+        mine && status && h('i', { className: 'fa-solid ' + (status === 'read' ? 'fa-check-double text-sky-300' : status === 'delivered' ? 'fa-check-double text-white/70' : 'fa-check text-white/70') + ' text-[10px]' })
       )
     )
   );
@@ -3356,9 +3368,9 @@ function MessageBubble({ m, mine, onMenu, onReply, senderAvatar, senderName }) {
         }),
         m.type === 'video' && h('video', { src: m.mediaURL, controls: true, className: 'rounded-lg max-w-full max-h-64 mb-1' }),
         m.type === 'audio' && h('audio', { src: m.mediaURL, controls: true, className: 'max-w-full' }),
-        m.type === 'voice' && m.mediaURL && h(VoiceMessagePlayer, { src: m.mediaURL, mine, avatarURL: senderAvatar, avatarName: senderName, durationSecs: m.durationSecs }),
+        m.type === 'voice' && m.mediaURL && h(VoiceMessagePlayer, { src: m.mediaURL, mine, avatarURL: senderAvatar, avatarName: senderName, durationSecs: m.durationSecs, createdAt: m.createdAt, status }),
         m.type === 'document' && h('a', { href: m.mediaURL, target: '_blank', rel: 'noreferrer', className: 'flex items-center gap-2 underline' }, h('i', { className: 'fa-solid fa-file' }), h('span', null, m.mediaName, ' ', m.mediaSize ? h('span', { className: 'opacity-70' }, '(' + bytesToSize(m.mediaSize) + ')') : null)),
-        m.type !== 'text' && h('div', { className: 'flex items-center gap-1 justify-end mt-0.5' },
+        m.type !== 'text' && m.type !== 'voice' && h('div', { className: 'flex items-center gap-1 justify-end mt-0.5' },
           h('span', { className: 'text-[10px] ' + (mine ? 'text-white/70' : 'text-slate-400') }, fmtClock(m.createdAt)),
           mine && h('i', { className: 'fa-solid ' + (status === 'read' ? 'fa-check-double text-sky-300' : status === 'delivered' ? 'fa-check-double text-white/70' : 'fa-check text-white/70') + ' text-[10px]' })
         )
