@@ -523,6 +523,32 @@ function fireLocalNotification(title, body, icon) {
     }
   } catch (e) { /* ignore */ }
 }
+/* Short two-tone "ding" chime for incoming messages, built with the Web
+   Audio API (same approach as useRingTone below) so no audio file needs to
+   be shipped. Gated behind the device-local 'st_notifSoundEnabled' setting
+   (see NotificationSettingsScreen) so people can turn it off. */
+function playNotificationSound() {
+  try {
+    if (!lsGet('st_notifSoundEnabled', true)) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    [[880, 0], [1175, 0.09]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.16);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.18);
+    });
+    setTimeout(() => { try { ctx.close(); } catch (e) {} }, 400);
+  } catch (e) { /* sound is best-effort, never block on it */ }
+}
 
 /* ============================== TOAST ============================== */
 const ToastCtx = createContext(null);
@@ -858,12 +884,28 @@ function useUnreadBadges(profile) {
   const [statusList, setStatusList] = useState([]); // [{ uid, latestMs }]
   const [missedCalls, setMissedCalls] = useState([]); // recent missed/cancelled incoming calls
   const [seenTick, setSeenTick] = useState(0); // bumped after marking something seen, to force a re-read of localStorage
+  // Previous per-doc unreadCount snapshots, used only to detect a fresh
+  // incoming message (count going UP) so the notification chime plays once
+  // per new message instead of on every unrelated re-render or on the count
+  // going back down when something gets marked read.
+  const prevDmCounts = useRef({});
+  const dmSoundInit = useRef(false);
+  const prevGroupCounts = useRef({});
+  const groupSoundInit = useRef(false);
 
   useEffect(() => {
     if (!profile) { setDmUnread(0); return; }
     const unsub = db.collection('smiletak_chatMembers').where('uid', '==', profile.id).onSnapshot(snap => {
       let sum = 0;
-      snap.docs.forEach(d => { const m = d.data(); if (!m.archived && m.unreadCount > 0) sum += m.unreadCount; });
+      const nextCounts = {};
+      snap.docs.forEach(d => {
+        const m = d.data();
+        nextCounts[d.id] = m.unreadCount || 0;
+        if (!m.archived && m.unreadCount > 0) sum += m.unreadCount;
+        if (dmSoundInit.current && !m.muted && (m.unreadCount || 0) > (prevDmCounts.current[d.id] || 0)) playNotificationSound();
+      });
+      prevDmCounts.current = nextCounts;
+      dmSoundInit.current = true;
       setDmUnread(sum);
     });
     return unsub;
@@ -873,7 +915,15 @@ function useUnreadBadges(profile) {
     if (!profile) { setGroupUnread(0); return; }
     const unsub = db.collection('smiletak_groupMembers').where('uid', '==', profile.id).onSnapshot(snap => {
       let sum = 0;
-      snap.docs.forEach(d => { const m = d.data(); if (!m.archived && m.unreadCount > 0) sum += m.unreadCount; });
+      const nextCounts = {};
+      snap.docs.forEach(d => {
+        const m = d.data();
+        nextCounts[d.id] = m.unreadCount || 0;
+        if (!m.archived && m.unreadCount > 0) sum += m.unreadCount;
+        if (groupSoundInit.current && !m.muted && (m.unreadCount || 0) > (prevGroupCounts.current[d.id] || 0)) playNotificationSound();
+      });
+      prevGroupCounts.current = nextCounts;
+      groupSoundInit.current = true;
       setGroupUnread(sum);
     });
     return unsub;
@@ -3204,30 +3254,28 @@ function VoiceMessagePlayer({ src, mine, avatarURL, avatarName, durationSecs }) 
   const displayAvatarURL = mine ? (profile && profile.photoURL) : avatarURL;
   const displayAvatarName = mine ? (profile && profile.fullName) : avatarName;
 
-  // Single compact row — play button, waveform, duration, and avatar all on
-  // one line — so the bubble's height stays tight instead of stacking the
-  // duration on its own line underneath (which was pushing the bubble too
-  // tall). All the same content is still shown, just arranged horizontally.
-  return h('div', { className: 'flex items-center gap-2 w-[230px]' },
+  // True single-row WhatsApp layout: play button, waveform, duration, and
+  // avatar all sit on ONE line with nothing stacked underneath, so the
+  // bubble's height is just the row height (~32px) instead of a button row
+  // plus a separate waveform+duration row underneath it.
+  return h('div', { className: 'flex items-center gap-2 w-[200px]' },
     h('audio', { ref: audioRef, src, preload: 'metadata', className: 'hidden' }),
     h('button', { onClick: toggle, className: 'shrink-0 w-8 h-8 rounded-full flex items-center justify-center ' + (mine ? 'bg-white text-brand-600' : 'bg-brand-500 text-white') },
       h('i', { className: 'fa-solid ' + (playing ? 'fa-pause' : 'fa-play') + ' text-xs' })
     ),
-    h('div', { className: 'flex-1 min-w-0 flex flex-col gap-0.5' },
-      h('div', {
-        ref: barRef, onClick: seek,
-        className: 'h-6 flex items-center gap-[2px] cursor-pointer'
-      },
-        barHeights.map((hgt, i) => h('span', {
-          key: i,
-          className: 'flex-1 rounded-full ' + (i < playedBars ? fillColor : dimColor),
-          style: { height: hgt }
-        }))
-      ),
-      h('span', { className: 'text-[11px] font-bold tabular-nums ' + (mine ? 'text-white' : 'text-slate-700 dark:text-slate-200') }, fmt(playing || curTime ? curTime : duration))
+    h('div', {
+      ref: barRef, onClick: seek,
+      className: 'flex-1 min-w-0 h-8 flex items-center gap-[2px] cursor-pointer'
+    },
+      barHeights.map((hgt, i) => h('span', {
+        key: i,
+        className: 'flex-1 rounded-full ' + (i < playedBars ? fillColor : dimColor),
+        style: { height: hgt }
+      }))
     ),
+    h('span', { className: 'shrink-0 text-[11px] font-bold tabular-nums ' + (mine ? 'text-white' : 'text-slate-700 dark:text-slate-200') }, fmt(playing || curTime ? curTime : duration)),
     h('div', { className: 'relative shrink-0' },
-      h(Avatar, { url: displayAvatarURL, name: displayAvatarName, size: 30 }),
+      h(Avatar, { url: displayAvatarURL, name: displayAvatarName, size: 28 }),
       h('span', { className: 'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-brand-500 flex items-center justify-center border-2 border-white dark:border-ink-800' },
         h('i', { className: 'fa-solid fa-microphone text-white', style: { fontSize: 6 } })
       )
@@ -4590,6 +4638,15 @@ function AppearanceSettingsScreen({ onBack }) {
 function NotificationSettingsScreen({ onBack }) {
   const toast = useToast();
   const enable = () => { requestNotifyPermission(); toast('Notifications enabled', 'success'); };
+  // Device-local (localStorage) on/off switch for the incoming-message
+  // chime — same lsGet/lsSet pattern used elsewhere for per-device settings.
+  const [soundOn, setSoundOn] = useState(lsGet('st_notifSoundEnabled', true));
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    lsSet('st_notifSoundEnabled', next);
+    if (next) playNotificationSound();
+  };
   return h('div', { className: 'h-full overflow-y-auto no-scrollbar' },
     h('div', { className: 'px-4 pt-4 pb-3 flex items-center gap-3' },
       h('button', { onClick: onBack, className: 'text-lg text-slate-500 dark:text-slate-300' }, h('i', { className: 'fa-solid fa-arrow-left' })),
@@ -4602,6 +4659,16 @@ function NotificationSettingsScreen({ onBack }) {
           h('p', { className: 'text-xs text-slate-400' }, 'Allow SmileTak to notify you of new activity')
         ),
         h('button', { className: 'text-brand-600 text-sm font-semibold shrink-0', onClick: enable }, 'Enable')
+      ),
+      h('div', { className: 'flex items-center justify-between py-3 border-t border-slate-100 dark:border-ink-800' },
+        h('div', null,
+          h('p', { className: 'font-medium text-sm' }, 'Notification sound'),
+          h('p', { className: 'text-xs text-slate-400' }, 'Play a sound when a new message arrives')
+        ),
+        h('button', {
+          onClick: toggleSound,
+          className: 'w-12 h-7 rounded-full relative transition-colors ' + (soundOn ? 'bg-brand-600' : 'bg-slate-300 dark:bg-ink-600')
+        }, h('span', { className: 'absolute top-1 w-5 h-5 rounded-full bg-white transition-all ' + (soundOn ? 'left-6' : 'left-1') }))
       )
     )
   );
