@@ -413,6 +413,77 @@ function bytesToSize(b) {
   return n.toFixed(n < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
 }
 
+/* Floating banner ad: pops up over whatever screen is open (wide banner,
+   same ~2.45:1 letterbox shape as the reference creative), auto-hides after
+   30 seconds, and comes back with a (possibly different) ad 5 minutes after
+   it goes away. An X in the corner lets the person dismiss it immediately
+   instead of waiting out the 30 seconds — closing early still starts the
+   same 5-minute wait before the next one shows. Runs once at the app root
+   so it's a single global cycle, not per-screen. */
+function FloatingAdOverlay() {
+  const { profile } = useAuth();
+  const [ad, setAd] = useState(null);
+  const [visible, setVisible] = useState(false);
+  const hideTimer = useRef(null);
+  const nextTimer = useRef(null);
+
+  const scheduleNext = () => {
+    clearTimeout(nextTimer.current);
+    nextTimer.current = setTimeout(fetchAndShow, 5 * 60 * 1000);
+  };
+  const fetchAndShow = () => {
+    db.collection('smiletak_adCampaigns').where('type', '==', 'floating_banner').where('enabled', '==', true).limit(20).get()
+      .then(s => {
+        const now = Date.now();
+        const eligible = s.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(c => {
+          const start = c.startAt ? c.startAt.toMillis() : 0;
+          const end = c.endAt ? c.endAt.toMillis() : Infinity;
+          return now >= start && now <= end;
+        });
+        if (!eligible.length) { scheduleNext(); return; }
+        const picked = eligible[Math.floor(Math.random() * eligible.length)];
+        setAd(picked);
+        setVisible(true);
+        logAdImpression(picked);
+        clearTimeout(hideTimer.current);
+        hideTimer.current = setTimeout(() => { setVisible(false); scheduleNext(); }, 30000);
+      }).catch(() => scheduleNext());
+  };
+  useEffect(() => {
+    fetchAndShow();
+    return () => { clearTimeout(hideTimer.current); clearTimeout(nextTimer.current); };
+    // eslint-disable-next-line
+  }, []);
+
+  const closeNow = () => {
+    setVisible(false);
+    clearTimeout(hideTimer.current);
+    scheduleNext();
+  };
+
+  if (!visible || !ad || isPremiumActive(profile)) return null;
+  const hasMedia = (ad.mediaType === 'image' || ad.mediaType === 'video') && ad.mediaURL;
+
+  return h('div', { className: 'fixed left-0 right-0 bottom-3 z-40 px-3 pointer-events-none flex justify-center' },
+    h('div', {
+      className: 'relative w-full max-w-md aspect-[2.45/1] rounded-2xl overflow-hidden shadow-xl border-2 border-amber-300 dark:border-amber-500/40 bg-white dark:bg-ink-800 pointer-events-auto cursor-pointer',
+      onClick: () => logAdClick(ad)
+    },
+      ad.mediaType === 'image' && ad.mediaURL && h('img', { src: ad.mediaURL, className: 'absolute inset-0 w-full h-full object-cover' }),
+      ad.mediaType === 'video' && ad.mediaURL && h('video', { src: ad.mediaURL, className: 'absolute inset-0 w-full h-full object-cover', muted: true, autoPlay: true, loop: true, playsInline: true }),
+      !hasMedia && h('div', { className: 'absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-gradient-to-br from-amber-50 to-white dark:from-ink-800 dark:to-ink-800' },
+        h('p', { className: 'text-sm font-extrabold' }, ad.headline || ad.advertiserName || 'Sponsored'),
+        ad.body && h('p', { className: 'text-xs text-slate-500 dark:text-slate-400 mt-1' }, ad.body)
+      ),
+      h('span', { className: 'absolute top-2 left-2 bg-amber-400 text-ink-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm tracking-wide z-10' }, 'SPONSORED'),
+      h('button', {
+        onClick: (e) => { e.stopPropagation(); closeNow(); },
+        className: 'absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center text-xs z-10'
+      }, h('i', { className: 'fa-solid fa-xmark' }))
+    )
+  );
+}
+
 /* ============================== DEVICE-LOCAL SETTINGS ==============================
    A handful of group-settings features (Chat lock, Media visibility) are, by
    nature, PER-DEVICE rather than synced account data — exactly like
@@ -4867,7 +4938,8 @@ const AD_PLACEMENTS = [
   { value: 'sponsored_status', label: 'Status', hint: 'Shown as a card in the Updates/Status feed' },
   { value: 'chatlist_banner', label: 'Chats list', hint: 'Banner at the top of the Chats tab' },
   { value: 'chat_window_banner', label: 'Inside chats', hint: 'Banner inside open 1:1 and group chats' },
-  { value: 'in_app_banner', label: 'Discover', hint: 'Banner on the Discover / search screen' }
+  { value: 'in_app_banner', label: 'Discover', hint: 'Banner on the Discover / search screen' },
+  { value: 'floating_banner', label: 'Floating banner', hint: 'Wide banner that pops up over the app for 30s, closable, then returns every 5 min' }
 ];
 function AdvertiseScreen({ onBack }) {
   const { profile } = useAuth();
@@ -5703,7 +5775,8 @@ function AdCampaignsAdmin({ ads, onToggle, onDelete }) {
       h('option', { value: 'sponsored_post' }, 'Sponsored post'),
       h('option', { value: 'chatlist_banner' }, 'Chat list banner'),
       h('option', { value: 'chat_window_banner' }, 'Inside chat banner'),
-      h('option', { value: 'in_app_banner' }, 'In-app banner (Discover)')
+      h('option', { value: 'in_app_banner' }, 'In-app banner (Discover)'),
+      h('option', { value: 'floating_banner' }, 'Floating banner (pops up, 30s, closable)')
     ),
     h('select', { className: inputCls, value: form.mediaType, onChange: e => setForm(f => Object.assign({}, f, { mediaType: e.target.value })) },
       h('option', { value: 'text' }, 'Text only'),
@@ -6660,7 +6733,7 @@ function Root() {
     return h('div', { className: 'h-full flex items-center justify-center' }, h('div', { className: 'w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full spinner' }));
   }
   return h(ThemeCtx.Provider, { value: themeState },
-    !user || !profile ? h(AuthScreen, null) : h(CallProvider, null, h(AppShell, null))
+    !user || !profile ? h(AuthScreen, null) : h(CallProvider, null, h(AppShell, null), h(FloatingAdOverlay, null))
   );
 }
 function App() {
