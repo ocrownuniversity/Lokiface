@@ -561,7 +561,7 @@ function _unlockNotifAudio() {
   const ctx = _getNotifAudioCtx();
   if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
 }
-['pointerdown', 'touchstart', 'click', 'keydown'].forEach(evt => {
+['pointerdown', 'touchstart', 'touchend', 'click', 'keydown'].forEach(evt => {
   document.addEventListener(evt, _unlockNotifAudio, { passive: true });
 });
 function playNotificationSound() {
@@ -1384,8 +1384,19 @@ function AppShell() {
         className: 'flex-1 py-2.5 flex flex-col items-center gap-1 text-xs font-medium relative ' + (tab === t.id ? 'text-brand-600' : 'text-slate-400')
       },
         h('span', { className: 'relative' },
-          h('i', { className: 'fa-solid ' + t.icon + ' text-lg' }),
-          !!t.badge && h('span', { className: 'absolute -top-1.5 -right-2.5 text-red-600 text-[11px] font-bold leading-none' }, t.badge > 99 ? '99+' : t.badge)
+          // Decorative yellow accent chip peeking out behind the Chats icon
+          // only, purely cosmetic (matches the WhatsApp reference).
+          t.id === 'chats' && h('span', {
+            className: 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -ml-2 w-6 h-5 rounded-full bg-amber-400 -z-10'
+          }),
+          h('i', { className: 'fa-solid ' + t.icon + ' text-lg relative' }),
+          // WhatsApp-style badges: Chats/Calls get a solid green pill with
+          // the count, Updates just gets a small green dot (no number) —
+          // matches the marked-up reference screenshot.
+          !!t.badge && t.id !== 'status' && h('span', {
+            className: 'absolute -top-2 -right-3 min-w-[16px] h-4 px-1 rounded-full bg-brand-500 text-white text-[10px] font-bold leading-4 text-center'
+          }, t.badge > 99 ? '99+' : t.badge),
+          !!t.badge && t.id === 'status' && h('span', { className: 'absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand-500 border-2 border-white dark:border-ink-800' })
         ),
         t.label
       ))
@@ -4881,6 +4892,22 @@ function NotificationSettingsScreen({ onBack }) {
           onClick: toggleSound,
           className: 'w-12 h-7 rounded-full relative transition-colors ' + (soundOn ? 'bg-brand-600' : 'bg-slate-300 dark:bg-ink-600')
         }, h('span', { className: 'absolute top-1 w-5 h-5 rounded-full bg-white transition-all ' + (soundOn ? 'left-6' : 'left-1') }))
+      ),
+      // Lets the person confirm right now, from a real tap, that the chime
+      // is actually audible on this device/browser — the most common
+      // reason the chime seems "not working" is that mobile browsers
+      // block Web Audio until a genuine tap unlocks it, or the phone's
+      // physical mute/silent switch is on (which iOS applies to Web Audio
+      // even when the toggle above is ON).
+      h('div', { className: 'flex items-center justify-between py-3 border-t border-slate-100 dark:border-ink-800' },
+        h('div', null,
+          h('p', { className: 'font-medium text-sm' }, 'Test sound'),
+          h('p', { className: 'text-xs text-slate-400' }, 'Tap to check the chime plays on this device')
+        ),
+        h('button', {
+          onClick: () => { if (!soundOn) { setSoundOn(true); lsSet('st_notifSoundEnabled', true); } playNotificationSound(); },
+          className: 'text-brand-600 text-sm font-semibold shrink-0'
+        }, 'Play')
       )
     )
   );
